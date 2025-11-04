@@ -1,0 +1,15 @@
+{
+	"git.autoRepositoryDetection": false,
+	"git.scanRepositories": [
+		"${workspaceFolder}"
+	],
+	"git.enabled": true,
+	"git.detectSubmodules": false,
+	"files.exclude": {
+		"**/node_modules": true,
+		"**/build": true,
+		"**/.DS_Store": true,
+		"**/.git/modules": true
+	}
+}
+

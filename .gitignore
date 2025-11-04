@@ -1,0 +1,102 @@
+# Standard ignores
+node_modules/
+.env
+.env.local
+*.log
+.DS_Store
+
+# Project-specific directories
+.bmad-core/
+.cursor/
+.local/
+web-bundles/
+docs/
+
+# Build directories and artifacts
+build/
+*/build/
+**/build/
+*.o
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+*.out
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+*.make
+*.cmake
+*.cmake.in
+!CMakeLists.txt
+
+# CMake build artifacts
+.autogen/
+*_autogen/
+*.autogen/
+*.moc
+*.moc.d
+moc_*.cpp
+moc_*.cpp.d
+ui_*.h
+qrc_*.cpp
+
+# Qt build artifacts
+*.pro.user
+*.pro.user.*
+*.qmake.stash
+*.qmake.cache
+
+# Compiled Object files
+*.o
+*.obj
+*.ko
+*.elf
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# IDE files
+.vscode/*
+!.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
+
+# Workspace files (ignore workspace files)
+*.code-workspace
+
+# OS files
+Thumbs.db
+.DS_Store
+*.orig
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+*~
+
