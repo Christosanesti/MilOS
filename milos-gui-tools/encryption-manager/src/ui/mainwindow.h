@@ -15,6 +15,8 @@ class QMenuBar;
 QT_END_NAMESPACE
 
 class BatchFilePicker;
+class BatchProgressWidget;
+class QDialog;
 
 /**
  * @brief Main window for Quantum Encryption Manager
@@ -30,6 +32,12 @@ public:
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
+    /**
+     * @brief Set files to encrypt (from command-line arguments or service menu)
+     * @param filePaths List of file paths to encrypt
+     */
+    void setFilesToEncrypt(const QStringList &filePaths);
+
 private slots:
     /**
      * @brief Switch to single-file encryption mode
@@ -41,10 +49,24 @@ private slots:
      */
     void switchToBatchFileMode();
 
+    /**
+     * @brief Handle batch encryption started signal
+     * @param operationId Operation ID
+     */
+    void onBatchEncryptionStarted(const QString &operationId);
+
+    /**
+     * @brief Handle batch encryption completed signal
+     * @param operationId Operation ID
+     * @param status Operation status
+     */
+    void onBatchCompleted(const QString &operationId, const QString &status);
+
 private:
     void setupUI();
     void setupMenuBar();
     void createDashboard();
+    void setupDBusConnection();
 
     QStackedWidget *m_stackedWidget;
     QWidget *m_dashboardWidget;
@@ -53,6 +75,8 @@ private:
     BatchFilePicker *m_batchFilePicker;
     QPushButton *m_singleFileButton;
     QPushButton *m_batchFileButton;
+    BatchProgressWidget *m_batchProgressWidget;
+    QDialog *m_progressDialog;
 };
 
 #endif // MAINWINDOW_H

@@ -79,6 +79,48 @@ void BatchFilePicker::clearSelection()
     emit selectionChanged(0);
 }
 
+void BatchFilePicker::setFiles(const QStringList &filePaths)
+{
+    // Clear existing selection
+    clearSelection();
+    
+    // Add files up to maximum
+    for (const QString &path : filePaths) {
+        if (m_selectedFiles.size() >= MAX_FILES) {
+            break;
+        }
+        
+        // Check for duplicates
+        bool isDuplicate = false;
+        for (const auto &existingFile : m_selectedFiles) {
+            if (existingFile.filePath == path) {
+                isDuplicate = true;
+                break;
+            }
+        }
+        
+        if (isDuplicate) {
+            continue;
+        }
+        
+        // Create file info and validate
+        FileInfo fileInfo(path);
+        if (!validateFile(path)) {
+            emit fileValidationError(path, tr("File does not exist or is not readable"));
+            continue;
+        }
+        
+        m_selectedFiles.append(fileInfo);
+    }
+    
+    // Update UI
+    if (!m_selectedFiles.isEmpty()) {
+        updateFileList();
+        updateFileCountDisplay();
+        emit selectionChanged(m_selectedFiles.size());
+    }
+}
+
 void BatchFilePicker::selectFiles()
 {
     // Calculate how many files can still be selected

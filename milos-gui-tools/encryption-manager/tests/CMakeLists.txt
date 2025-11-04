@@ -71,3 +71,36 @@ target_link_libraries(batchencryptionprocessor_test
 # Add batch processor test
 add_test(NAME BatchEncryptionProcessorTest COMMAND batchencryptionprocessor_test)
 
+# Batch Progress Widget test executable
+add_executable(batchprogresswidget_test
+    batchprogresswidget_test.cpp
+    ../src/ui/batchprogresswidget.cpp
+)
+
+# Link Qt6 libraries for batchprogresswidget_test
+target_link_libraries(batchprogresswidget_test
+    Qt6::Core
+    Qt6::Widgets
+    Qt6::Test
+    Qt6::DBus
+)
+
+# Add batch progress widget test
+add_test(NAME BatchProgressWidgetTest COMMAND batchprogresswidget_test)
+
+# CLI Batch Command test executable
+add_executable(cli_batchcommand_test
+    cli_batchcommand_test.cpp
+    ../src/cli/batchcommand.cpp
+)
+
+# Link Qt6 libraries for cli_batchcommand_test
+target_link_libraries(cli_batchcommand_test
+    Qt6::Core
+    Qt6::Test
+    Qt6::DBus
+)
+
+# Add CLI batch command test
+add_test(NAME CLIBatchCommandTest COMMAND cli_batchcommand_test)
+

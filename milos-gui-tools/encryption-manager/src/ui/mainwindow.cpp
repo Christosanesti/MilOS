@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 #include "batchfilepicker.h"
+#include "batchprogresswidget.h"
 #include <QMenuBar>
 #include <QMenu>
 #include <QAction>
@@ -9,6 +10,11 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QMessageBox>
+#include <QDialog>
+#include <QtDBus/QDBusConnection>
+#include <QUrl>
+#include <QFileInfo>
+#include "dbus/encryptionmanager_interface.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -19,12 +25,19 @@ MainWindow::MainWindow(QWidget *parent)
     , m_batchFilePicker(new BatchFilePicker(this))
     , m_singleFileButton(new QPushButton(tr("Encrypt Single File"), this))
     , m_batchFileButton(new QPushButton(tr("Encrypt Multiple Files"), this))
+    , m_batchProgressWidget(new BatchProgressWidget(this))
+    , m_progressDialog(nullptr)
 {
     setWindowTitle(tr("Quantum Encryption Manager"));
     setMinimumSize(800, 600);
 
     setupMenuBar();
     setupUI();
+    setupDBusConnection();
+    
+    // Connect progress widget signals
+    connect(m_batchProgressWidget, &BatchProgressWidget::batchCompleted,
+            this, &MainWindow::onBatchCompleted);
 }
 
 MainWindow::~MainWindow() = default;
@@ -171,5 +184,85 @@ void MainWindow::switchToBatchFileMode()
 {
     m_stackedWidget->setCurrentWidget(m_batchFileWidget);
     setWindowTitle(tr("Quantum Encryption Manager - Batch File Mode"));
+}
+
+void MainWindow::setupDBusConnection()
+{
+    // Connect to D-Bus signals for batch encryption progress
+    QDBusConnection connection = QDBusConnection::sessionBus();
+    OrgMilosEncryptionManagerInterface *dbusInterface = new OrgMilosEncryptionManagerInterface(
+        "org.milos.EncryptionManager",
+        "/org/milos/EncryptionManager",
+        connection,
+        this
+    );
+    
+    // Connect to batch encryption started signal
+    connect(dbusInterface, &OrgMilosEncryptionManagerInterface::BatchEncryptionStarted,
+            this, &MainWindow::onBatchEncryptionStarted);
+}
+
+void MainWindow::onBatchEncryptionStarted(const QString &operationId)
+{
+    // Get file paths from batch file picker
+    QList<FileInfo> selectedFiles = m_batchFilePicker->getSelectedFiles();
+    if (selectedFiles.isEmpty()) {
+        return;
+    }
+    
+    // Extract file paths
+    QStringList filePaths;
+    for (const auto &fileInfo : selectedFiles) {
+        filePaths.append(fileInfo.filePath);
+    }
+    
+    // Initialize progress widget with batch operation
+    m_batchProgressWidget->initializeBatch(operationId, filePaths);
+    
+    // Create and show progress dialog
+    if (!m_progressDialog) {
+        m_progressDialog = new QDialog(this);
+        m_progressDialog->setWindowTitle(tr("Batch Encryption Progress"));
+        m_progressDialog->setModal(true);
+        m_progressDialog->setMinimumSize(600, 500);
+        
+        QVBoxLayout *dialogLayout = new QVBoxLayout(m_progressDialog);
+        dialogLayout->addWidget(m_batchProgressWidget);
+        m_progressDialog->setLayout(dialogLayout);
+    }
+    
+    // Show progress dialog
+    m_progressDialog->show();
+    m_progressDialog->raise();
+    m_progressDialog->activateWindow();
+}
+
+void MainWindow::onBatchCompleted(const QString &operationId, const QString &status)
+{
+    Q_UNUSED(operationId);
+    
+    // Keep progress dialog visible for a moment, then allow user to close it
+    // The dialog will remain visible until user closes it (as per AC7)
+    // We could auto-close after a delay, but AC7 says "remains visible until batch operation completes or is cancelled"
+    // So we'll keep it visible and let user close it manually
+    
+    // Update button text to indicate completion
+    if (m_progressDialog && m_batchProgressWidget) {
+        // The progress widget already updates its UI on completion
+        // Dialog remains visible (user can close it manually)
+    }
+}
+
+void MainWindow::setFilesToEncrypt(const QStringList &filePaths)
+{
+    if (filePaths.isEmpty()) {
+        return;
+    }
+    
+    // Switch to batch mode first
+    switchToBatchFileMode();
+    
+    // Set files in batch picker
+    m_batchFilePicker->setFiles(filePaths);
 }
 

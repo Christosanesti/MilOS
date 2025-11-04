@@ -1,0 +1,22 @@
+[Desktop Entry]
+Type=Service
+Name=MilOS Emergency Actions
+Name[en]=MilOS Emergency Actions
+Comment=Always-visible emergency action buttons for critical security controls
+Comment[en]=Always-visible emergency action buttons for critical security controls
+Icon=security-high
+ServiceTypes=Plasma/Applet
+X-KDE-PluginInfo-Name=org.milos.emergency-widget
+X-KDE-PluginInfo-Category=System
+X-KDE-PluginInfo-Author=MilOS Development Team
+X-KDE-PluginInfo-Email=dev@milos.org
+X-KDE-PluginInfo-Version=1.0.0
+X-KDE-PluginInfo-License=GPL-3.0-or-later
+X-KDE-PluginInfo-Website=https://milos.org
+X-Plasma-API=declarativeappletscript
+X-Plasma-ContainmentType=Panel
+X-Plasma-ContainmentCategory=System
+X-KDE-Required-Plasma-Version=6.0.0
+X-KDE-PluginInfo-RequiredPermissions=admin
+X-KDE-PluginInfo-Locked=true
+

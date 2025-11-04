@@ -74,6 +74,12 @@ public:
      */
     void clearSelection();
 
+    /**
+     * @brief Set files to encrypt (from command-line or service menu)
+     * @param filePaths List of file paths to add to selection
+     */
+    void setFiles(const QStringList &filePaths);
+
 public slots:
     /**
      * @brief Open file selection dialog for multi-file selection

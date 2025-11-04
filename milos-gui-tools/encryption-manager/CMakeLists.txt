@@ -32,6 +32,7 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ui
     ${CMAKE_CURRENT_SOURCE_DIR}/src/services
     ${CMAKE_CURRENT_SOURCE_DIR}/src/dbus
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/cli
 )
 
 # Source files
@@ -39,6 +40,7 @@ set(SOURCES
     src/main.cpp
     src/ui/mainwindow.cpp
     src/ui/batchfilepicker.cpp
+    src/ui/batchprogresswidget.cpp
     src/services/encryptionmanagerservice.cpp
     src/services/singlefileencryption.cpp
     src/services/batchencryptionprocessor.cpp
@@ -47,6 +49,7 @@ set(SOURCES
 set(HEADERS
     src/ui/mainwindow.h
     src/ui/batchfilepicker.h
+    src/ui/batchprogresswidget.h
     src/services/encryptionmanagerservice.h
     src/services/singlefileencryption.h
     src/services/batchencryptionprocessor.h
@@ -63,8 +66,45 @@ target_link_libraries(${PROJECT_NAME}
     Qt6::DBus
 )
 
-# Install
+# CLI executable (milos-encrypt)
+set(CLI_SOURCES
+    src/cli/milos_encrypt.cpp
+    src/cli/batchcommand.cpp
+)
+
+set(CLI_HEADERS
+    src/cli/batchcommand.h
+    src/dbus/encryptionmanager_interface.h
+)
+
+add_executable(milos-encrypt ${CLI_SOURCES} ${CLI_HEADERS})
+
+# Link Qt6 libraries for CLI (only Core and DBus, no Widgets)
+target_link_libraries(milos-encrypt
+    Qt6::Core
+    Qt6::DBus
+)
+
+# Install CLI executable
+install(TARGETS milos-encrypt
+    RUNTIME DESTINATION bin
+)
+
+# Install GUI executable
 install(TARGETS ${PROJECT_NAME}
     RUNTIME DESTINATION bin
+)
+
+# Install KDE service menu file
+install(FILES
+    data/kservices5/ServiceMenus/milos-encrypt.desktop
+    DESTINATION share/kservices5/ServiceMenus
+)
+
+# Install service menu icon
+install(FILES
+    data/icons/milos-encrypt-service-menu.svg
+    DESTINATION share/icons/hicolor/scalable/apps
+    RENAME milos-encrypt-service-menu.svg
 )
 
