@@ -9,6 +9,7 @@ Rectangle {
     property string buttonIcon: ""
     property color buttonColor: "#4A90E2"
     property bool isHovered: false
+    property bool enabled: true
     
     signal clicked()
     
@@ -60,10 +61,23 @@ Rectangle {
     
     MouseArea {
         anchors.fill: parent
-        hoverEnabled: true
+        hoverEnabled: buttonRoot.enabled
+        enabled: buttonRoot.enabled
         onEntered: buttonRoot.isHovered = true
         onExited: buttonRoot.isHovered = false
-        onClicked: buttonRoot.clicked()
+        onClicked: {
+            if (buttonRoot.enabled) {
+                buttonRoot.clicked();
+            }
+        }
+    }
+    
+    // Disabled state overlay
+    Rectangle {
+        anchors.fill: parent
+        color: "#000000"
+        opacity: buttonRoot.enabled ? 0 : 0.5
+        radius: parent.radius
     }
 }
 

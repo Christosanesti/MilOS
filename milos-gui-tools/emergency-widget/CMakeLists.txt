@@ -30,6 +30,37 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
+# Source files for C++ backend
+set(SOURCES
+    src/networkkillswitch.cpp
+    src/emergencywidgetplugin.cpp
+)
+
+set(HEADERS
+    src/networkkillswitch.h
+)
+
+# Create shared library for QML plugin
+add_library(emergencywidgetplugin SHARED ${SOURCES} ${HEADERS})
+
+# Link Qt6 libraries
+target_link_libraries(emergencywidgetplugin
+    Qt6::Core
+    Qt6::Qml
+    Qt6::DBus
+    Qt6::Quick
+)
+
+# Install library
+install(TARGETS emergencywidgetplugin
+    LIBRARY DESTINATION ${KDE_INSTALL_QMLDIR}/org/milos/emergencywidget
+)
+
+# Install qmldir file
+install(FILES src/qmldir
+    DESTINATION ${KDE_INSTALL_QMLDIR}/org/milos/emergencywidget
+)
+
 # Install Plasmoid package directory structure
 install(DIRECTORY package/
     DESTINATION ${KDE_INSTALL_PLASMAPACKAGEDIR}/org.milos.emergency-widget

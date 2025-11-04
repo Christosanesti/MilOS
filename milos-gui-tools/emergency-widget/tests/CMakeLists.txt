@@ -30,3 +30,19 @@ target_link_libraries(emergencywidget_test
 # Add emergency widget test
 add_test(NAME EmergencyWidgetTest COMMAND emergencywidget_test)
 
+# Network Kill Switch test executable
+add_executable(networkkillswitch_test
+    networkkillswitch_test.cpp
+    ../src/networkkillswitch.cpp
+)
+
+# Link Qt6 libraries for networkkillswitch_test
+target_link_libraries(networkkillswitch_test
+    Qt6::Core
+    Qt6::Test
+    Qt6::DBus
+)
+
+# Add network kill switch test
+add_test(NAME NetworkKillSwitchTest COMMAND networkkillswitch_test)
+

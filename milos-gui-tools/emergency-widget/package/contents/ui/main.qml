@@ -1,7 +1,10 @@
 import QtQuick 2.15
 import QtQuick.Layouts 1.15
+import QtQuick.Controls 2.15
+import QtQuick.Dialogs 1.3
 import org.kde.plasma.plasmoid 2.0
 import org.kde.plasma.core 2.1 as PlasmaCore
+import org.milos.emergencywidget 1.0
 
 PlasmoidItem {
     id: root
@@ -15,7 +18,7 @@ PlasmoidItem {
     compactRepresentation: Item {
         id: compactRoot
         
-        PlasmoidIcon {
+        PlasmaCore.IconItem {
             id: icon
             source: "security-high"  // KDE system icon
             anchors.fill: parent
@@ -38,12 +41,14 @@ PlasmoidItem {
         EmergencyButton {
             id: networkButton
             Layout.fillWidth: true
-            buttonText: "Disable Network"
-            buttonIcon: "network-disconnect"
-            buttonColor: "#FF6B6B"
+            buttonText: networkKillSwitch.isNetworkEnabled ? "Disable Network" : "Network Disabled"
+            buttonIcon: networkKillSwitch.isNetworkEnabled ? "network-disconnect" : "network-offline"
+            buttonColor: networkKillSwitch.isNetworkEnabled ? "#FF6B6B" : "#888888"
+            enabled: networkKillSwitch.isNetworkEnabled
             onClicked: {
-                // TODO: Implement network kill switch (Story 2.2)
-                console.log("Disable Network clicked");
+                // Show confirmation dialog
+                networkKillSwitchDialog.networkKillSwitch = networkKillSwitch;
+                networkKillSwitchDialog.open();
             }
         }
         
@@ -99,5 +104,30 @@ PlasmoidItem {
         } else {
             return units.gridUnit * 10;
         }
+    }
+    
+    // Network kill switch instance
+    NetworkKillSwitch {
+        id: networkKillSwitch
+        onNetworkStatusChanged: {
+            // Update button state when network status changes
+        }
+        onNetworkDisableCompleted: {
+            if (success) {
+                console.log("Network disabled successfully");
+            } else {
+                console.log("Network disable failed:", errorMessage);
+            }
+        }
+        
+        Component.onCompleted: {
+            // Check network status on startup
+            checkNetworkStatus();
+        }
+    }
+    
+    // Network kill switch confirmation dialog
+    NetworkKillSwitchDialog {
+        id: networkKillSwitchDialog
     }
 }
