@@ -5,6 +5,7 @@
 #include <QtCore/QString>
 #include <QtCore/QStringList>
 #include <QtDBus/QDBusContext>
+#include "batchencryptionprocessor.h"
 
 /**
  * @brief Encryption Manager D-Bus service implementation
@@ -147,6 +148,12 @@ public:
      */
     bool registerService(const QString &serviceName = "org.milos.EncryptionManager",
                         const QString &objectPath = "/org/milos/EncryptionManager");
+
+private:
+    /**
+     * @brief Batch encryption processor instance
+     */
+    BatchEncryptionProcessor *m_batchProcessor;
 };
 
 #endif // ENCRYPTIONMANAGERSERVICE_H

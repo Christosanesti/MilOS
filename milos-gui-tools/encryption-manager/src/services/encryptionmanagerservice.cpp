@@ -1,4 +1,5 @@
 #include "encryptionmanagerservice.h"
+#include "singlefileencryption.h"
 #include <QtCore/QFileInfo>
 #include <QtCore/QDir>
 #include <QtCore/QUuid>
@@ -9,7 +10,25 @@
 
 EncryptionManagerService::EncryptionManagerService(QObject *parent)
     : QObject(parent)
+    , m_batchProcessor(new BatchEncryptionProcessor(this))
 {
+    // Connect batch processor signals to service signals
+    connect(m_batchProcessor, &BatchEncryptionProcessor::fileEncryptionStarted,
+            this, [this](const QString &batchOpId, int fileIndex, const QString &filePath) {
+                Q_UNUSED(filePath);
+                // Emit batch progress signal
+                emit BatchEncryptionProgress(batchOpId, fileIndex, 0);
+            });
+    
+    connect(m_batchProcessor, &BatchEncryptionProcessor::fileEncryptionProgress,
+            this, &EncryptionManagerService::BatchEncryptionProgress);
+    
+    connect(m_batchProcessor, &BatchEncryptionProcessor::fileEncryptionCompleted,
+            this, [this](const QString &batchOpId, int fileIndex, bool success, const QString &error) {
+                if (!success) {
+                    emit EncryptionError(batchOpId, error);
+                }
+            });
 }
 
 EncryptionManagerService::~EncryptionManagerService() = default;
@@ -42,10 +61,26 @@ QString EncryptionManagerService::EncryptFile(const QString &path, const QString
 
     // Emit signal for encryption started
     emit EncryptionStarted(operationId);
+    
+    // Emit progress signal (0%)
+    emit EncryptionProgress(operationId, 0);
 
-    // TODO: Actual encryption implementation will be added in story 1.3
-    // For now, this method validates inputs and returns operation ID
-    // The actual encryption logic will be implemented in the batch encryption processing story
+    // Encrypt file using existing encryption logic
+    EncryptionResult result = encryptFile(path, algorithm, key_id);
+    
+    // Emit progress signal (50%)
+    emit EncryptionProgress(operationId, 50);
+    
+    if (result.success) {
+        // Encryption successful
+        emit EncryptionProgress(operationId, 100);
+        emit EncryptionCompleted(operationId, "SUCCESS");
+    } else {
+        // Encryption failed
+        emit EncryptionError(operationId, result.errorMessage);
+        emit EncryptionCompleted(operationId, "FAILED");
+        return QString(); // Return empty string on failure
+    }
 
     return operationId;
 }
@@ -95,9 +130,24 @@ QString EncryptionManagerService::EncryptFiles(const QStringList &paths, const Q
     // Emit signal for batch encryption started
     emit BatchEncryptionStarted(operationId);
 
-    // TODO: Actual batch encryption implementation will be added in story 1.3
-    // For now, this method validates inputs and returns operation ID
-    // The actual encryption logic will be implemented in the batch encryption processing story
+    // Process batch encryption using batch processor
+    BatchEncryptionResult batchResult = m_batchProcessor->processBatchEncryption(paths, algorithm, key_id);
+    
+    // Set the operation ID from batch processor
+    operationId = batchResult.batchOperationId;
+    
+    // Determine overall batch status
+    QString batchStatus;
+    if (batchResult.failedFiles == 0) {
+        batchStatus = "SUCCESS";
+    } else if (batchResult.successfulFiles == 0) {
+        batchStatus = "FAILED";
+    } else {
+        batchStatus = "PARTIAL_SUCCESS";
+    }
+    
+    // Emit batch completion signal
+    emit BatchEncryptionCompleted(operationId, batchStatus);
 
     return operationId;
 }

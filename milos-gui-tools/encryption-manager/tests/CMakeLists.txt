@@ -38,6 +38,8 @@ add_test(NAME BatchFilePickerTest COMMAND batchfilepicker_test)
 add_executable(dbus_encryptionmanager_test
     dbus_encryptionmanager_test.cpp
     ../src/services/encryptionmanagerservice.cpp
+    ../src/services/batchencryptionprocessor.cpp
+    ../src/services/singlefileencryption.cpp
 )
 
 # Link Qt6 libraries for dbus_encryptionmanager_test
@@ -50,4 +52,22 @@ target_link_libraries(dbus_encryptionmanager_test
 
 # Add D-Bus test
 add_test(NAME DBusEncryptionManagerTest COMMAND dbus_encryptionmanager_test)
+
+# Batch Encryption Processor test executable
+add_executable(batchencryptionprocessor_test
+    batchencryptionprocessor_test.cpp
+    ../src/services/batchencryptionprocessor.cpp
+    ../src/services/singlefileencryption.cpp
+)
+
+# Link Qt6 libraries for batchencryptionprocessor_test
+target_link_libraries(batchencryptionprocessor_test
+    Qt6::Core
+    Qt6::Widgets
+    Qt6::Test
+    Qt6::DBus
+)
+
+# Add batch processor test
+add_test(NAME BatchEncryptionProcessorTest COMMAND batchencryptionprocessor_test)
 

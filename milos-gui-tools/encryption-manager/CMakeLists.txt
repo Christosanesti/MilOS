@@ -40,12 +40,16 @@ set(SOURCES
     src/ui/mainwindow.cpp
     src/ui/batchfilepicker.cpp
     src/services/encryptionmanagerservice.cpp
+    src/services/singlefileencryption.cpp
+    src/services/batchencryptionprocessor.cpp
 )
 
 set(HEADERS
     src/ui/mainwindow.h
     src/ui/batchfilepicker.h
     src/services/encryptionmanagerservice.h
+    src/services/singlefileencryption.h
+    src/services/batchencryptionprocessor.h
     src/dbus/encryptionmanager_interface.h
 )
 
