@@ -1,4 +1,3 @@
 module org.milos.emergencywidget
-NetworkKillSwitch 1.0 networkkillswitch.h
-emergencywidgetplugin 1.0 emergencywidgetplugin.cpp
+plugin emergencywidgetplugin
 

@@ -3,6 +3,9 @@
 #include <QtDBus/QDBusInterface>
 #include <QtDBus/QDBusError>
 #include <QtDBus/QDBusReply>
+#include <QtDBus/QDBusMessage>
+#include <QtDBus/QDBusVariant>
+#include <QtDBus/QDBusObjectPath>
 #include <QtCore/QDebug>
 #include <QtCore/QProcess>
 #include <QtCore/QDateTime>
@@ -79,7 +82,23 @@ bool NetworkKillSwitch::disableNetworkViaNetworkManager()
         return false;
     }
 
-    // Get all devices
+    // Method 1: Disable networking globally (more direct)
+    QDBusMessage disableNetworkingMsg = QDBusMessage::createMethodCall(
+        "org.freedesktop.NetworkManager",
+        "/org/freedesktop/NetworkManager",
+        "org.freedesktop.DBus.Properties",
+        "Set"
+    );
+    disableNetworkingMsg << "org.freedesktop.NetworkManager";
+    disableNetworkingMsg << "NetworkingEnabled";
+    disableNetworkingMsg << QVariant::fromValue(QDBusVariant(false));
+    
+    QDBusReply<void> disableReply = m_dbusConnection.call(disableNetworkingMsg);
+    if (disableReply.isValid()) {
+        return true;
+    }
+
+    // Method 2: If global disable fails, disconnect each device
     QDBusReply<QList<QDBusObjectPath>> devicesReply = networkManager.call("GetDevices");
     if (!devicesReply.isValid()) {
         qWarning() << "Failed to get network devices:" << devicesReply.error().message();
@@ -101,18 +120,18 @@ bool NetworkKillSwitch::disableNetworkViaNetworkManager()
         }
 
         // Get device type
-        QDBusReply<quint32> deviceTypeReply = device.call("Get", "org.freedesktop.NetworkManager.Device", "DeviceType");
+        QDBusReply<QVariant> deviceTypeReply = device.call("Get", "org.freedesktop.NetworkManager.Device", "DeviceType");
         if (!deviceTypeReply.isValid()) {
             continue;
         }
 
         // Only disable ethernet and wifi devices (type 1 = ethernet, type 2 = wifi)
-        quint32 deviceType = deviceTypeReply.value();
+        quint32 deviceType = deviceTypeReply.value().toUInt();
         if (deviceType == 1 || deviceType == 2) {
-            // Disable device
-            QDBusReply<void> disableReply = device.call("Disconnect");
-            if (!disableReply.isValid()) {
-                qWarning() << "Failed to disable device" << devicePath.path() << ":" << disableReply.error().message();
+            // Disconnect device
+            QDBusReply<void> disconnectReply = device.call("Disconnect");
+            if (!disconnectReply.isValid()) {
+                qWarning() << "Failed to disconnect device" << devicePath.path() << ":" << disconnectReply.error().message();
                 allDisabled = false;
             }
         }
