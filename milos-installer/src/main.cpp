@@ -5,6 +5,11 @@
 #include <QFile>
 #include <QStandardPaths>
 #include "ui/mainwindow.h"
+#include "ui/encryptionsetupscreen.h"
+#include "ui/useraccountscreen.h"
+#include "services/encryptionmanager.h"
+#include "services/passwordvalidator.h"
+#include "services/useraccountmanager.h"
 
 int main(int argc, char *argv[])
 {
@@ -16,9 +21,19 @@ int main(int argc, char *argv[])
     
     // Register QML types
     qmlRegisterType<MainWindow>("MilosInstaller", 1, 0, "MainWindow");
+    qmlRegisterType<EncryptionSetupScreen>("MilosInstaller", 1, 0, "EncryptionSetupScreen");
+    qmlRegisterType<UserAccountScreen>("MilosInstaller", 1, 0, "UserAccountScreen");
     
     // Create QML engine
     QQmlApplicationEngine engine;
+    
+    // Expose services to QML
+    EncryptionManager encryptionManager;
+    PasswordValidator passwordValidator;
+    UserAccountManager userAccountManager;
+    engine.rootContext()->setContextProperty("encryptionManager", &encryptionManager);
+    engine.rootContext()->setContextProperty("passwordValidator", &passwordValidator);
+    engine.rootContext()->setContextProperty("userAccountManager", &userAccountManager);
     
     // Set QML import paths
     QStringList importPaths = engine.importPathList();

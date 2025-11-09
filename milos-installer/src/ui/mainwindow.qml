@@ -14,8 +14,8 @@ ApplicationWindow {
     
     // Wizard navigation
     property int currentStep: 0
-    property int totalSteps: 2
-    property var steps: ["Welcome", "Partitioning"]
+    property int totalSteps: 4
+    property var steps: ["Welcome", "Partitioning", "Encryption", "User Account"]
     
     // Stack view for wizard screens
     StackView {
@@ -43,8 +43,32 @@ ApplicationWindow {
                 currentStep = 0
             }
             onNextClicked: {
-                // TODO: Proceed to next step
-                console.log("Next clicked from partitioning")
+                stackView.push(encryptionSetupScreen)
+                currentStep = 2
+            }
+        }
+        
+        EncryptionSetupScreen {
+            id: encryptionSetupScreen
+            onBackClicked: {
+                stackView.pop()
+                currentStep = 1
+            }
+            onNextClicked: {
+                stackView.push(userAccountScreen)
+                currentStep = 3
+            }
+        }
+        
+        UserAccountScreen {
+            id: userAccountScreen
+            onBackClicked: {
+                stackView.pop()
+                currentStep = 2
+            }
+            onNextClicked: {
+                // TODO: Proceed to next step (package installation, etc.)
+                console.log("User account created, proceeding to next step")
             }
         }
     }
