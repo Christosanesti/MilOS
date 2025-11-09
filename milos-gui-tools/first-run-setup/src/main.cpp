@@ -6,6 +6,10 @@
 #include "ui/mainwindow.h"
 #include "ui/firewallconfigurationscreen.h"
 #include "ui/updatecheckscreen.h"
+#include "ui/hardeningwizardscreen.h"
+#include "ui/securitypreferencesscreen.h"
+#include "ui/securitytourscreen.h"
+#include "ui/completionscreen.h"
 #include "services/firewallservice.h"
 #include "services/updateservice.h"
 #include "services/hardeningservice.h"
@@ -23,6 +27,10 @@ int main(int argc, char *argv[])
     qmlRegisterType<MainWindow>("FirstRunSetup", 1, 0, "MainWindow");
     qmlRegisterType<FirewallConfigurationScreen>("FirstRunSetup", 1, 0, "FirewallConfigurationScreen");
     qmlRegisterType<UpdateCheckScreen>("FirstRunSetup", 1, 0, "UpdateCheckScreen");
+    qmlRegisterType<HardeningWizardScreen>("FirstRunSetup", 1, 0, "HardeningWizardScreen");
+    qmlRegisterType<SecurityPreferencesScreen>("FirstRunSetup", 1, 0, "SecurityPreferencesScreen");
+    qmlRegisterType<SecurityTourScreen>("FirstRunSetup", 1, 0, "SecurityTourScreen");
+    qmlRegisterType<CompletionScreen>("FirstRunSetup", 1, 0, "CompletionScreen");
     
     // Create QML engine
     QQmlApplicationEngine engine;

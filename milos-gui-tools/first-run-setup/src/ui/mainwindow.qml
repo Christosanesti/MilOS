@@ -14,7 +14,7 @@ ApplicationWindow {
     
     // Wizard state
     property int currentStep: 0
-    property var steps: ["Welcome", "Security Overview", "Firewall", "Updates"]
+    property var steps: ["Welcome", "Security Overview", "Firewall", "Updates", "Hardening", "Preferences", "Tour", "Complete"]
     
     // Stack view for wizard screens
     StackView {
@@ -66,12 +66,55 @@ ApplicationWindow {
                 mainWindow.currentStep = 2
             }
             onNextClicked: {
-                // TODO: Proceed to next step (hardening, etc.)
-                console.log("Proceeding to next step")
+                stackView.push(hardeningWizardScreen)
+                mainWindow.currentStep = 4
             }
             onSkipClicked: {
-                // TODO: Proceed to next step without installing updates
-                console.log("Skipping updates")
+                stackView.push(hardeningWizardScreen)
+                mainWindow.currentStep = 4
+            }
+        }
+        
+        HardeningWizardScreen {
+            id: hardeningWizardScreen
+            onBackClicked: {
+                stackView.pop()
+                mainWindow.currentStep = 3
+            }
+            onNextClicked: {
+                stackView.push(securityPreferencesScreen)
+                mainWindow.currentStep = 5
+            }
+        }
+        
+        SecurityPreferencesScreen {
+            id: securityPreferencesScreen
+            onBackClicked: {
+                stackView.pop()
+                mainWindow.currentStep = 4
+            }
+            onNextClicked: {
+                stackView.push(securityTourScreen)
+                mainWindow.currentStep = 6
+            }
+        }
+        
+        SecurityTourScreen {
+            id: securityTourScreen
+            onBackClicked: {
+                stackView.pop()
+                mainWindow.currentStep = 5
+            }
+            onNextClicked: {
+                stackView.push(completionScreen)
+                mainWindow.currentStep = 7
+            }
+        }
+        
+        CompletionScreen {
+            id: completionScreen
+            onFinishClicked: {
+                Qt.quit()
             }
         }
     }

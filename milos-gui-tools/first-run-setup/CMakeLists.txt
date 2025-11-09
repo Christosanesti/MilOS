@@ -41,6 +41,10 @@ set(SETUP_SOURCES
     src/ui/securityoverview.cpp
     src/ui/firewallconfigurationscreen.cpp
     src/ui/updatecheckscreen.cpp
+    src/ui/hardeningwizardscreen.cpp
+    src/ui/securitypreferencesscreen.cpp
+    src/ui/securitytourscreen.cpp
+    src/ui/completionscreen.cpp
     src/services/setupstatemanager.cpp
     src/services/firewallservice.cpp
     src/services/updateservice.cpp
@@ -53,6 +57,10 @@ set(SETUP_HEADERS
     src/ui/securityoverview.h
     src/ui/firewallconfigurationscreen.h
     src/ui/updatecheckscreen.h
+    src/ui/hardeningwizardscreen.h
+    src/ui/securitypreferencesscreen.h
+    src/ui/securitytourscreen.h
+    src/ui/completionscreen.h
     src/services/setupstatemanager.h
     src/services/firewallservice.h
     src/services/updateservice.h
@@ -66,6 +74,10 @@ set(QML_FILES
     src/ui/securityoverview.qml
     src/ui/firewallconfigurationscreen.qml
     src/ui/updatecheckscreen.qml
+    src/ui/hardeningwizardscreen.qml
+    src/ui/securitypreferencesscreen.qml
+    src/ui/securitytourscreen.qml
+    src/ui/completionscreen.qml
 )
 
 # Create executable
