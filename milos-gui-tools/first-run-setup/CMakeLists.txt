@@ -39,6 +39,8 @@ set(SETUP_SOURCES
     src/ui/mainwindow.cpp
     src/ui/welcomescreen.cpp
     src/ui/securityoverview.cpp
+    src/ui/firewallconfigurationscreen.cpp
+    src/ui/updatecheckscreen.cpp
     src/services/setupstatemanager.cpp
     src/services/firewallservice.cpp
     src/services/updateservice.cpp
@@ -49,6 +51,8 @@ set(SETUP_HEADERS
     src/ui/mainwindow.h
     src/ui/welcomescreen.h
     src/ui/securityoverview.h
+    src/ui/firewallconfigurationscreen.h
+    src/ui/updatecheckscreen.h
     src/services/setupstatemanager.h
     src/services/firewallservice.h
     src/services/updateservice.h
@@ -60,6 +64,8 @@ set(QML_FILES
     src/ui/mainwindow.qml
     src/ui/welcomescreen.qml
     src/ui/securityoverview.qml
+    src/ui/firewallconfigurationscreen.qml
+    src/ui/updatecheckscreen.qml
 )
 
 # Create executable

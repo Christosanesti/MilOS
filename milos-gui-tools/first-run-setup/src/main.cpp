@@ -4,6 +4,8 @@
 #include <QDir>
 #include <QFile>
 #include "ui/mainwindow.h"
+#include "ui/firewallconfigurationscreen.h"
+#include "ui/updatecheckscreen.h"
 #include "services/firewallservice.h"
 #include "services/updateservice.h"
 #include "services/hardeningservice.h"
@@ -19,6 +21,8 @@ int main(int argc, char *argv[])
     
     // Register QML types
     qmlRegisterType<MainWindow>("FirstRunSetup", 1, 0, "MainWindow");
+    qmlRegisterType<FirewallConfigurationScreen>("FirstRunSetup", 1, 0, "FirewallConfigurationScreen");
+    qmlRegisterType<UpdateCheckScreen>("FirstRunSetup", 1, 0, "UpdateCheckScreen");
     
     // Create QML engine
     QQmlApplicationEngine engine;

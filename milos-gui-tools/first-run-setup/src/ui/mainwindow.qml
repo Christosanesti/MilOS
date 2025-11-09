@@ -14,7 +14,7 @@ ApplicationWindow {
     
     // Wizard state
     property int currentStep: 0
-    property var steps: ["Welcome", "Security Overview"]
+    property var steps: ["Welcome", "Security Overview", "Firewall", "Updates"]
     
     // Stack view for wizard screens
     StackView {
@@ -42,8 +42,36 @@ ApplicationWindow {
                 mainWindow.currentStep = 0
             }
             onNextClicked: {
-                // TODO: Proceed to next step (firewall configuration, etc.)
+                stackView.push(firewallConfigurationScreen)
+                mainWindow.currentStep = 2
+            }
+        }
+        
+        FirewallConfigurationScreen {
+            id: firewallConfigurationScreen
+            onBackClicked: {
+                stackView.pop()
+                mainWindow.currentStep = 1
+            }
+            onNextClicked: {
+                stackView.push(updateCheckScreen)
+                mainWindow.currentStep = 3
+            }
+        }
+        
+        UpdateCheckScreen {
+            id: updateCheckScreen
+            onBackClicked: {
+                stackView.pop()
+                mainWindow.currentStep = 2
+            }
+            onNextClicked: {
+                // TODO: Proceed to next step (hardening, etc.)
                 console.log("Proceeding to next step")
+            }
+            onSkipClicked: {
+                // TODO: Proceed to next step without installing updates
+                console.log("Skipping updates")
             }
         }
     }
