@@ -10,6 +10,7 @@
 #include "../components/DropdownMenu.h"
 #include "../components/DataVisualization.h"
 #include "../components/ModalDialog.h"
+#include "../components/PlasmaWidget.h"
 
 QT_BEGIN_NAMESPACE
 
@@ -34,6 +35,7 @@ public:
         qmlRegisterType<DropdownMenu>(uri, 1, 0, "DropdownMenu");
         qmlRegisterType<DataVisualization>(uri, 1, 0, "DataVisualization");
         qmlRegisterType<ModalDialog>(uri, 1, 0, "ModalDialog");
+        qmlRegisterType<PlasmaWidget>(uri, 1, 0, "PlasmaWidget");
         
         // QML files are auto-registered via qmldir
     }

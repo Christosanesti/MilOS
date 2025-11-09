@@ -43,6 +43,7 @@ set(COMPONENT_SOURCES
     src/components/DropdownMenu.cpp
     src/components/DataVisualization.cpp
     src/components/ModalDialog.cpp
+    src/components/PlasmaWidget.cpp
     src/qml/plugin.cpp
 )
 
@@ -57,6 +58,7 @@ set(COMPONENT_HEADERS
     src/components/DropdownMenu.h
     src/components/DataVisualization.h
     src/components/ModalDialog.h
+    src/components/PlasmaWidget.h
 )
 
 # QML files
@@ -71,6 +73,7 @@ set(QML_FILES
     src/components/DropdownMenu.qml
     src/components/DataVisualization.qml
     src/components/ModalDialog.qml
+    src/components/PlasmaWidget.qml
 )
 
 # Create Qt plugin for component library

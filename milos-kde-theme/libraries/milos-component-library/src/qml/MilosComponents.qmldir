@@ -13,4 +13,5 @@ Card 1.0 ../components/Card.qml
 DropdownMenu 1.0 ../components/DropdownMenu.qml
 DataVisualization 1.0 ../components/DataVisualization.qml
 ModalDialog 1.0 ../components/ModalDialog.qml
+PlasmaWidget 1.0 ../components/PlasmaWidget.qml
 
