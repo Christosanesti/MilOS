@@ -43,6 +43,8 @@ set(INSTALLER_SOURCES
     src/ui/useraccountscreen.cpp
     src/ui/networkconfigurationscreen.cpp
     src/ui/hardwaredetectionscreen.cpp
+    src/ui/packageinstallationscreen.cpp
+    src/ui/installationcompletionscreen.cpp
     src/ui/wizardnavigation.cpp
     src/services/installerstate.cpp
     src/services/encryptionmanager.cpp
@@ -50,6 +52,7 @@ set(INSTALLER_SOURCES
     src/services/useraccountmanager.cpp
     src/services/networkmanager.cpp
     src/services/hardwaremanager.cpp
+    src/services/packagemanager.cpp
 )
 
 set(INSTALLER_HEADERS
@@ -60,6 +63,8 @@ set(INSTALLER_HEADERS
     src/ui/useraccountscreen.h
     src/ui/networkconfigurationscreen.h
     src/ui/hardwaredetectionscreen.h
+    src/ui/packageinstallationscreen.h
+    src/ui/installationcompletionscreen.h
     src/ui/wizardnavigation.h
     src/services/installerstate.h
     src/services/encryptionmanager.h
@@ -67,6 +72,7 @@ set(INSTALLER_HEADERS
     src/services/useraccountmanager.h
     src/services/networkmanager.h
     src/services/hardwaremanager.h
+    src/services/packagemanager.h
 )
 
 # QML files
@@ -78,6 +84,8 @@ set(QML_FILES
     src/ui/useraccountscreen.qml
     src/ui/networkconfigurationscreen.qml
     src/ui/hardwaredetectionscreen.qml
+    src/ui/packageinstallationscreen.qml
+    src/ui/installationcompletionscreen.qml
     src/ui/wizardnavigation.qml
 )
 

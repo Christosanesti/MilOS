@@ -14,8 +14,8 @@ ApplicationWindow {
     
     // Wizard navigation
     property int currentStep: 0
-    property int totalSteps: 6
-    property var steps: ["Welcome", "Partitioning", "Encryption", "User Account", "Network", "Hardware"]
+    property int totalSteps: 8
+    property var steps: ["Welcome", "Partitioning", "Encryption", "User Account", "Network", "Hardware", "Packages", "Complete"]
     
     // Stack view for wizard screens
     StackView {
@@ -95,8 +95,33 @@ ApplicationWindow {
                 currentStep = 4
             }
             onNextClicked: {
-                // TODO: Proceed to next step (package installation, etc.)
-                console.log("Hardware detection complete, proceeding to next step")
+                stackView.push(packageInstallationScreen)
+                currentStep = 6
+            }
+        }
+        
+        PackageInstallationScreen {
+            id: packageInstallationScreen
+            onBackClicked: {
+                stackView.pop()
+                currentStep = 5
+            }
+            onNextClicked: {
+                stackView.push(installationCompletionScreen)
+                currentStep = 7
+            }
+            onErrorOccurred: function(error) {
+                console.log("Installation error:", error)
+                // TODO: Show error dialog
+            }
+        }
+        
+        InstallationCompletionScreen {
+            id: installationCompletionScreen
+            onRebootClicked: {
+                // TODO: Reboot system
+                console.log("Rebooting system...")
+                Qt.quit()
             }
         }
     }
