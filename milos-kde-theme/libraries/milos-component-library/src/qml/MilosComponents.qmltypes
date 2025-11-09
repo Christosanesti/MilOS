@@ -1,0 +1,29 @@
+import QtQuick 2.15
+
+Module {
+    Component {
+        name: "Button"
+        prototype: "QQuickItem"
+        exports: ["MilosComponents 1.0/Button"]
+        exportMetaObjectRevisions: [0]
+    }
+    Component {
+        name: "InputField"
+        prototype: "QQuickItem"
+        exports: ["MilosComponents 1.0/InputField"]
+        exportMetaObjectRevisions: [0]
+    }
+    Component {
+        name: "StatusIndicator"
+        prototype: "QQuickItem"
+        exports: ["MilosComponents 1.0/StatusIndicator"]
+        exportMetaObjectRevisions: [0]
+    }
+    Component {
+        name: "ProgressBar"
+        prototype: "QQuickItem"
+        exports: ["MilosComponents 1.0/ProgressBar"]
+        exportMetaObjectRevisions: [0]
+    }
+}
+

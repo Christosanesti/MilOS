@@ -1,0 +1,13 @@
+module MilosComponents
+plugin miloscomponentsplugin
+classname MilosComponentsPlugin
+
+# Component exports
+Button 1.0 ../components/Button.qml
+InputField 1.0 ../components/InputField.qml
+StatusIndicator 1.0 ../components/StatusIndicator.qml
+ProgressBar 1.0 ../components/ProgressBar.qml
+TabNavigation 1.0 ../components/TabNavigation.qml
+NotificationAlert 1.0 ../components/NotificationAlert.qml
+Card 1.0 ../components/Card.qml
+
