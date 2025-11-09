@@ -14,8 +14,8 @@ ApplicationWindow {
     
     // Wizard navigation
     property int currentStep: 0
-    property int totalSteps: 4
-    property var steps: ["Welcome", "Partitioning", "Encryption", "User Account"]
+    property int totalSteps: 6
+    property var steps: ["Welcome", "Partitioning", "Encryption", "User Account", "Network", "Hardware"]
     
     // Stack view for wizard screens
     StackView {
@@ -67,8 +67,36 @@ ApplicationWindow {
                 currentStep = 2
             }
             onNextClicked: {
+                stackView.push(networkConfigurationScreen)
+                currentStep = 4
+            }
+        }
+        
+        NetworkConfigurationScreen {
+            id: networkConfigurationScreen
+            onBackClicked: {
+                stackView.pop()
+                currentStep = 3
+            }
+            onNextClicked: {
+                stackView.push(hardwareDetectionScreen)
+                currentStep = 5
+            }
+            onSkipClicked: {
+                stackView.push(hardwareDetectionScreen)
+                currentStep = 5
+            }
+        }
+        
+        HardwareDetectionScreen {
+            id: hardwareDetectionScreen
+            onBackClicked: {
+                stackView.pop()
+                currentStep = 4
+            }
+            onNextClicked: {
                 // TODO: Proceed to next step (package installation, etc.)
-                console.log("User account created, proceeding to next step")
+                console.log("Hardware detection complete, proceeding to next step")
             }
         }
     }

@@ -41,11 +41,15 @@ set(INSTALLER_SOURCES
     src/ui/partitioningscreen.cpp
     src/ui/encryptionsetupscreen.cpp
     src/ui/useraccountscreen.cpp
+    src/ui/networkconfigurationscreen.cpp
+    src/ui/hardwaredetectionscreen.cpp
     src/ui/wizardnavigation.cpp
     src/services/installerstate.cpp
     src/services/encryptionmanager.cpp
     src/services/passwordvalidator.cpp
     src/services/useraccountmanager.cpp
+    src/services/networkmanager.cpp
+    src/services/hardwaremanager.cpp
 )
 
 set(INSTALLER_HEADERS
@@ -54,11 +58,15 @@ set(INSTALLER_HEADERS
     src/ui/partitioningscreen.h
     src/ui/encryptionsetupscreen.h
     src/ui/useraccountscreen.h
+    src/ui/networkconfigurationscreen.h
+    src/ui/hardwaredetectionscreen.h
     src/ui/wizardnavigation.h
     src/services/installerstate.h
     src/services/encryptionmanager.h
     src/services/passwordvalidator.h
     src/services/useraccountmanager.h
+    src/services/networkmanager.h
+    src/services/hardwaremanager.h
 )
 
 # QML files
@@ -68,6 +76,8 @@ set(QML_FILES
     src/ui/partitioningscreen.qml
     src/ui/encryptionsetupscreen.qml
     src/ui/useraccountscreen.qml
+    src/ui/networkconfigurationscreen.qml
+    src/ui/hardwaredetectionscreen.qml
     src/ui/wizardnavigation.qml
 )
 

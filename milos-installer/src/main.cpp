@@ -7,9 +7,13 @@
 #include "ui/mainwindow.h"
 #include "ui/encryptionsetupscreen.h"
 #include "ui/useraccountscreen.h"
+#include "ui/networkconfigurationscreen.h"
+#include "ui/hardwaredetectionscreen.h"
 #include "services/encryptionmanager.h"
 #include "services/passwordvalidator.h"
 #include "services/useraccountmanager.h"
+#include "services/networkmanager.h"
+#include "services/hardwaremanager.h"
 
 int main(int argc, char *argv[])
 {
@@ -23,6 +27,8 @@ int main(int argc, char *argv[])
     qmlRegisterType<MainWindow>("MilosInstaller", 1, 0, "MainWindow");
     qmlRegisterType<EncryptionSetupScreen>("MilosInstaller", 1, 0, "EncryptionSetupScreen");
     qmlRegisterType<UserAccountScreen>("MilosInstaller", 1, 0, "UserAccountScreen");
+    qmlRegisterType<NetworkConfigurationScreen>("MilosInstaller", 1, 0, "NetworkConfigurationScreen");
+    qmlRegisterType<HardwareDetectionScreen>("MilosInstaller", 1, 0, "HardwareDetectionScreen");
     
     // Create QML engine
     QQmlApplicationEngine engine;
@@ -31,9 +37,13 @@ int main(int argc, char *argv[])
     EncryptionManager encryptionManager;
     PasswordValidator passwordValidator;
     UserAccountManager userAccountManager;
+    NetworkManager networkManager;
+    HardwareManager hardwareManager;
     engine.rootContext()->setContextProperty("encryptionManager", &encryptionManager);
     engine.rootContext()->setContextProperty("passwordValidator", &passwordValidator);
     engine.rootContext()->setContextProperty("userAccountManager", &userAccountManager);
+    engine.rootContext()->setContextProperty("networkManager", &networkManager);
+    engine.rootContext()->setContextProperty("hardwareManager", &hardwareManager);
     
     // Set QML import paths
     QStringList importPaths = engine.importPathList();
