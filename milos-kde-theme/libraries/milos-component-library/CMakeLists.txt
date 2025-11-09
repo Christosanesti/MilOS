@@ -40,6 +40,9 @@ set(COMPONENT_SOURCES
     src/components/TabNavigation.cpp
     src/components/NotificationAlert.cpp
     src/components/Card.cpp
+    src/components/DropdownMenu.cpp
+    src/components/DataVisualization.cpp
+    src/components/ModalDialog.cpp
     src/qml/plugin.cpp
 )
 
@@ -51,6 +54,9 @@ set(COMPONENT_HEADERS
     src/components/TabNavigation.h
     src/components/NotificationAlert.h
     src/components/Card.h
+    src/components/DropdownMenu.h
+    src/components/DataVisualization.h
+    src/components/ModalDialog.h
 )
 
 # QML files
@@ -62,6 +68,9 @@ set(QML_FILES
     src/components/TabNavigation.qml
     src/components/NotificationAlert.qml
     src/components/Card.qml
+    src/components/DropdownMenu.qml
+    src/components/DataVisualization.qml
+    src/components/ModalDialog.qml
 )
 
 # Create Qt plugin for component library

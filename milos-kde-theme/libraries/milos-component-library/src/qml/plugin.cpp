@@ -7,6 +7,9 @@
 #include "../components/TabNavigation.h"
 #include "../components/NotificationAlert.h"
 #include "../components/Card.h"
+#include "../components/DropdownMenu.h"
+#include "../components/DataVisualization.h"
+#include "../components/ModalDialog.h"
 
 QT_BEGIN_NAMESPACE
 
@@ -28,6 +31,9 @@ public:
         qmlRegisterType<TabNavigation>(uri, 1, 0, "TabNavigation");
         qmlRegisterType<NotificationAlert>(uri, 1, 0, "NotificationAlert");
         qmlRegisterType<Card>(uri, 1, 0, "Card");
+        qmlRegisterType<DropdownMenu>(uri, 1, 0, "DropdownMenu");
+        qmlRegisterType<DataVisualization>(uri, 1, 0, "DataVisualization");
+        qmlRegisterType<ModalDialog>(uri, 1, 0, "ModalDialog");
         
         // QML files are auto-registered via qmldir
     }

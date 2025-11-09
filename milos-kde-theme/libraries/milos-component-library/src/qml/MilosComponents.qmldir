@@ -10,4 +10,7 @@ ProgressBar 1.0 ../components/ProgressBar.qml
 TabNavigation 1.0 ../components/TabNavigation.qml
 NotificationAlert 1.0 ../components/NotificationAlert.qml
 Card 1.0 ../components/Card.qml
+DropdownMenu 1.0 ../components/DropdownMenu.qml
+DataVisualization 1.0 ../components/DataVisualization.qml
+ModalDialog 1.0 ../components/ModalDialog.qml
 
