@@ -80,7 +80,37 @@ sudo make install
 
 ## Documentation
 
-Component API documentation, usage guidelines, and examples are available in the `docs/` directory (to be created).
+Comprehensive component library documentation is available in the `docs/` directory:
+
+- **[API.md](docs/API.md)** - Complete API documentation for all 11 components
+- **[UsageGuidelines.md](docs/UsageGuidelines.md)** - When and how to use each component
+- **[IntegrationPatterns.md](docs/IntegrationPatterns.md)** - Integration patterns and examples
+- **[CustomizationGuidelines.md](docs/CustomizationGuidelines.md)** - How to customize components
+
+### Quick Start
+
+1. **Import the module:**
+   ```qml
+   import MilosComponents 1.0
+   ```
+
+2. **Use components:**
+   ```qml
+   Button {
+       text: "Click Me"
+       variant: "primary"
+       onClicked: {
+           // Handle click
+       }
+   }
+   ```
+
+3. **Configure import path in your application:**
+   ```cpp
+   QStringList importPaths = engine.importPathList();
+   importPaths.prepend(componentLibraryPath);
+   engine.setImportPathList(importPaths);
+   ```
 
 ## License
 

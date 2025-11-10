@@ -1,0 +1,36 @@
+{
+    "KPlugin": {
+        "Id": "org.milos.emergency-widget",
+        "Name": "MilOS Emergency Actions Widget",
+        "Description": "Always-visible emergency action buttons for critical security operations",
+        "Version": "1.0.0",
+        "Authors": [
+            {
+                "Name": "MilOS Development Team",
+                "Email": "dev@milos.security"
+            }
+        ],
+        "License": "GPL-3.0-or-later",
+        "Website": "https://milos.security",
+        "Category": "System Information",
+        "Icon": "security-high",
+        "ServiceTypes": [
+            "Plasma/Applet"
+        ],
+        "FormFactors": [
+            "planar",
+            "mediacenter",
+            "phone",
+            "tablet",
+        ],
+        "X-Plasma-API": "declarativeappletscript",
+        "X-Plasma-MainScript": "ui/main.qml",
+        "X-KDE-PluginInfo-Name": "org.milos.emergency-widget",
+        "X-KDE-PluginInfo-Category": "System Information",
+        "X-KDE-PluginInfo-License": "GPL-3.0-or-later",
+        "X-KDE-PluginInfo-Website": "https://milos.security",
+        "X-KDE-PluginInfo-RequiredPermissions": "admin",
+        "X-KDE-PluginInfo-Locked": "true"
+    }
+}
+
