@@ -14,6 +14,18 @@ target_link_libraries(test_button
     Qt6::Quick
 )
 
-# Add test
+# Integration tests
+add_executable(test_integration
+    test_integration.cpp
+)
+
+target_link_libraries(test_integration
+    Qt6::Core
+    Qt6::Test
+    Qt6::Quick
+)
+
+# Add tests
 add_test(NAME ButtonComponentTest COMMAND test_button)
+add_test(NAME ComponentIntegrationTest COMMAND test_integration)
 
