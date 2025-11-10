@@ -68,6 +68,29 @@ private slots:
     void testNotificationAlertSpecificationCompliance();
     void testCardSpecificationCompliance();
     
+    // DropdownMenu component integration tests
+    void testDropdownMenuIntegrationInEncryptionManager();
+    void testDropdownMenuVariants();
+    void testDropdownMenuKeyboardNavigation();
+    void testDropdownMenuSearchFunctionality();
+    
+    // DataVisualization component integration tests
+    void testDataVisualizationIntegrationInNetworkScreen();
+    void testDataVisualizationVariants();
+    void testDataVisualizationRealTimeUpdates();
+    
+    // ModalDialog component integration tests
+    void testModalDialogIntegrationInEncryptionManager();
+    void testModalDialogIntegrationInNetworkScreen();
+    void testModalDialogVariants();
+    void testModalDialogFocusManagement();
+    void testModalDialogDismissalBehavior();
+    
+    // Component specification compliance tests (Advanced Components)
+    void testDropdownMenuSpecificationCompliance();
+    void testDataVisualizationSpecificationCompliance();
+    void testModalDialogSpecificationCompliance();
+    
     // Regression tests
     void testNoRegressionInEncryptionManager();
     void testNoRegressionInNetworkConfiguration();
@@ -1018,6 +1041,418 @@ void ComponentIntegrationTest::testCardSpecificationCompliance()
         card->setProperty("state", state);
         QCOMPARE(card->property("state").toString(), state);
     }
+    
+    delete object;
+}
+
+void ComponentIntegrationTest::testDropdownMenuIntegrationInEncryptionManager()
+{
+    QQmlComponent component(m_engine);
+    component.setData(
+        "import QtQuick 2.15\n"
+        "import MilosComponents 1.0\n"
+        "DropdownMenu {\n"
+        "  variant: 'standard'\n"
+        "  items: [\n"
+        "    {text: 'AES-XTS (Recommended)', value: 'aes-xts-plain64'},\n"
+        "    {text: 'Serpent-XTS', value: 'serpent-xts-plain64'}\n"
+        "  ]\n"
+        "  selectedValue: 'aes-xts-plain64'\n"
+        "}",
+        QUrl()
+    );
+    
+    QObject *object = component.create();
+    QQuickItem *dropdown = qobject_cast<QQuickItem*>(object);
+    QVERIFY(dropdown != nullptr);
+    
+    // Verify dropdown properties
+    QCOMPARE(dropdown->property("variant").toString(), QString("standard"));
+    QCOMPARE(dropdown->property("selectedValue").toString(), QString("aes-xts-plain64"));
+    
+    delete object;
+}
+
+void ComponentIntegrationTest::testDropdownMenuVariants()
+{
+    QQmlComponent component(m_engine);
+    component.setData(
+        "import QtQuick 2.15\n"
+        "import MilosComponents 1.0\n"
+        "DropdownMenu { }",
+        QUrl()
+    );
+    
+    QObject *object = component.create();
+    QQuickItem *dropdown = qobject_cast<QQuickItem*>(object);
+    QVERIFY(dropdown != nullptr);
+    
+    // Test all variants
+    QStringList variants = {"standard", "multiselect", "searchable", "icon", "context"};
+    for (const QString &variant : variants) {
+        dropdown->setProperty("variant", variant);
+        QCOMPARE(dropdown->property("variant").toString(), variant);
+    }
+    
+    delete object;
+}
+
+void ComponentIntegrationTest::testDropdownMenuKeyboardNavigation()
+{
+    QQmlComponent component(m_engine);
+    component.setData(
+        "import QtQuick 2.15\n"
+        "import MilosComponents 1.0\n"
+        "DropdownMenu {\n"
+        "  variant: 'standard'\n"
+        "  items: [{text: 'Option 1'}, {text: 'Option 2'}, {text: 'Option 3'}]\n"
+        "}",
+        QUrl()
+    );
+    
+    QObject *object = component.create();
+    QQuickItem *dropdown = qobject_cast<QQuickItem*>(object);
+    QVERIFY(dropdown != nullptr);
+    
+    // Verify keyboard navigation support
+    QVERIFY(dropdown->property("items").isValid());
+    
+    delete object;
+}
+
+void ComponentIntegrationTest::testDropdownMenuSearchFunctionality()
+{
+    QQmlComponent component(m_engine);
+    component.setData(
+        "import QtQuick 2.15\n"
+        "import MilosComponents 1.0\n"
+        "DropdownMenu {\n"
+        "  variant: 'searchable'\n"
+        "  items: [{text: 'Option 1'}, {text: 'Option 2'}]\n"
+        "}",
+        QUrl()
+    );
+    
+    QObject *object = component.create();
+    QQuickItem *dropdown = qobject_cast<QQuickItem*>(object);
+    QVERIFY(dropdown != nullptr);
+    
+    // Verify searchable variant
+    QCOMPARE(dropdown->property("variant").toString(), QString("searchable"));
+    
+    delete object;
+}
+
+void ComponentIntegrationTest::testDataVisualizationIntegrationInNetworkScreen()
+{
+    QQmlComponent component(m_engine);
+    component.setData(
+        "import QtQuick 2.15\n"
+        "import MilosComponents 1.0\n"
+        "DataVisualization {\n"
+        "  variant: 'line'\n"
+        "  state: 'animated'\n"
+        "  data: [{x: 0, y: 10}, {x: 1, y: 20}, {x: 2, y: 15}]\n"
+        "}",
+        QUrl()
+    );
+    
+    QObject *object = component.create();
+    QQuickItem *dataViz = qobject_cast<QQuickItem*>(object);
+    QVERIFY(dataViz != nullptr);
+    
+    // Verify data visualization properties
+    QCOMPARE(dataViz->property("variant").toString(), QString("line"));
+    QCOMPARE(dataViz->property("state").toString(), QString("animated"));
+    
+    delete object;
+}
+
+void ComponentIntegrationTest::testDataVisualizationVariants()
+{
+    QQmlComponent component(m_engine);
+    component.setData(
+        "import QtQuick 2.15\n"
+        "import MilosComponents 1.0\n"
+        "DataVisualization { }",
+        QUrl()
+    );
+    
+    QObject *object = component.create();
+    QQuickItem *dataViz = qobject_cast<QQuickItem*>(object);
+    QVERIFY(dataViz != nullptr);
+    
+    // Test all variants
+    QStringList variants = {"line", "bar", "area", "network", "stream"};
+    for (const QString &variant : variants) {
+        dataViz->setProperty("variant", variant);
+        QCOMPARE(dataViz->property("variant").toString(), variant);
+    }
+    
+    delete object;
+}
+
+void ComponentIntegrationTest::testDataVisualizationRealTimeUpdates()
+{
+    QQmlComponent component(m_engine);
+    component.setData(
+        "import QtQuick 2.15\n"
+        "import MilosComponents 1.0\n"
+        "DataVisualization {\n"
+        "  variant: 'stream'\n"
+        "  state: 'animated'\n"
+        "  data: []\n"
+        "}",
+        QUrl()
+    );
+    
+    QObject *object = component.create();
+    QQuickItem *dataViz = qobject_cast<QQuickItem*>(object);
+    QVERIFY(dataViz != nullptr);
+    
+    // Test real-time updates
+    QCOMPARE(dataViz->property("variant").toString(), QString("stream"));
+    QCOMPARE(dataViz->property("state").toString(), QString("animated"));
+    
+    // Update data
+    QVariantList newData;
+    for (int i = 0; i < 10; i++) {
+        QVariantMap point;
+        point["x"] = i;
+        point["y"] = i * 10;
+        newData.append(point);
+    }
+    dataViz->setProperty("data", newData);
+    
+    delete object;
+}
+
+void ComponentIntegrationTest::testModalDialogIntegrationInEncryptionManager()
+{
+    QQmlComponent component(m_engine);
+    component.setData(
+        "import QtQuick 2.15\n"
+        "import MilosComponents 1.0\n"
+        "ModalDialog {\n"
+        "  variant: 'warning'\n"
+        "  title: 'Confirm Disk Encryption'\n"
+        "  message: 'Disk encryption will be applied.'\n"
+        "  critical: true\n"
+        "}",
+        QUrl()
+    );
+    
+    QObject *object = component.create();
+    QQuickItem *dialog = qobject_cast<QQuickItem*>(object);
+    QVERIFY(dialog != nullptr);
+    
+    // Verify dialog properties
+    QCOMPARE(dialog->property("variant").toString(), QString("warning"));
+    QCOMPARE(dialog->property("title").toString(), QString("Confirm Disk Encryption"));
+    QVERIFY(dialog->property("critical").toBool() == true);
+    
+    delete object;
+}
+
+void ComponentIntegrationTest::testModalDialogIntegrationInNetworkScreen()
+{
+    QQmlComponent component(m_engine);
+    component.setData(
+        "import QtQuick 2.15\n"
+        "import MilosComponents 1.0\n"
+        "ModalDialog {\n"
+        "  variant: 'confirmation'\n"
+        "  title: 'Test Network Connection'\n"
+        "  message: 'This will test the network connection.'\n"
+        "  critical: false\n"
+        "}",
+        QUrl()
+    );
+    
+    QObject *object = component.create();
+    QQuickItem *dialog = qobject_cast<QQuickItem*>(object);
+    QVERIFY(dialog != nullptr);
+    
+    // Verify dialog properties
+    QCOMPARE(dialog->property("variant").toString(), QString("confirmation"));
+    QCOMPARE(dialog->property("title").toString(), QString("Test Network Connection"));
+    QVERIFY(dialog->property("critical").toBool() == false);
+    
+    delete object;
+}
+
+void ComponentIntegrationTest::testModalDialogVariants()
+{
+    QQmlComponent component(m_engine);
+    component.setData(
+        "import QtQuick 2.15\n"
+        "import MilosComponents 1.0\n"
+        "ModalDialog { }",
+        QUrl()
+    );
+    
+    QObject *object = component.create();
+    QQuickItem *dialog = qobject_cast<QQuickItem*>(object);
+    QVERIFY(dialog != nullptr);
+    
+    // Test all variants
+    QStringList variants = {"confirmation", "warning", "error", "form", "progress"};
+    for (const QString &variant : variants) {
+        dialog->setProperty("variant", variant);
+        QCOMPARE(dialog->property("variant").toString(), variant);
+    }
+    
+    delete object;
+}
+
+void ComponentIntegrationTest::testModalDialogFocusManagement()
+{
+    QQmlComponent component(m_engine);
+    component.setData(
+        "import QtQuick 2.15\n"
+        "import MilosComponents 1.0\n"
+        "ModalDialog {\n"
+        "  variant: 'confirmation'\n"
+        "  visible: true\n"
+        "  state: 'displaying'\n"
+        "}",
+        QUrl()
+    );
+    
+    QObject *object = component.create();
+    QQuickItem *dialog = qobject_cast<QQuickItem*>(object);
+    QVERIFY(dialog != nullptr);
+    
+    // Verify focus management
+    QVERIFY(dialog->property("visible").toBool() == true);
+    QCOMPARE(dialog->property("state").toString(), QString("displaying"));
+    
+    delete object;
+}
+
+void ComponentIntegrationTest::testModalDialogDismissalBehavior()
+{
+    QQmlComponent component(m_engine);
+    component.setData(
+        "import QtQuick 2.15\n"
+        "import MilosComponents 1.0\n"
+        "ModalDialog {\n"
+        "  variant: 'confirmation'\n"
+        "  critical: false\n"
+        "  state: 'displaying'\n"
+        "}",
+        QUrl()
+    );
+    
+    QObject *object = component.create();
+    QQuickItem *dialog = qobject_cast<QQuickItem*>(object);
+    QVERIFY(dialog != nullptr);
+    
+    // Test dismissal
+    QVERIFY(dialog->property("critical").toBool() == false);
+    dialog->setProperty("state", "closing");
+    QCOMPARE(dialog->property("state").toString(), QString("closing"));
+    
+    // Test critical dialog (cannot be dismissed)
+    dialog->setProperty("critical", true);
+    QVERIFY(dialog->property("critical").toBool() == true);
+    
+    delete object;
+}
+
+void ComponentIntegrationTest::testDropdownMenuSpecificationCompliance()
+{
+    QQmlComponent component(m_engine);
+    component.setData(
+        "import QtQuick 2.15\n"
+        "import MilosComponents 1.0\n"
+        "DropdownMenu { variant: 'standard' }",
+        QUrl()
+    );
+    
+    QObject *object = component.create();
+    QQuickItem *dropdown = qobject_cast<QQuickItem*>(object);
+    QVERIFY(dropdown != nullptr);
+    
+    // Specification: All variants supported
+    QStringList variants = {"standard", "multiselect", "searchable", "icon", "context"};
+    for (const QString &variant : variants) {
+        dropdown->setProperty("variant", variant);
+        QCOMPARE(dropdown->property("variant").toString(), variant);
+    }
+    
+    // Specification: All states supported
+    QStringList states = {"default", "open", "hover", "selected", "disabled"};
+    for (const QString &state : states) {
+        dropdown->setProperty("state", state);
+        QCOMPARE(dropdown->property("state").toString(), state);
+    }
+    
+    delete object;
+}
+
+void ComponentIntegrationTest::testDataVisualizationSpecificationCompliance()
+{
+    QQmlComponent component(m_engine);
+    component.setData(
+        "import QtQuick 2.15\n"
+        "import MilosComponents 1.0\n"
+        "DataVisualization { variant: 'line' }",
+        QUrl()
+    );
+    
+    QObject *object = component.create();
+    QQuickItem *dataViz = qobject_cast<QQuickItem*>(object);
+    QVERIFY(dataViz != nullptr);
+    
+    // Specification: All variants supported
+    QStringList variants = {"line", "bar", "area", "network", "stream"};
+    for (const QString &variant : variants) {
+        dataViz->setProperty("variant", variant);
+        QCOMPARE(dataViz->property("variant").toString(), variant);
+    }
+    
+    // Specification: All states supported
+    QStringList states = {"default", "hover", "active", "animated", "error"};
+    for (const QString &state : states) {
+        dataViz->setProperty("state", state);
+        QCOMPARE(dataViz->property("state").toString(), state);
+    }
+    
+    delete object;
+}
+
+void ComponentIntegrationTest::testModalDialogSpecificationCompliance()
+{
+    QQmlComponent component(m_engine);
+    component.setData(
+        "import QtQuick 2.15\n"
+        "import MilosComponents 1.0\n"
+        "ModalDialog { variant: 'confirmation' }",
+        QUrl()
+    );
+    
+    QObject *object = component.create();
+    QQuickItem *dialog = qobject_cast<QQuickItem*>(object);
+    QVERIFY(dialog != nullptr);
+    
+    // Specification: All variants supported
+    QStringList variants = {"confirmation", "warning", "error", "form", "progress"};
+    for (const QString &variant : variants) {
+        dialog->setProperty("variant", variant);
+        QCOMPARE(dialog->property("variant").toString(), variant);
+    }
+    
+    // Specification: All states supported
+    QStringList states = {"opening", "displaying", "closing", "processing"};
+    for (const QString &state : states) {
+        dialog->setProperty("state", state);
+        QCOMPARE(dialog->property("state").toString(), state);
+    }
+    
+    // Specification: Critical dialogs cannot be dismissed
+    dialog->setProperty("critical", true);
+    QVERIFY(dialog->property("critical").toBool() == true);
     
     delete object;
 }

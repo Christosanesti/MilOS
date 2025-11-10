@@ -16,6 +16,7 @@ Rectangle {
     property string passwordStrength: "weak"
     property bool encryptionInProgress: false
     property double encryptionProgress: 0.0
+    property bool showEncryptionConfirmationDialog: false
     
     signal backClicked()
     signal nextClicked()
@@ -299,9 +300,41 @@ Rectangle {
                          encryptionSetupScreen.passwordsMatch && 
                          !encryptionSetupScreen.encryptionInProgress
                 onClicked: {
-                    encryptionSetupScreen.nextClicked()
+                    encryptionSetupScreen.showEncryptionConfirmationDialog = true
                 }
             }
+        }
+    }
+    
+    // Modal Dialog for encryption confirmation
+    ModalDialog {
+        id: encryptionConfirmationDialog
+        anchors.fill: parent
+        variant: "warning"
+        title: "Confirm Disk Encryption"
+        message: "Disk encryption will be applied to your system. This process cannot be undone. Are you sure you want to continue?"
+        critical: true
+        visible: encryptionSetupScreen.showEncryptionConfirmationDialog
+        
+        onConfirmed: {
+            encryptionSetupScreen.showEncryptionConfirmationDialog = false
+            encryptionSetupScreen.encryptionInProgress = true
+            encryptionSetupScreen.encryptionProgress = 0.0
+            // TODO: Start encryption process
+            // Simulate encryption progress
+            var progressTimer = Qt.createQmlObject("import QtQuick 2.15; Timer { interval: 100; running: true; repeat: true }", encryptionSetupScreen)
+            progressTimer.triggered.connect(function() {
+                encryptionSetupScreen.encryptionProgress += 2
+                if (encryptionSetupScreen.encryptionProgress >= 100) {
+                    encryptionSetupScreen.encryptionInProgress = false
+                    progressTimer.stop()
+                    encryptionSetupScreen.nextClicked()
+                }
+            })
+        }
+        
+        onCancelled: {
+            encryptionSetupScreen.showEncryptionConfirmationDialog = false
         }
     }
     

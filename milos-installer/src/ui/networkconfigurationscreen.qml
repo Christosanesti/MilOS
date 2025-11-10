@@ -18,6 +18,8 @@ Rectangle {
     property string dnsServer: ""
     property string connectionStatus: "disconnected" // disconnected, connecting, connected, error
     property bool canSkip: true
+    property var networkActivityData: [] // For data visualization
+    property bool showTestConnectionDialog: false
     
     signal backClicked()
     signal nextClicked()
@@ -329,14 +331,27 @@ Rectangle {
                         variant: "secondary"
                         text: "Test Connection"
                         onClicked: {
-                            networkConfigurationScreen.connectionStatus = "connecting"
-                            // TODO: Test network connection
-                            Qt.callLater(function() {
-                                networkConfigurationScreen.connectionStatus = "connected"
-                            })
+                            networkConfigurationScreen.showTestConnectionDialog = true
                         }
                     }
                 }
+            }
+        }
+        
+        // Network activity visualization
+        Card {
+            Layout.fillWidth: true
+            Layout.preferredHeight: 250
+            variant: "dashboard"
+            title: "Network Activity"
+            visible: networkConfigurationScreen.connectionStatus === "connected"
+            
+            DataVisualization {
+                anchors.fill: parent
+                anchors.margins: 24
+                variant: "line"
+                state: networkConfigurationScreen.connectionStatus === "connected" ? "animated" : "default"
+                data: networkConfigurationScreen.networkActivityData
             }
         }
         
@@ -391,6 +406,36 @@ Rectangle {
         }
     }
     
+    // Modal Dialog for connection test confirmation
+    ModalDialog {
+        id: testConnectionDialog
+        anchors.fill: parent
+        variant: "confirmation"
+        title: "Test Network Connection"
+        message: "This will test the network connection using the configured settings. Continue?"
+        critical: false
+        visible: networkConfigurationScreen.showTestConnectionDialog
+        
+        onConfirmed: {
+            networkConfigurationScreen.showTestConnectionDialog = false
+            networkConfigurationScreen.connectionStatus = "connecting"
+            // TODO: Test network connection
+            Qt.callLater(function() {
+                networkConfigurationScreen.connectionStatus = "connected"
+                // Generate sample network activity data
+                var data = []
+                for (var i = 0; i < 20; i++) {
+                    data.push({x: i, y: Math.random() * 100})
+                }
+                networkConfigurationScreen.networkActivityData = data
+            })
+        }
+        
+        onCancelled: {
+            networkConfigurationScreen.showTestConnectionDialog = false
+        }
+    }
+    
     // Start scanning on load
     Component.onCompleted: {
         networkConfigurationScreen.scanning = true
@@ -402,6 +447,9 @@ Rectangle {
             ]
             networkConfigurationScreen.scanning = false
         })
+        
+        // Initialize empty network activity data
+        networkConfigurationScreen.networkActivityData = []
     }
     
     // Accessibility
