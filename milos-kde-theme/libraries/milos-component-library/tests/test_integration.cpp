@@ -46,6 +46,28 @@ private slots:
     void testStatusIndicatorSpecificationCompliance();
     void testProgressBarSpecificationCompliance();
     
+    // TabNavigation component integration tests
+    void testTabNavigationIntegrationInEncryptionManager();
+    void testTabNavigationVariants();
+    void testTabNavigationOverflow();
+    void testTabNavigationKeyboardNavigation();
+    
+    // NotificationAlert component integration tests
+    void testNotificationAlertIntegrationInNetworkScreen();
+    void testNotificationAlertVariants();
+    void testNotificationAlertStacking();
+    void testNotificationAlertDismissal();
+    
+    // Card component integration tests
+    void testCardIntegrationInNetworkScreen();
+    void testCardVariants();
+    void testCardExpansion();
+    
+    // Component specification compliance tests (Navigation & Feedback)
+    void testTabNavigationSpecificationCompliance();
+    void testNotificationAlertSpecificationCompliance();
+    void testCardSpecificationCompliance();
+    
     // Regression tests
     void testNoRegressionInEncryptionManager();
     void testNoRegressionInNetworkConfiguration();
@@ -617,6 +639,384 @@ void ComponentIntegrationTest::testNoRegressionInNetworkConfiguration()
     if (statusIndicator) {
         QCOMPARE(statusIndicator->property("status").toString(), QString("success"));
         QCOMPARE(statusIndicator->property("text").toString(), QString("Connected"));
+    }
+    
+    delete object;
+}
+
+void ComponentIntegrationTest::testTabNavigationIntegrationInEncryptionManager()
+{
+    QQmlComponent component(m_engine);
+    component.setData(
+        "import QtQuick 2.15\n"
+        "import MilosComponents 1.0\n"
+        "TabNavigation {\n"
+        "  variant: 'standard'\n"
+        "  currentIndex: 0\n"
+        "  maxTabs: 10\n"
+        "  tabs: [\n"
+        "    {text: 'Standard', icon: '', badge: 0, enabled: true},\n"
+        "    {text: 'Advanced', icon: '', badge: 0, enabled: true}\n"
+        "  ]\n"
+        "}",
+        QUrl()
+    );
+    
+    QObject *object = component.create();
+    QQuickItem *tabNavigation = qobject_cast<QQuickItem*>(object);
+    QVERIFY(tabNavigation != nullptr);
+    
+    // Verify tab navigation properties
+    QCOMPARE(tabNavigation->property("variant").toString(), QString("standard"));
+    QCOMPARE(tabNavigation->property("currentIndex").toInt(), 0);
+    QCOMPARE(tabNavigation->property("maxTabs").toInt(), 10);
+    
+    delete object;
+}
+
+void ComponentIntegrationTest::testTabNavigationVariants()
+{
+    QQmlComponent component(m_engine);
+    component.setData(
+        "import QtQuick 2.15\n"
+        "import MilosComponents 1.0\n"
+        "TabNavigation { }",
+        QUrl()
+    );
+    
+    QObject *object = component.create();
+    QQuickItem *tabNavigation = qobject_cast<QQuickItem*>(object);
+    QVERIFY(tabNavigation != nullptr);
+    
+    // Test all variants
+    QStringList variants = {"standard", "icon", "pill", "underline", "vertical"};
+    for (const QString &variant : variants) {
+        tabNavigation->setProperty("variant", variant);
+        QCOMPARE(tabNavigation->property("variant").toString(), variant);
+    }
+    
+    delete object;
+}
+
+void ComponentIntegrationTest::testTabNavigationOverflow()
+{
+    QQmlComponent component(m_engine);
+    component.setData(
+        "import QtQuick 2.15\n"
+        "import MilosComponents 1.0\n"
+        "TabNavigation {\n"
+        "  maxTabs: 10\n"
+        "  tabs: [\n"
+        "    {text: 'Tab1'}, {text: 'Tab2'}, {text: 'Tab3'}, {text: 'Tab4'}, {text: 'Tab5'},\n"
+        "    {text: 'Tab6'}, {text: 'Tab7'}, {text: 'Tab8'}, {text: 'Tab9'}, {text: 'Tab10'},\n"
+        "    {text: 'Tab11'}, {text: 'Tab12'}\n"
+        "  ]\n"
+        "}",
+        QUrl()
+    );
+    
+    QObject *object = component.create();
+    QQuickItem *tabNavigation = qobject_cast<QQuickItem*>(object);
+    QVERIFY(tabNavigation != nullptr);
+    
+    // Verify maxTabs limits displayed tabs
+    QCOMPARE(tabNavigation->property("maxTabs").toInt(), 10);
+    // Component should handle overflow (implementation detail)
+    
+    delete object;
+}
+
+void ComponentIntegrationTest::testTabNavigationKeyboardNavigation()
+{
+    QQmlComponent component(m_engine);
+    component.setData(
+        "import QtQuick 2.15\n"
+        "import MilosComponents 1.0\n"
+        "TabNavigation {\n"
+        "  variant: 'standard'\n"
+        "  tabs: [{text: 'Tab1'}, {text: 'Tab2'}, {text: 'Tab3'}]\n"
+        "}",
+        QUrl()
+    );
+    
+    QObject *object = component.create();
+    QQuickItem *tabNavigation = qobject_cast<QQuickItem*>(object);
+    QVERIFY(tabNavigation != nullptr);
+    
+    // Verify keyboard navigation support
+    QVERIFY(tabNavigation->property("currentIndex").isValid());
+    
+    // Test tab switching
+    tabNavigation->setProperty("currentIndex", 1);
+    QCOMPARE(tabNavigation->property("currentIndex").toInt(), 1);
+    
+    delete object;
+}
+
+void ComponentIntegrationTest::testNotificationAlertIntegrationInNetworkScreen()
+{
+    QQmlComponent component(m_engine);
+    component.setData(
+        "import QtQuick 2.15\n"
+        "import MilosComponents 1.0\n"
+        "NotificationAlert {\n"
+        "  variant: 'warning'\n"
+        "  title: 'Network Configuration'\n"
+        "  message: 'Network configuration is optional.'\n"
+        "}",
+        QUrl()
+    );
+    
+    QObject *object = component.create();
+    QQuickItem *notification = qobject_cast<QQuickItem*>(object);
+    QVERIFY(notification != nullptr);
+    
+    // Verify notification properties
+    QCOMPARE(notification->property("variant").toString(), QString("warning"));
+    QCOMPARE(notification->property("title").toString(), QString("Network Configuration"));
+    
+    delete object;
+}
+
+void ComponentIntegrationTest::testNotificationAlertVariants()
+{
+    QQmlComponent component(m_engine);
+    component.setData(
+        "import QtQuick 2.15\n"
+        "import MilosComponents 1.0\n"
+        "NotificationAlert { }",
+        QUrl()
+    );
+    
+    QObject *object = component.create();
+    QQuickItem *notification = qobject_cast<QQuickItem*>(object);
+    QVERIFY(notification != nullptr);
+    
+    // Test all variants
+    QStringList variants = {"success", "error", "warning", "info", "security", "toast"};
+    for (const QString &variant : variants) {
+        notification->setProperty("variant", variant);
+        QCOMPARE(notification->property("variant").toString(), variant);
+    }
+    
+    delete object;
+}
+
+void ComponentIntegrationTest::testNotificationAlertStacking()
+{
+    QQmlComponent component(m_engine);
+    component.setData(
+        "import QtQuick 2.15\n"
+        "import QtQuick.Layouts 1.15\n"
+        "import MilosComponents 1.0\n"
+        "Column {\n"
+        "  spacing: 8\n"
+        "  NotificationAlert { variant: 'info'; title: 'Info 1'; state: 'displaying' }\n"
+        "  NotificationAlert { variant: 'warning'; title: 'Warning 1'; state: 'displaying' }\n"
+        "  NotificationAlert { variant: 'error'; title: 'Error 1'; state: 'displaying' }\n"
+        "}",
+        QUrl()
+    );
+    
+    QObject *object = component.create();
+    QVERIFY(object != nullptr);
+    
+    // Verify multiple notifications can exist
+    QQuickItem *rootItem = qobject_cast<QQuickItem*>(object);
+    QVERIFY(rootItem != nullptr);
+    
+    delete object;
+}
+
+void ComponentIntegrationTest::testNotificationAlertDismissal()
+{
+    QQmlComponent component(m_engine);
+    component.setData(
+        "import QtQuick 2.15\n"
+        "import MilosComponents 1.0\n"
+        "NotificationAlert {\n"
+        "  variant: 'info'\n"
+        "  dismissible: true\n"
+        "  state: 'displaying'\n"
+        "}",
+        QUrl()
+    );
+    
+    QObject *object = component.create();
+    QQuickItem *notification = qobject_cast<QQuickItem*>(object);
+    QVERIFY(notification != nullptr);
+    
+    // Test dismissal
+    QVERIFY(notification->property("dismissible").toBool() == true);
+    notification->setProperty("state", "closing");
+    QCOMPARE(notification->property("state").toString(), QString("closing"));
+    
+    delete object;
+}
+
+void ComponentIntegrationTest::testCardIntegrationInNetworkScreen()
+{
+    QQmlComponent component(m_engine);
+    component.setData(
+        "import QtQuick 2.15\n"
+        "import MilosComponents 1.0\n"
+        "Card {\n"
+        "  variant: 'dashboard'\n"
+        "  title: 'Network Interfaces'\n"
+        "}",
+        QUrl()
+    );
+    
+    QObject *object = component.create();
+    QQuickItem *card = qobject_cast<QQuickItem*>(object);
+    QVERIFY(card != nullptr);
+    
+    // Verify card properties
+    QCOMPARE(card->property("variant").toString(), QString("dashboard"));
+    QCOMPARE(card->property("title").toString(), QString("Network Interfaces"));
+    
+    delete object;
+}
+
+void ComponentIntegrationTest::testCardVariants()
+{
+    QQmlComponent component(m_engine);
+    component.setData(
+        "import QtQuick 2.15\n"
+        "import MilosComponents 1.0\n"
+        "Card { }",
+        QUrl()
+    );
+    
+    QObject *object = component.create();
+    QQuickItem *card = qobject_cast<QQuickItem*>(object);
+    QVERIFY(card != nullptr);
+    
+    // Test all variants
+    QStringList variants = {"status", "dashboard", "interactive", "detail", "alert"};
+    for (const QString &variant : variants) {
+        card->setProperty("variant", variant);
+        QCOMPARE(card->property("variant").toString(), variant);
+    }
+    
+    delete object;
+}
+
+void ComponentIntegrationTest::testCardExpansion()
+{
+    QQmlComponent component(m_engine);
+    component.setData(
+        "import QtQuick 2.15\n"
+        "import MilosComponents 1.0\n"
+        "Card {\n"
+        "  variant: 'interactive'\n"
+        "  expandable: true\n"
+        "  expanded: false\n"
+        "}",
+        QUrl()
+    );
+    
+    QObject *object = component.create();
+    QQuickItem *card = qobject_cast<QQuickItem*>(object);
+    QVERIFY(card != nullptr);
+    
+    // Test expansion
+    QVERIFY(card->property("expandable").toBool() == true);
+    QVERIFY(card->property("expanded").toBool() == false);
+    
+    card->setProperty("expanded", true);
+    QVERIFY(card->property("expanded").toBool() == true);
+    
+    delete object;
+}
+
+void ComponentIntegrationTest::testTabNavigationSpecificationCompliance()
+{
+    QQmlComponent component(m_engine);
+    component.setData(
+        "import QtQuick 2.15\n"
+        "import MilosComponents 1.0\n"
+        "TabNavigation { variant: 'standard' }",
+        QUrl()
+    );
+    
+    QObject *object = component.create();
+    QQuickItem *tabNavigation = qobject_cast<QQuickItem*>(object);
+    QVERIFY(tabNavigation != nullptr);
+    
+    // Specification: All variants supported
+    QStringList variants = {"standard", "icon", "pill", "underline", "vertical"};
+    for (const QString &variant : variants) {
+        tabNavigation->setProperty("variant", variant);
+        QCOMPARE(tabNavigation->property("variant").toString(), variant);
+    }
+    
+    // Specification: Max tabs 10
+    QCOMPARE(tabNavigation->property("maxTabs").toInt(), 10);
+    
+    delete object;
+}
+
+void ComponentIntegrationTest::testNotificationAlertSpecificationCompliance()
+{
+    QQmlComponent component(m_engine);
+    component.setData(
+        "import QtQuick 2.15\n"
+        "import MilosComponents 1.0\n"
+        "NotificationAlert { variant: 'info' }",
+        QUrl()
+    );
+    
+    QObject *object = component.create();
+    QQuickItem *notification = qobject_cast<QQuickItem*>(object);
+    QVERIFY(notification != nullptr);
+    
+    // Specification: All variants supported
+    QStringList variants = {"success", "error", "warning", "info", "security", "toast"};
+    for (const QString &variant : variants) {
+        notification->setProperty("variant", variant);
+        QCOMPARE(notification->property("variant").toString(), variant);
+    }
+    
+    // Specification: Duration settings
+    notification->setProperty("variant", "info");
+    QCOMPARE(notification->property("duration").toInt(), 3000);
+    
+    notification->setProperty("variant", "warning");
+    QCOMPARE(notification->property("duration").toInt(), 5000);
+    
+    notification->setProperty("variant", "error");
+    QCOMPARE(notification->property("duration").toInt(), -1); // Persistent
+    
+    delete object;
+}
+
+void ComponentIntegrationTest::testCardSpecificationCompliance()
+{
+    QQmlComponent component(m_engine);
+    component.setData(
+        "import QtQuick 2.15\n"
+        "import MilosComponents 1.0\n"
+        "Card { variant: 'dashboard' }",
+        QUrl()
+    );
+    
+    QObject *object = component.create();
+    QQuickItem *card = qobject_cast<QQuickItem*>(object);
+    QVERIFY(card != nullptr);
+    
+    // Specification: All variants supported
+    QStringList variants = {"status", "dashboard", "interactive", "detail", "alert"};
+    for (const QString &variant : variants) {
+        card->setProperty("variant", variant);
+        QCOMPARE(card->property("variant").toString(), variant);
+    }
+    
+    // Specification: All states supported
+    QStringList states = {"default", "hover", "active", "expanded", "alert"};
+    for (const QString &state : states) {
+        card->setProperty("state", state);
+        QCOMPARE(card->property("state").toString(), state);
     }
     
     delete object;

@@ -11,6 +11,7 @@ Rectangle {
     property string encryptionPassword: ""
     property string passwordConfirmation: ""
     property string selectedAlgorithm: "aes-xts-plain64"
+    property int algorithmCategoryIndex: 0 // 0 = Standard, 1 = Advanced
     property bool passwordsMatch: false
     property string passwordStrength: "weak"
     property bool encryptionInProgress: false
@@ -176,37 +177,63 @@ Rectangle {
             }
         }
         
-        // Encryption algorithm selection
+        // Encryption algorithm selection with Tab Navigation
         Card {
             Layout.fillWidth: true
-            Layout.preferredHeight: 120
+            Layout.preferredHeight: 200
             variant: "dashboard"
             title: "Encryption Algorithm"
             
-            RowLayout {
+            ColumnLayout {
                 anchors.fill: parent
                 anchors.margins: 24
                 spacing: 16
                 
-                Text {
+                // Tab Navigation for algorithm categories
+                TabNavigation {
                     Layout.fillWidth: true
-                    text: "Select encryption algorithm"
-                    font.pixelSize: 14
-                    color: "#ffffff"
-                }
-                
-                DropdownMenu {
-                    Layout.preferredWidth: 300
                     Layout.preferredHeight: 48
                     variant: "standard"
-                    items: [
-                        {text: "AES-XTS (Recommended)", value: "aes-xts-plain64"},
-                        {text: "Serpent-XTS", value: "serpent-xts-plain64"},
-                        {text: "Twofish-XTS", value: "twofish-xts-plain64"}
+                    currentIndex: encryptionSetupScreen.algorithmCategoryIndex
+                    maxTabs: 10
+                    tabs: [
+                        {text: "Standard", icon: "", badge: 0, enabled: true},
+                        {text: "Advanced", icon: "", badge: 0, enabled: true}
                     ]
-                    selectedValue: encryptionSetupScreen.selectedAlgorithm
-                    onSelectedValueChanged: {
-                        encryptionSetupScreen.selectedAlgorithm = selectedValue
+                    onTabChanged: function(index) {
+                        encryptionSetupScreen.algorithmCategoryIndex = index
+                    }
+                }
+                
+                // Algorithm selection based on category
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 16
+                    
+                    Text {
+                        Layout.fillWidth: true
+                        text: "Select encryption algorithm"
+                        font.pixelSize: 14
+                        color: "#ffffff"
+                    }
+                    
+                    DropdownMenu {
+                        Layout.preferredWidth: 300
+                        Layout.preferredHeight: 48
+                        variant: "standard"
+                        items: encryptionSetupScreen.algorithmCategoryIndex === 0 ? [
+                            {text: "AES-XTS (Recommended)", value: "aes-xts-plain64"},
+                            {text: "Serpent-XTS", value: "serpent-xts-plain64"},
+                            {text: "Twofish-XTS", value: "twofish-xts-plain64"}
+                        ] : [
+                            {text: "AES-XTS-256", value: "aes-xts-plain64-256"},
+                            {text: "Serpent-XTS-256", value: "serpent-xts-plain64-256"},
+                            {text: "Twofish-XTS-256", value: "twofish-xts-plain64-256"}
+                        ]
+                        selectedValue: encryptionSetupScreen.selectedAlgorithm
+                        onSelectedValueChanged: {
+                            encryptionSetupScreen.selectedAlgorithm = selectedValue
+                        }
                     }
                 }
             }
