@@ -1,0 +1,7 @@
+module EmergencyWidget
+NetworkKillSwitch 1.0 networkkillswitch.js
+ScreenLock 1.0 screenlock.js
+SecureMode 1.0 securemode.js
+EmergencyShutdown 1.0 emergencyshutdown.js
+AuditLogger 1.0 auditlogger.js
+

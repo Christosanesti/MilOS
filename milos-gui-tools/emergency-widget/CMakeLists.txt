@@ -18,7 +18,8 @@ if(QT6_PREFIX_PATH)
     message(STATUS "Using local Qt6 installation: ${QT6_PREFIX_PATH}")
 endif()
 
-find_package(Qt6 REQUIRED COMPONENTS Core Quick QuickControls2 DBus)
+find_package(Qt6 REQUIRED COMPONENTS Core Quick QuickControls2 DBus Qml)
+find_package(KF6 REQUIRED COMPONENTS Plasma)
 
 # Enable Qt MOC
 set(CMAKE_AUTOMOC ON)
@@ -39,6 +40,7 @@ set(EMERGENCY_SOURCES
     src/services/securemode.cpp
     src/services/emergencyshutdown.cpp
     src/services/auditlogger.cpp
+    src/emergencywidget.cpp
 )
 
 set(EMERGENCY_HEADERS
@@ -47,6 +49,7 @@ set(EMERGENCY_HEADERS
     src/services/securemode.h
     src/services/emergencyshutdown.h
     src/services/auditlogger.h
+    src/emergencywidget.h
 )
 
 # Create library
@@ -58,10 +61,26 @@ add_library(emergency-widget-services STATIC
 target_link_libraries(emergency-widget-services
     Qt6::Core
     Qt6::DBus
+    Qt6::Qml
+    KF6::Plasma
 )
 
 # Install library
 install(TARGETS emergency-widget-services
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)
+
+# Install Plasmoid package
+install(DIRECTORY package/
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/plasma/plasmoids/org.milos.emergency-widget
+    FILES_MATCHING
+    PATTERN "*.qml"
+    PATTERN "*.json"
+    PATTERN "*.desktop"
+)
+
+# Install desktop file for Plasma registration
+install(FILES org.milos.emergency-widget.desktop
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/kservices6/plasmoid
 )
