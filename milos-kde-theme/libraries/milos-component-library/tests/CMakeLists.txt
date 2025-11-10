@@ -58,10 +58,22 @@ target_link_libraries(test_branding_compliance
     Qt6::Quick
 )
 
+# Animation compliance tests
+add_executable(test_animation_compliance
+    test_animation_compliance.cpp
+)
+
+target_link_libraries(test_animation_compliance
+    Qt6::Core
+    Qt6::Test
+    Qt6::Quick
+)
+
 # Add tests
 add_test(NAME ButtonComponentTest COMMAND test_button)
 add_test(NAME ComponentIntegrationTest COMMAND test_integration)
 add_test(NAME ComponentSpecificationVerificationTest COMMAND test_component_specification_verification)
 add_test(NAME AccessibilityComplianceTest COMMAND test_accessibility_compliance)
 add_test(NAME BrandingComplianceTest COMMAND test_branding_compliance)
+add_test(NAME AnimationComplianceTest COMMAND test_animation_compliance)
 
