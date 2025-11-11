@@ -1,0 +1,82 @@
+# MilOS Post-Quantum Cryptography Abstraction Layer Configuration
+# This file defines algorithm selection and configuration
+
+# Algorithm Selection
+algorithm_selection:
+  # Default algorithm for key encapsulation (KEM)
+  default_kem: "Kyber512"
+  
+  # Default algorithm for digital signatures
+  default_signature: "Dilithium2"
+  
+  # Default algorithm for hash-based signatures
+  default_hash_signature: "SPHINCS+-SHA256-128f-simple"
+  
+  # Algorithm selection mode: auto, manual, performance
+  selection_mode: "auto"
+  
+  # Performance mode: fast, secure, balanced
+  performance_mode: "balanced"
+
+# Algorithm Registry
+algorithm_registry:
+  # Enable algorithm versioning
+  versioning_enabled: true
+  
+  # Algorithm update policy: automatic, manual, notify
+  update_policy: "notify"
+  
+  # Backward compatibility mode
+  backward_compatibility: true
+
+# Hybrid Encryption Settings
+hybrid_encryption:
+  # Enable hybrid encryption modes (classical + quantum)
+  enabled: true
+  
+  # Hybrid mode selection: always, fallback, performance
+  mode: "fallback"
+  
+  # Classical encryption algorithm (for hybrid mode)
+  classical_algorithm: "AES-256-GCM"
+  
+  # Performance threshold for hybrid mode selection
+  performance_threshold: 100  # MB/s
+
+# Fallback Settings
+fallback:
+  # Enable automatic fallback
+  enabled: true
+  
+  # Fallback to classical encryption on PQC failure
+  fallback_to_classical: true
+  
+  # Fallback algorithm priority
+  fallback_priority:
+    - "Kyber512"
+    - "Kyber768"
+    - "AES-256-GCM"  # Classical fallback
+
+# Performance Settings
+performance:
+  # Enable performance profiling
+  profiling_enabled: true
+  
+  # Enable algorithm operation caching
+  caching_enabled: true
+  
+  # Cache size limit (MB)
+  cache_size_mb: 100
+  
+  # Performance optimization level: none, basic, aggressive
+  optimization_level: "basic"
+
+# D-Bus Service Settings
+dbus:
+  # D-Bus service name
+  service_name: "org.milos.PQCAbstraction"
+  service_path: "/org/milos/PQCAbstraction"
+  
+  # Enable D-Bus interface
+  enabled: true
+
