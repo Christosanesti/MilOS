@@ -93,24 +93,22 @@ add_executable(milos-data-guard
 
 target_link_libraries(milos-data-guard
     CLI11::CLI11
-    ${LIBPCAP_LIBRARIES}
-    yaml-cpp::yaml-cpp
     pthread
 )
 
 if(USE_QT_DBUS)
+    set(CMAKE_AUTOMOC ON)
     target_link_libraries(milos-data-guard
         Qt6::Core
         Qt6::DBus
     )
+    set_property(TARGET milos-data-guard PROPERTY AUTOMOC ON)
 else()
     target_link_libraries(milos-data-guard
         ${DBUS_LIBRARIES}
     )
     target_include_directories(milos-data-guard PRIVATE ${DBUS_INCLUDE_DIRS})
 endif()
-
-target_include_directories(milos-data-guard PRIVATE ${LIBPCAP_INCLUDE_DIRS})
 
 # Install executables
 install(TARGETS milos-data-guard-daemon milos-data-guard
