@@ -7,6 +7,7 @@
 
 class ConfigParser;
 class PolicyManager;
+class AuditLogger;
 
 /**
  * @brief Network layer enforcement component
@@ -23,9 +24,10 @@ public:
      * @brief Initialize network enforcement
      * @param configParser Configuration parser instance
      * @param policyManager Policy manager instance
+     * @param auditLogger Audit logger instance (optional)
      * @return true if initialization successful, false otherwise
      */
-    bool initialize(ConfigParser* configParser, PolicyManager* policyManager);
+    bool initialize(ConfigParser* configParser, PolicyManager* policyManager, class AuditLogger* auditLogger = nullptr);
 
     /**
      * @brief Start network enforcement
@@ -70,6 +72,7 @@ private:
     
     ConfigParser* m_configParser;
     PolicyManager* m_policyManager;
+    AuditLogger* m_auditLogger;
 
     // libpcap handle for packet capture
     void* m_pcapHandle;  // pcap_t* handle

@@ -1,4 +1,5 @@
 #include "dataguard_service.h"
+#include <QCoreApplication>
 #include <systemd/sd-daemon.h>
 #include <iostream>
 #include <csignal>
@@ -11,9 +12,17 @@ void signalHandler(int signal) {
         std::cout << "Received signal " << signal << ", shutting down..." << std::endl;
         g_service->stop();
     }
+    if (QCoreApplication::instance()) {
+        QCoreApplication::instance()->quit();
+    }
 }
 
 int main(int argc, char* argv[]) {
+    // Create QCoreApplication for Qt D-Bus
+    QCoreApplication app(argc, argv);
+    app.setApplicationName("milos-data-guard-daemon");
+    app.setOrganizationName("MilOS");
+
     // Register signal handlers
     signal(SIGINT, signalHandler);
     signal(SIGTERM, signalHandler);
@@ -35,18 +44,16 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    // Main service loop
-    while (service.isRunning() && service.isHealthy()) {
-        sleep(1);
-    }
+    // Run Qt event loop (required for D-Bus)
+    int result = app.exec();
 
-    // Service stopped or unhealthy
+    // Service stopped
     if (!service.isHealthy()) {
         std::cerr << "Service became unhealthy, exiting" << std::endl;
         sd_notify(0, "STATUS=Service unhealthy\n");
         return 1;
     }
 
-    return 0;
+    return result;
 }
 

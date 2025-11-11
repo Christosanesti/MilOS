@@ -3,6 +3,7 @@
 #include "policy_manager.h"
 #include "dbus_interface.h"
 #include "config_parser.h"
+#include "audit_logger.h"
 #include <systemd/sd-daemon.h>
 #include <iostream>
 #include <stdexcept>
@@ -46,6 +47,12 @@ bool DataGuardService::initialize() {
         if (!initializeDBusInterface()) {
             std::cerr << "Failed to initialize D-Bus interface" << std::endl;
             return false;
+        }
+
+        // Initialize audit logger
+        if (!initializeAuditLogger()) {
+            std::cerr << "Failed to initialize audit logger (continuing with graceful degradation)" << std::endl;
+            // Continue with graceful degradation
         }
 
         m_initialized = true;
@@ -151,16 +158,41 @@ bool DataGuardService::loadConfiguration() {
 
 bool DataGuardService::initializeNetworkEnforcement() {
     m_networkEnforcement = std::make_unique<NetworkEnforcement>();
-    return m_networkEnforcement->initialize(m_configParser.get(), m_policyManager.get());
+    return m_networkEnforcement->initialize(
+        m_configParser.get(), 
+        m_policyManager.get(),
+        m_auditLogger.get()
+    );
 }
 
 bool DataGuardService::initializeDBusInterface() {
-    m_dbusInterface = std::make_unique<DBusInterface>();
+    m_dbusInterface = std::make_unique<DBusInterface>(nullptr);
     return m_dbusInterface->initialize(
         m_configParser.get(),
         m_policyManager.get(),
         m_networkEnforcement.get()
     );
+}
+
+bool DataGuardService::initializeAuditLogger() {
+    m_auditLogger = std::make_unique<AuditLogger>(nullptr);
+    
+    // Get audit service configuration from config parser
+    QString auditServiceBus = QString::fromStdString(
+        m_configParser->getString("service.audit_service_bus")
+    );
+    if (auditServiceBus.isEmpty()) {
+        auditServiceBus = "org.milos.AuditService";
+    }
+    
+    QString auditServicePath = QString::fromStdString(
+        m_configParser->getString("service.audit_service_path")
+    );
+    if (auditServicePath.isEmpty()) {
+        auditServicePath = "/org/milos/AuditService";
+    }
+    
+    return m_auditLogger->initialize(auditServiceBus, auditServicePath);
 }
 
 void DataGuardService::notifySystemdReady() {

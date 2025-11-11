@@ -41,6 +41,7 @@ set(SERVICE_SOURCES
     src/policy_manager.cpp
     src/dbus_interface.cpp
     src/config_parser.cpp
+    src/audit_logger.cpp
 )
 
 set(SERVICE_HEADERS
@@ -49,6 +50,7 @@ set(SERVICE_HEADERS
     src/policy_manager.h
     src/dbus_interface.h
     src/config_parser.h
+    src/audit_logger.h
 )
 
 # Create service daemon executable
@@ -70,6 +72,11 @@ if(USE_QT_DBUS)
         Qt6::Core
         Qt6::DBus
     )
+    # Enable MOC for Q_OBJECT classes
+    set_property(TARGET milos-data-guard-daemon PROPERTY AUTOMOC ON)
+    # Add Qt JSON support
+    find_package(Qt6 REQUIRED COMPONENTS Core DBus)
+    target_link_libraries(milos-data-guard-daemon Qt6::Core)
 else()
     target_link_libraries(milos-data-guard-daemon
         ${DBUS_LIBRARIES}

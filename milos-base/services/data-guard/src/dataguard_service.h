@@ -64,6 +64,7 @@ private:
     std::unique_ptr<PolicyManager> m_policyManager;
     std::unique_ptr<NetworkEnforcement> m_networkEnforcement;
     std::unique_ptr<DBusInterface> m_dbusInterface;
+    std::unique_ptr<class AuditLogger> m_auditLogger;
 
     /**
      * @brief Load configuration from file
@@ -79,6 +80,11 @@ private:
      * @brief Initialize D-Bus interface
      */
     bool initializeDBusInterface();
+
+    /**
+     * @brief Initialize audit logger
+     */
+    bool initializeAuditLogger();
 
     /**
      * @brief Notify systemd that service is ready

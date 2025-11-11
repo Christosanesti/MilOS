@@ -14,6 +14,7 @@ NetworkEnforcement::NetworkEnforcement()
     , m_allowedCount(0)
     , m_configParser(nullptr)
     , m_policyManager(nullptr)
+    , m_auditLogger(nullptr)
     , m_pcapHandle(nullptr)
     , m_captureRunning(false)
     , m_captureThread(nullptr)
@@ -24,13 +25,14 @@ NetworkEnforcement::~NetworkEnforcement() {
     stop();
 }
 
-bool NetworkEnforcement::initialize(ConfigParser* configParser, PolicyManager* policyManager) {
+bool NetworkEnforcement::initialize(ConfigParser* configParser, PolicyManager* policyManager, AuditLogger* auditLogger) {
     if (m_initialized) {
         return true;
     }
 
     m_configParser = configParser;
     m_policyManager = policyManager;
+    m_auditLogger = auditLogger;
 
     // Initialize network hooks
     if (!initializeNetworkHooks()) {
@@ -303,10 +305,26 @@ void NetworkEnforcement::processPacket(const void* header, const unsigned char* 
     // Inspect packet
     bool allowed = inspectPacket(packet, hdr->caplen);
     
+    // Extract packet information for logging
+    QString source = "unknown";
+    QString destination = "unknown";
+    QString protocol = "unknown";
+    
+    // TODO: Extract actual source/destination/protocol from packet headers
+    // For now, use placeholder values
+    
     if (!allowed) {
         // Packet blocked - log to audit service
-        // TODO: Integrate with audit service via D-Bus
+        if (m_auditLogger) {
+            m_auditLogger->logTransmissionAttempt(source, destination, protocol, false, "BLOCK");
+        }
         std::cout << "Packet blocked: size=" << hdr->caplen << std::endl;
+    } else {
+        // Packet allowed - log to audit service (optional, can be configured)
+        if (m_auditLogger) {
+            // Only log if configured to log allowed transmissions
+            // For now, only log blocked transmissions
+        }
     }
 }
 

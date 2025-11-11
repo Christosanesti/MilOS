@@ -1,9 +1,10 @@
 #ifndef DBUS_INTERFACE_H
 #define DBUS_INTERFACE_H
 
-#include <memory>
-#include <string>
-#include <vector>
+#include <QObject>
+#include <QString>
+#include <QStringList>
+#include <QVariantMap>
 
 class ConfigParser;
 class PolicyManager;
@@ -14,10 +15,14 @@ class NetworkEnforcement;
  * 
  * Implements org.milos.DataGuard D-Bus interface with methods
  * and signals for service management and monitoring.
+ * Uses Qt D-Bus adaptor pattern.
  */
-class DBusInterface {
+class DBusInterface : public QObject {
+    Q_OBJECT
+    Q_CLASSINFO("D-Bus Interface", "org.milos.DataGuard")
+
 public:
-    DBusInterface();
+    DBusInterface(QObject* parent = nullptr);
     ~DBusInterface();
 
     /**
@@ -56,11 +61,46 @@ public:
      */
     bool isHealthy() const;
 
-    // D-Bus methods (to be called via D-Bus)
-    std::string getTransmissionStatus();
-    std::vector<std::string> getBlockedTransmissions();
-    bool configurePolicy(const std::string& policy);
-    std::string getPolicyStatus(const std::string& policyId);
+public Q_SLOTS:
+    // D-Bus methods
+    /**
+     * @brief Get current transmission monitoring status
+     * @return JSON string with status information
+     */
+    QString GetTransmissionStatus();
+
+    /**
+     * @brief Get list of blocked transmissions
+     * @return List of blocked transmission information (JSON strings)
+     */
+    QStringList GetBlockedTransmissions();
+
+    /**
+     * @brief Configure a transmission policy
+     * @param policy JSON string containing policy configuration
+     * @return true if configuration successful, false otherwise
+     */
+    bool ConfigurePolicy(const QString& policy);
+
+    /**
+     * @brief Get status of a specific policy
+     * @param policyId Policy ID to query
+     * @return JSON string with policy status
+     */
+    QString GetPolicyStatus(const QString& policyId);
+
+Q_SIGNALS:
+    /**
+     * @brief Signal emitted when a transmission is blocked
+     * @param transmissionInfo JSON string with transmission information
+     */
+    void TransmissionBlocked(const QString& transmissionInfo);
+
+    /**
+     * @brief Signal emitted when a policy violation is detected
+     * @param violationInfo JSON string with violation information
+     */
+    void PolicyViolationDetected(const QString& violationInfo);
 
 private:
     bool m_running;
@@ -69,9 +109,6 @@ private:
     ConfigParser* m_configParser;
     PolicyManager* m_policyManager;
     NetworkEnforcement* m_networkEnforcement;
-
-    // D-Bus connection (opaque pointer)
-    void* m_dbusConnection;
 
     /**
      * @brief Register D-Bus interface
