@@ -1,0 +1,119 @@
+# MilOS Audit Service Configuration
+# This file defines audit logging policies and service settings
+
+# Service settings
+service:
+  # Enable/disable service
+  enabled: true
+  
+  # Logging level: debug, info, warning, error
+  log_level: info
+  
+  # Database type: sqlite, postgresql
+  database_type: sqlite
+  
+  # SQLite database path (for sqlite)
+  sqlite_path: /var/lib/milos/audit-service/audit.db
+  
+  # PostgreSQL connection (for postgresql, optional)
+  postgresql:
+    host: localhost
+    port: 5432
+    database: milos_audit
+    user: milos_audit
+    # password: (set via environment variable or keyring)
+  
+  # Local socket path for high-throughput logging
+  socket_path: /var/run/milos/audit-service.sock
+  
+  # D-Bus service name
+  dbus_service: "org.milos.AuditService"
+  dbus_path: "/org/milos/AuditService"
+
+# Log retention policies
+retention:
+  # Retention period in days
+  retention_days: 365
+  
+  # Archive old logs (older than retention period)
+  archive_enabled: true
+  
+  # Archive location
+  archive_path: /var/lib/milos/audit-service/archive
+  
+  # Compression for archived logs
+  compression_enabled: true
+  
+  # Automatic cleanup of archived logs older than this (days)
+  archive_retention_days: 2555  # 7 years
+
+# Hash chain settings
+hash_chain:
+  # Hash algorithm: sha256, sha512
+  algorithm: sha256
+  
+  # Initialize hash chain on service start
+  initialize_on_start: true
+  
+  # Verify hash chain on service start
+  verify_on_start: true
+  
+  # Periodic integrity verification interval (seconds)
+  verification_interval: 3600  # 1 hour
+
+# Event collection settings
+event_collection:
+  # Maximum queue size for event queuing
+  max_queue_size: 10000
+  
+  # Batch insert size (number of events per batch)
+  batch_size: 100
+  
+  # Flush interval (seconds) for batch operations
+  flush_interval: 5
+  
+  # Enable Linux audit framework (auditd) integration
+  auditd_integration: true
+  
+  # Auditd socket path
+  auditd_socket: /var/run/auditd.sock
+
+# Query and analysis settings
+query:
+  # Maximum query result size
+  max_result_size: 10000
+  
+  # Default pagination size
+  default_page_size: 100
+  
+  # Maximum page size
+  max_page_size: 1000
+  
+  # Query timeout (seconds)
+  query_timeout: 30
+
+# Export settings
+export:
+  # Supported formats: json, csv, xml
+  supported_formats:
+    - json
+    - csv
+    - xml
+  
+  # Export file location
+  export_path: /var/lib/milos/audit-service/exports
+  
+  # Maximum export file size (MB)
+  max_export_size_mb: 1000
+
+# Performance settings
+performance:
+  # Database connection pool size
+  connection_pool_size: 10
+  
+  # Enable query caching
+  query_cache_enabled: true
+  
+  # Query cache size (number of queries)
+  query_cache_size: 1000
+
