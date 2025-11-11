@@ -27,9 +27,39 @@ find_package(yaml-cpp REQUIRED)
 # Find CLI11 for CLI tool
 find_package(CLI11 REQUIRED)
 
-# Note: liboqs will be integrated in Story 17.2
-# For now, we'll prepare the structure for liboqs integration
-pkg_check_modules(LIBOQS QUIET liboqs)
+# Find liboqs (Open Quantum Safe library)
+# liboqs can be found via pkg-config or CMake
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(LIBOQS liboqs)
+if(NOT LIBOQS_FOUND)
+    # Try to find liboqs via CMake
+    find_path(LIBOQS_INCLUDE_DIR oqs/oqs.h
+        PATHS
+        /usr/include
+        /usr/local/include
+        /opt/liboqs/include
+    )
+    find_library(LIBOQS_LIBRARY
+        NAMES oqs
+        PATHS
+        /usr/lib
+        /usr/local/lib
+        /opt/liboqs/lib
+    )
+    if(LIBOQS_INCLUDE_DIR AND LIBOQS_LIBRARY)
+        set(LIBOQS_FOUND TRUE)
+        set(LIBOQS_INCLUDE_DIRS ${LIBOQS_INCLUDE_DIR})
+        set(LIBOQS_LIBRARIES ${LIBOQS_LIBRARY})
+    endif()
+endif()
+
+if(NOT LIBOQS_FOUND)
+    message(WARNING "liboqs not found. PQC algorithms will not be available.")
+    message(STATUS "Install liboqs to enable post-quantum cryptography algorithms.")
+else()
+    message(STATUS "liboqs found: ${LIBOQS_LIBRARIES}")
+    add_definitions(-DHAVE_LIBOQS)
+endif()
 
 # Include directories
 include_directories(
@@ -46,7 +76,18 @@ set(LIBRARY_SOURCES
     src/config_parser.cpp
     src/algorithm_versioning.cpp
     src/fallback_manager.cpp
+    src/performance_optimizer.cpp
 )
+
+# Add algorithm implementations if liboqs is available
+if(LIBOQS_FOUND)
+    list(APPEND LIBRARY_SOURCES
+        src/algorithms/kyber_algorithm.cpp
+        src/algorithms/dilithium_algorithm.cpp
+        src/algorithms/sphincs_algorithm.cpp
+        src/algorithms/algorithm_registration.cpp
+    )
+endif()
 
 set(LIBRARY_HEADERS
     include/milos/pqc/algorithm_interface.h
@@ -56,6 +97,7 @@ set(LIBRARY_HEADERS
     include/milos/pqc/config_parser.h
     include/milos/pqc/algorithm_versioning.h
     include/milos/pqc/fallback_manager.h
+    include/milos/pqc/performance_optimizer.h
 )
 
 # Create shared library
@@ -89,6 +131,7 @@ endif()
 if(LIBOQS_FOUND)
     target_link_libraries(milos-pqc ${LIBOQS_LIBRARIES})
     target_include_directories(milos-pqc PRIVATE ${LIBOQS_INCLUDE_DIRS})
+    target_compile_definitions(milos-pqc PRIVATE HAVE_LIBOQS)
 endif()
 
 # Set library properties
