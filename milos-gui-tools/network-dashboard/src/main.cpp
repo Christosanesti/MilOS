@@ -42,11 +42,19 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
+    // Create NetworkTopologyManager and expose to QML
+    NetworkTopologyManager* networkTopology = dashboard.getNetworkTopology();
+    if (!networkTopology) {
+        std::cerr << "Failed to get Network Topology" << std::endl;
+        return 1;
+    }
+
     // Create QML engine
     QQmlApplicationEngine engine;
     
-    // Expose NetworkMonitor to QML
+    // Expose NetworkMonitor and NetworkTopology to QML
     engine.rootContext()->setContextProperty("networkMonitor", networkMonitor);
+    engine.rootContext()->setContextProperty("networkTopology", networkTopology);
     
     // Load main QML file
     engine.load("qrc:/src/ui/main.qml");

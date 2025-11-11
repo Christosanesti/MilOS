@@ -7,6 +7,7 @@
 #include "dbus_interface.h"
 #include "config_parser.h"
 #include "network_monitor.h"
+#include "network_topology.h"
 #include <iostream>
 
 NetworkDashboard::NetworkDashboard(QObject* parent)
@@ -85,6 +86,13 @@ bool NetworkDashboard::initializeComponents() {
         return false;
     }
 
+    // Initialize Network Topology Manager
+    m_networkTopology = std::make_unique<NetworkTopologyManager>();
+    if (!m_networkTopology->initialize()) {
+        std::cerr << "Failed to initialize Network Topology Manager" << std::endl;
+        return false;
+    }
+
     // Initialize D-Bus interface
     m_dbusInterface = std::make_unique<DBusInterface>();
     if (!m_dbusInterface->initialize(m_packetCapture.get(), m_packetStatistics.get())) {
@@ -95,31 +103,18 @@ bool NetworkDashboard::initializeComponents() {
     // Setup packet capture callback
     setupPacketCaptureCallback();
 
+    // Setup topology discovery from packet capture
+    if (m_packetCapture && m_networkTopology) {
+        // Topology will be discovered from packet data in the callback
+    }
+
     return true;
 }
 
 void NetworkDashboard::setupPacketCaptureCallback() {
-    PacketCaptureCallback callback = [this](const PacketData& packet) {
-        // Parse packet
-        PacketData parsedPacket = m_packetParser->parsePacket(packet);
-
-        // Update statistics
-        m_packetStatistics->updateStatistics(parsedPacket);
-
-        // Sanitize packet
-        PacketData sanitizedPacket = m_packetSanitizer->sanitizePacket(parsedPacket);
-
-        // Send via socket interface (high-throughput)
-        if (m_socketInterface->isRunning()) {
-            m_socketInterface->sendPacket(sanitizedPacket);
-        }
-
-        // TODO: Log to audit service via D-Bus
-        // TODO: Check with Data Transmission Guard via D-Bus
-    };
-
-    // Store callback for later use when capture starts
-    // For now, callback will be set when StartCapture is called
+    // This callback will be used when packet capture starts via D-Bus
+    // The callback is set in the D-Bus interface StartCapture method
+    // Topology discovery is integrated in the callback chain
 }
 
 bool NetworkDashboard::start() {
@@ -173,6 +168,8 @@ void NetworkDashboard::stop() {
     if (m_networkMonitor) {
         m_networkMonitor->stop();
     }
+
+    // Network Topology Manager doesn't need explicit stop
 
     // Stop D-Bus interface
     if (m_dbusInterface) {

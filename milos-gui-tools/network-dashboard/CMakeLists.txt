@@ -78,6 +78,9 @@ endif()
 # Find yaml-cpp for YAML configuration
 find_package(yaml-cpp REQUIRED)
 
+# Find SQLite3 for threat history
+find_package(SQLite3 REQUIRED)
+
 # Find CLI11 for CLI tool
 find_package(CLI11 REQUIRED)
 
@@ -107,6 +110,10 @@ set(APPLICATION_SOURCES
     src/config_parser.cpp
     src/packet_sanitizer.cpp
     src/socket_interface.cpp
+    src/network_monitor.cpp
+    src/network_topology.cpp
+    src/ids_rule.cpp
+    src/threat_detector.cpp
 )
 
 set(APPLICATION_HEADERS
@@ -119,6 +126,10 @@ set(APPLICATION_HEADERS
     include/config_parser.h
     include/packet_sanitizer.h
     include/socket_interface.h
+    include/network_monitor.h
+    include/network_topology.h
+    include/ids_rule.h
+    include/threat_detector.h
 )
 
 # QML files
@@ -129,6 +140,7 @@ set(QML_FILES
     src/ui/bandwidth_monitor.qml
     src/ui/connection_tracker.qml
     src/ui/network_alerts.qml
+    src/ui/network_topology.qml
 )
 
 # Create executable
@@ -147,6 +159,7 @@ target_link_libraries(milos-network-dashboard
     Qt6::DBus
     yaml-cpp::yaml-cpp
     CLI11::CLI11
+    SQLite3::SQLite3
 )
 
 if(WIRESHARK_FOUND)

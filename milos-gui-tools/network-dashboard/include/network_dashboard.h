@@ -14,6 +14,7 @@ class SocketInterface;
 class DBusInterface;
 class ConfigParser;
 class NetworkMonitor;
+class NetworkTopologyManager;
 
 /**
  * @brief Network Dashboard
@@ -55,6 +56,12 @@ public:
      * @return Network Monitor instance
      */
     NetworkMonitor* getNetworkMonitor() const { return m_networkMonitor.get(); }
+
+    /**
+     * @brief Get Network Topology Manager instance
+     * @return Network Topology Manager instance
+     */
+    NetworkTopologyManager* getNetworkTopology() const { return m_networkTopology.get(); }
 
 private:
     bool m_initialized;

@@ -158,6 +158,16 @@ bool DBusInterface::ConfigureIDS(const QString& rulesJson) {
     return true;
 }
 
+QString DBusInterface::GetNetworkTopology() {
+    // Get network topology from NetworkTopologyManager
+    // This would integrate with NetworkTopologyManager
+    // For now, return empty JSON as placeholder
+    // In production, this would call m_networkTopology->getNetworkTopology()
+    QJsonObject topology;
+    QJsonDocument doc(topology);
+    return QString::fromUtf8(doc.toJson());
+}
+
 bool DBusInterface::registerInterface() {
     QDBusConnection connection = QDBusConnection::systemBus();
 

@@ -1,6 +1,7 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
+import QtQuick.Controls 1.4 as Controls1
 import org.kde.plasma.core 2.0 as PlasmaCore
 import org.kde.plasma.components 3.0 as PlasmaComponents
 
@@ -15,6 +16,7 @@ ApplicationWindow {
 
     // Network Monitor backend
     property var networkMonitor: null
+    property var networkTopology: null
 
     // Main layout
     RowLayout {
@@ -69,12 +71,28 @@ ApplicationWindow {
             }
         }
 
-        // Center panel: Traffic visualization
-        TrafficVisualization {
-            id: trafficViz
+        // Center panel: Traffic visualization and topology
+        Controls1.TabView {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            networkMonitor: mainWindow.networkMonitor
+            
+            Controls1.Tab {
+                title: "Traffic Flow"
+                TrafficVisualization {
+                    anchors.fill: parent
+                    networkMonitor: mainWindow.networkMonitor
+                }
+            }
+            
+            Controls1.Tab {
+                title: "Network Topology"
+                NetworkTopology {
+                    id: networkTopologyView
+                    anchors.fill: parent
+                    networkTopology: mainWindow.networkTopology
+                    networkMonitor: mainWindow.networkMonitor
+                }
+            }
         }
 
         // Right panel: Connections and alerts

@@ -74,6 +74,15 @@ public:
         return reply.value();
     }
 
+    QString getNetworkTopology() {
+        QDBusReply<QString> reply = m_interface->call("GetNetworkTopology");
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return QString();
+        }
+        return reply.value();
+    }
+
 private:
     QDBusConnection m_connection;
     QDBusInterface* m_interface;
@@ -146,6 +155,9 @@ int main(int argc, char* argv[]) {
     idsConfigCmd->add_option("-f,--file", configFile, "IDS rules configuration file");
     idsConfigCmd->add_flag("--show", show, "Show current IDS configuration");
     idsConfigCmd->add_flag("--reload", reload, "Reload IDS configuration");
+
+    // Topology command
+    auto* topologyCmd = cliApp.add_subcommand("topology", "Display network topology");
 
     try {
         cliApp.parse(argc, argv);
@@ -224,6 +236,33 @@ int main(int argc, char* argv[]) {
         } else {
             std::cout << "Use --show or --reload with ids-config command" << std::endl;
         }
+    } else if (*topologyCmd) {
+        QString topologyJson = client.getNetworkTopology();
+        if (topologyJson.isEmpty()) {
+            std::cout << "No network topology available." << std::endl;
+            return 0;
+        }
+        
+        QJsonParseError error;
+        QJsonDocument doc = QJsonDocument::fromJson(topologyJson.toUtf8(), &error);
+        if (error.error != QJsonParseError::NoError) {
+            std::cerr << "Error parsing topology: " << error.errorString().toStdString() << std::endl;
+            return 1;
+        }
+        
+        QJsonObject topology = doc.object();
+        QJsonArray nodes = topology["nodes"].toArray();
+        QJsonArray edges = topology["edges"].toArray();
+        
+        std::cout << "Network Topology:" << std::endl;
+        std::cout << "  Nodes: " << nodes.size() << std::endl;
+        for (int i = 0; i < nodes.size(); i++) {
+            QJsonObject node = nodes[i].toObject();
+            std::cout << "    " << node["name"].toString().toStdString() 
+                      << " (" << node["address"].toString().toStdString() << ")" << std::endl;
+        }
+        std::cout << "  Edges: " << edges.size() << std::endl;
+        return 0;
     } else if (*captureCmd) {
         if (start) {
             bool success = client.startCapture(
