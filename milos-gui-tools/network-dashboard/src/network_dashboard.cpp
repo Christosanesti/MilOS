@@ -6,6 +6,7 @@
 #include "socket_interface.h"
 #include "dbus_interface.h"
 #include "config_parser.h"
+#include "network_monitor.h"
 #include <iostream>
 
 NetworkDashboard::NetworkDashboard(QObject* parent)
@@ -74,6 +75,13 @@ bool NetworkDashboard::initializeComponents() {
     }
     if (!m_socketInterface->initialize(socketPath)) {
         std::cerr << "Failed to initialize socket interface" << std::endl;
+        return false;
+    }
+
+    // Initialize Network Monitor
+    m_networkMonitor = std::make_unique<NetworkMonitor>();
+    if (!m_networkMonitor->initialize(m_packetCapture.get(), m_packetStatistics.get())) {
+        std::cerr << "Failed to initialize Network Monitor" << std::endl;
         return false;
     }
 
@@ -159,6 +167,11 @@ void NetworkDashboard::stop() {
     // Stop socket interface
     if (m_socketInterface) {
         m_socketInterface->stop();
+    }
+
+    // Stop Network Monitor
+    if (m_networkMonitor) {
+        m_networkMonitor->stop();
     }
 
     // Stop D-Bus interface

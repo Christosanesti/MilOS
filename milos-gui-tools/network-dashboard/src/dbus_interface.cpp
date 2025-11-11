@@ -142,6 +142,14 @@ QString DBusInterface::GetPacketStats() {
     return QString::fromUtf8(doc.toJson());
 }
 
+QString DBusInterface::GetThreats() {
+    // Placeholder for threat information
+    // Will be populated by IDS integration (Story 18.3)
+    QJsonArray threats;
+    QJsonDocument doc(threats);
+    return QString::fromUtf8(doc.toJson());
+}
+
 bool DBusInterface::registerInterface() {
     QDBusConnection connection = QDBusConnection::systemBus();
 

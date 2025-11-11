@@ -13,6 +13,7 @@ class PacketSanitizer;
 class SocketInterface;
 class DBusInterface;
 class ConfigParser;
+class NetworkMonitor;
 
 /**
  * @brief Network Dashboard
@@ -48,6 +49,12 @@ public:
      * @return true if running, false otherwise
      */
     bool isRunning() const { return m_running; }
+
+    /**
+     * @brief Get Network Monitor instance
+     * @return Network Monitor instance
+     */
+    NetworkMonitor* getNetworkMonitor() const { return m_networkMonitor.get(); }
 
 private:
     bool m_initialized;

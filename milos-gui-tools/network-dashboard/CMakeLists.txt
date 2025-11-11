@@ -121,10 +121,21 @@ set(APPLICATION_HEADERS
     include/socket_interface.h
 )
 
+# QML files
+set(QML_FILES
+    src/ui/main.qml
+    src/ui/traffic_visualization.qml
+    src/ui/network_statistics.qml
+    src/ui/bandwidth_monitor.qml
+    src/ui/connection_tracker.qml
+    src/ui/network_alerts.qml
+)
+
 # Create executable
 add_executable(milos-network-dashboard
     ${APPLICATION_SOURCES}
     ${APPLICATION_HEADERS}
+    ${QML_FILES}
 )
 
 # Link libraries
@@ -148,9 +159,16 @@ if(LIBPCAP_FOUND)
     target_include_directories(milos-network-dashboard PRIVATE ${LIBPCAP_INCLUDE_DIRS})
 endif()
 
-# Enable Qt MOC
+# Enable Qt MOC and QRC
 set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
 set_property(TARGET milos-network-dashboard PROPERTY AUTOMOC ON)
+
+# Create QML resource file
+qt6_add_resources(milos-network-dashboard "qml"
+    PREFIX "/"
+    FILES ${QML_FILES}
+)
 
 # Install executable
 install(TARGETS milos-network-dashboard

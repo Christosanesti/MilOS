@@ -53,6 +53,15 @@ public:
         return reply.value();
     }
 
+    QString getThreats() {
+        QDBusReply<QString> reply = m_interface->call("GetThreats");
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return QString();
+        }
+        return reply.value();
+    }
+
 private:
     QDBusConnection m_connection;
     QDBusInterface* m_interface;
@@ -110,6 +119,12 @@ int main(int argc, char* argv[]) {
     captureCmd->add_flag("--stop", stop, "Stop capture");
     captureCmd->add_flag("--stats", stats, "Show statistics");
 
+    // Analyze command
+    auto* analyzeCmd = cliApp.add_subcommand("analyze", "Analyze network traffic");
+
+    // Threats command
+    auto* threatsCmd = cliApp.add_subcommand("threats", "Display threat information");
+
     try {
         cliApp.parse(argc, argv);
     } catch (const CLI::ParseError& e) {
@@ -126,7 +141,35 @@ int main(int argc, char* argv[]) {
     }
 
     // Execute commands
-    if (*captureCmd) {
+    if (*analyzeCmd) {
+        QString statsJson = client.getPacketStats();
+        if (statsJson.isEmpty()) {
+            return 1;
+        }
+        printStatistics(statsJson);
+        return 0;
+    } else if (*threatsCmd) {
+        QString threatsJson = client.getThreats();
+        if (threatsJson.isEmpty()) {
+            std::cout << "No threats detected." << std::endl;
+            return 0;
+        }
+        
+        QJsonParseError error;
+        QJsonDocument doc = QJsonDocument::fromJson(threatsJson.toUtf8(), &error);
+        if (error.error != QJsonParseError::NoError) {
+            std::cerr << "Error parsing threats: " << error.errorString().toStdString() << std::endl;
+            return 1;
+        }
+        
+        QJsonArray threats = doc.array();
+        std::cout << "Threats detected: " << threats.size() << std::endl;
+        for (int i = 0; i < threats.size(); i++) {
+            QJsonObject threat = threats[i].toObject();
+            std::cout << "  Threat " << (i + 1) << ": " << threat["title"].toString().toStdString() << std::endl;
+        }
+        return 0;
+    } else if (*captureCmd) {
         if (start) {
             bool success = client.startCapture(
                 interface.empty() ? QString() : QString::fromStdString(interface),

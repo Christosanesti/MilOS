@@ -1,5 +1,8 @@
 #include "network_dashboard.h"
-#include <QCoreApplication>
+#include "network_monitor.h"
+#include <QApplication>
+#include <QQmlApplicationEngine>
+#include <QQmlContext>
 #include <QTimer>
 #include <iostream>
 #include <signal.h>
@@ -10,12 +13,12 @@ void signalHandler(int signal) {
     if (g_dashboard) {
         std::cout << "Received signal " << signal << ", shutting down..." << std::endl;
         g_dashboard->stop();
-        QCoreApplication::quit();
+        QApplication::quit();
     }
 }
 
 int main(int argc, char* argv[]) {
-    QCoreApplication app(argc, argv);
+    QApplication app(argc, argv);
     app.setApplicationName("milos-network-dashboard");
     app.setOrganizationName("MilOS");
 
@@ -32,8 +35,35 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
+    // Create NetworkMonitor and expose to QML
+    NetworkMonitor* networkMonitor = dashboard.getNetworkMonitor();
+    if (!networkMonitor) {
+        std::cerr << "Failed to get Network Monitor" << std::endl;
+        return 1;
+    }
+
+    // Create QML engine
+    QQmlApplicationEngine engine;
+    
+    // Expose NetworkMonitor to QML
+    engine.rootContext()->setContextProperty("networkMonitor", networkMonitor);
+    
+    // Load main QML file
+    engine.load("qrc:/src/ui/main.qml");
+
+    if (engine.rootObjects().isEmpty()) {
+        std::cerr << "Failed to load QML" << std::endl;
+        return 1;
+    }
+
     if (!dashboard.start()) {
         std::cerr << "Failed to start Network Dashboard" << std::endl;
+        return 1;
+    }
+
+    // Start network monitor
+    if (!networkMonitor->start()) {
+        std::cerr << "Failed to start Network Monitor" << std::endl;
         return 1;
     }
 
