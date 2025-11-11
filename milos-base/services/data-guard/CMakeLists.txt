@@ -131,3 +131,7 @@ install(DIRECTORY DESTINATION ${CMAKE_INSTALL_PREFIX}/etc/milos/data-guard
     FILES_MATCHING PATTERN "*.yaml"
 )
 
+# Testing
+enable_testing()
+add_subdirectory(tests)
+
