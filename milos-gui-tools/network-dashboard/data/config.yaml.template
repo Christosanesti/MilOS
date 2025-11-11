@@ -1,0 +1,80 @@
+# MilOS Network Defense Dashboard Configuration
+
+# Packet Capture Settings
+packet_capture:
+  # Default network interface (empty for auto-detect)
+  default_interface: ""
+  
+  # Capture buffer size (bytes)
+  buffer_size: 1048576  # 1 MB
+  
+  # BPF filter (optional)
+  bpf_filter: ""
+  
+  # Performance settings
+  performance:
+    # Enable high-performance mode
+    high_performance_mode: true
+    
+    # Thread count for packet processing
+    thread_count: 4
+    
+    # Socket buffer size (bytes)
+    socket_buffer_size: 8388608  # 8 MB
+
+# Wireshark Integration
+wireshark:
+  # Enable Wireshark API integration
+  enabled: true
+  
+  # Wireshark API version (auto-detect if empty)
+  version: ""
+  
+  # Backward compatibility mode
+  backward_compatibility: true
+
+# Packet Processing
+packet_processing:
+  # Enable packet sanitization
+  sanitization_enabled: true
+  
+  # Enable packet encryption at rest
+  encryption_enabled: true
+  
+  # Maximum packet size to store (bytes)
+  max_packet_size: 65535
+
+# Statistics
+statistics:
+  # Update interval (seconds)
+  update_interval: 1
+  
+  # Protocol statistics enabled
+  protocol_stats_enabled: true
+
+# Integration Settings
+integration:
+  # Data Transmission Guard integration
+  data_guard:
+    enabled: true
+    service_name: "org.milos.DataGuard"
+  
+  # Audit Service integration
+  audit_service:
+    enabled: true
+    service_name: "org.milos.AuditService"
+  
+  # Socket interface for high-throughput data
+  socket:
+    enabled: true
+    socket_path: "/var/run/milos/network-dashboard.sock"
+
+# D-Bus Settings
+dbus:
+  # D-Bus service name
+  service_name: "org.milos.NetworkDashboard"
+  service_path: "/org/milos/NetworkDashboard"
+  
+  # Enable D-Bus interface
+  enabled: true
+
