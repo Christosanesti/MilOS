@@ -1,0 +1,118 @@
+# MilOS Update Service Configuration
+# This file defines update policies and repository settings
+
+# Service settings
+service:
+  # Enable/disable service
+  enabled: true
+  
+  # Logging level: debug, info, warning, error
+  log_level: info
+  
+  # Update history database path
+  history_db_path: /var/lib/milos/update-service/history.db
+  
+  # D-Bus service name
+  dbus_service: "org.milos.UpdateService"
+  dbus_path: "/org/milos/UpdateService"
+
+# Package management settings
+package_management:
+  # Package manager type: pacman, apt
+  type: pacman
+  
+  # Repository access mode: online, offline, both
+  access_mode: both
+  
+  # Online repository settings
+  online:
+    # Repository URLs (for pacman: mirror URLs, for APT: sources.list entries)
+    repositories:
+      - https://mirror.archlinux.org/repos/repo
+      - https://mirror.archlinux.org/repos/community
+    # Use HTTPS/TLS for repository access
+    use_https: true
+    # Timeout for repository access (seconds)
+    timeout: 30
+  
+  # Offline repository settings
+  offline:
+    # Local repository path
+    local_repository_path: /var/lib/milos/update-service/repository
+    # Enable offline mode
+    enabled: true
+
+# Signature verification settings
+signature_verification:
+  # Enable signature verification
+  enabled: true
+  
+  # GPG keyring path
+  keyring_path: /etc/pacman.d/gnupg
+  
+  # Repository signing keys (GPG key IDs)
+  repository_keys:
+    - "F66F4D7C"  # Arch Linux master signing key
+  
+  # Require signature verification before installation
+  require_verification: true
+  
+  # Allow unsigned packages (not recommended)
+  allow_unsigned: false
+
+# Update policies
+update_policy:
+  # Automatic update check interval (hours)
+  check_interval_hours: 24
+  
+  # Automatic update application (true/false)
+  auto_apply: false
+  
+  # Security updates only (true/false)
+  security_only: true
+  
+  # Update categories to include
+  categories:
+    - security
+    - critical
+  
+  # Packages to exclude from updates
+  exclude_packages: []
+
+# Rollback settings
+rollback:
+  # Enable rollback capability
+  enabled: true
+  
+  # Maximum number of rollback snapshots to keep
+  max_snapshots: 10
+  
+  # Rollback snapshot location
+  snapshot_path: /var/lib/milos/update-service/snapshots
+  
+  # Automatic snapshot before update
+  auto_snapshot: true
+
+# Audit logging settings
+audit:
+  # Enable audit logging
+  enabled: true
+  
+  # Audit service D-Bus name
+  audit_service_bus: "org.milos.AuditService"
+  audit_service_path: "/org/milos/AuditService"
+  
+  # Log all update activities
+  log_all_activities: true
+
+# Performance settings
+performance:
+  # Maximum concurrent package downloads
+  max_concurrent_downloads: 3
+  
+  # Download timeout (seconds)
+  download_timeout: 300
+  
+  # Update application timeout (seconds)
+  update_timeout: 3600
+
