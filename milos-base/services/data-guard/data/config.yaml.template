@@ -1,0 +1,74 @@
+# MilOS Data Transmission Guard Configuration
+# This file defines transmission policies and service settings
+
+# Service settings
+service:
+  # Enable/disable service
+  enabled: true
+  
+  # Logging level: debug, info, warning, error
+  log_level: info
+  
+  # Audit service D-Bus name
+  audit_service_bus: "org.milos.AuditService"
+  audit_service_path: "/org/milos/AuditService"
+  
+  # Network hook type: netfilter, ebpf, auto
+  network_hook_type: auto
+  
+  # Graceful degradation: if network hooks unavailable, continue with reduced functionality
+  graceful_degradation: true
+
+# Default transmission policies
+policies:
+  # Default policy: require encryption for all outbound traffic
+  - policy_id: "default-encryption-required"
+    policy_name: "Default Encryption Required"
+    policy_type: "ENCRYPTION_REQUIRED"
+    enabled: true
+    priority: 100
+    rules:
+      - rule_id: "default-rule"
+        source: null  # Any source
+        destination: null  # Any destination
+        protocol: null  # Any protocol
+        port: null  # Any port
+        encryption_required: true
+        action: "BLOCK"  # Block if not encrypted
+    created_at: null  # Set by service
+    updated_at: null  # Set by service
+
+  # Allow localhost traffic (unencrypted allowed)
+  - policy_id: "localhost-exception"
+    policy_name: "Localhost Exception"
+    policy_type: "PROTOCOL_ALLOWLIST"
+    enabled: true
+    priority: 200  # Higher priority than default
+    rules:
+      - rule_id: "localhost-rule"
+        source: "127.0.0.0/8"
+        destination: "127.0.0.0/8"
+        protocol: null
+        port: null
+        encryption_required: false
+        action: "ALLOW"
+    created_at: null
+    updated_at: null
+
+# Network monitoring settings
+monitoring:
+  # Enable real-time monitoring
+  real_time_monitoring: true
+  
+  # Packet inspection depth (bytes to inspect per packet)
+  inspection_depth: 1024
+  
+  # Encryption detection methods
+  encryption_detection:
+    # Detect TLS/SSL handshakes
+    detect_tls: true
+    # Detect encrypted protocols (SSH, VPN, etc.)
+    detect_encrypted_protocols: true
+    # Custom encryption signatures
+    custom_signatures: []
+

@@ -100,3 +100,4 @@ Rectangle {
     Accessible.description: "Emergency action: " + label
 }
 
+

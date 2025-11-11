@@ -31,3 +31,4 @@ private:
 
 #endif // EMERGENCYWIDGET_H
 
+

@@ -33,3 +33,4 @@ void EmergencyWidget::registerServices(QQmlContext *context)
     context->setContextProperty("auditLogger", widget->m_auditLogger);
 }
 
+

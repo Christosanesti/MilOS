@@ -1,0 +1,48 @@
+[Unit]
+Description=MilOS Data Transmission Guard Service
+Documentation=https://milos.security/docs/services/data-guard
+After=network.target auditd.service
+Wants=auditd.service
+Requires=network.target
+
+[Service]
+Type=notify
+ExecStart=/usr/bin/milos-data-guard-daemon
+Restart=on-failure
+RestartSec=5s
+TimeoutStartSec=30s
+TimeoutStopSec=10s
+
+# Security hardening
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+NoNewPrivileges=true
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+
+# Capabilities
+CapabilityBoundingSet=CAP_NET_RAW CAP_NET_ADMIN CAP_NET_BIND_SERVICE
+AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN CAP_NET_BIND_SERVICE
+
+# Resource limits
+LimitNOFILE=65536
+LimitNPROC=4096
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=milos-data-guard
+
+# Notify systemd when ready
+NotifyAccess=all
+
+[Install]
+WantedBy=multi-user.target
+
