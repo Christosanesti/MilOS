@@ -1,0 +1,54 @@
+# MilOS Network Defense Dashboard - IDS Rules Configuration
+
+# IDS Rules
+ids_rules:
+  # Example: Port scan detection
+  - id: "port_scan_detection"
+    name: "Port Scan Detection"
+    description: "Detects potential port scanning activity"
+    severity: "high"
+    protocol: "TCP"
+    source_address: ""
+    destination_address: ""
+    source_port: 0
+    destination_port: 0
+    pattern: ""
+    keywords: []
+    enabled: true
+    priority: 100
+
+  # Example: Suspicious payload detection
+  - id: "suspicious_payload"
+    name: "Suspicious Payload Detection"
+    description: "Detects suspicious patterns in packet payloads"
+    severity: "medium"
+    protocol: ""
+    source_address: ""
+    destination_address: ""
+    source_port: 0
+    destination_port: 0
+    pattern: ""
+    keywords:
+      - "malware"
+      - "exploit"
+      - "shellcode"
+    enabled: true
+    priority: 80
+
+  # Example: Unauthorized access attempt
+  - id: "unauthorized_access"
+    name: "Unauthorized Access Attempt"
+    description: "Detects unauthorized access attempts"
+    severity: "critical"
+    protocol: "TCP"
+    source_address: ""
+    destination_address: ""
+    source_port: 0
+    destination_port: 22  # SSH
+    pattern: ""
+    keywords:
+      - "unauthorized"
+      - "access denied"
+    enabled: true
+    priority: 150
+

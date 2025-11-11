@@ -68,12 +68,24 @@ public Q_SLOTS:
      */
     QString GetPacketStats();
 
+    /**
+     * @brief Get threat information
+     * @return JSON string with threat information
+     */
+    QString GetThreats();
+
 Q_SIGNALS:
     /**
      * @brief Signal emitted when packet is captured
      * @param packetInfo JSON string with packet information
      */
     void PacketCaptured(const QString& packetInfo);
+
+    /**
+     * @brief Signal emitted when network status changes
+     * @param status Network status string
+     */
+    void NetworkStatusChanged(const QString& status);
 
 private:
     bool m_running;
@@ -93,4 +105,3 @@ private:
 };
 
 #endif // DBUS_INTERFACE_H
-

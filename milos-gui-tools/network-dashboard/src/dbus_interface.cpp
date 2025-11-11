@@ -143,11 +143,19 @@ QString DBusInterface::GetPacketStats() {
 }
 
 QString DBusInterface::GetThreats() {
-    // Placeholder for threat information
-    // Will be populated by IDS integration (Story 18.3)
+    // Get threats from IDS engine (if available)
+    // For now, return empty array - will be populated by IDS integration
     QJsonArray threats;
     QJsonDocument doc(threats);
     return QString::fromUtf8(doc.toJson());
+}
+
+bool DBusInterface::ConfigureIDS(const QString& rulesJson) {
+    // Configure IDS rules from JSON
+    // This would integrate with IDSRuleManager
+    // For now, return true as placeholder
+    Q_UNUSED(rulesJson);
+    return true;
 }
 
 bool DBusInterface::registerInterface() {

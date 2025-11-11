@@ -6,8 +6,11 @@
 #include <QDBusError>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QJsonArray>
 #include <iostream>
 #include <string>
+#include <fstream>
+#include <iterator>
 
 class NetworkDashboardClient {
 public:
@@ -58,6 +61,15 @@ public:
         if (!reply.isValid()) {
             std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
             return QString();
+        }
+        return reply.value();
+    }
+
+    bool configureIDS(const QString& rulesJson) {
+        QDBusReply<bool> reply = m_interface->call("ConfigureIDS", rulesJson);
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return false;
         }
         return reply.value();
     }
@@ -125,6 +137,16 @@ int main(int argc, char* argv[]) {
     // Threats command
     auto* threatsCmd = cliApp.add_subcommand("threats", "Display threat information");
 
+    // IDS Config command
+    auto* idsConfigCmd = cliApp.add_subcommand("ids-config", "Manage IDS configuration");
+    std::string configFile;
+    bool show = false;
+    bool reload = false;
+    
+    idsConfigCmd->add_option("-f,--file", configFile, "IDS rules configuration file");
+    idsConfigCmd->add_flag("--show", show, "Show current IDS configuration");
+    idsConfigCmd->add_flag("--reload", reload, "Reload IDS configuration");
+
     try {
         cliApp.parse(argc, argv);
     } catch (const CLI::ParseError& e) {
@@ -169,6 +191,39 @@ int main(int argc, char* argv[]) {
             std::cout << "  Threat " << (i + 1) << ": " << threat["title"].toString().toStdString() << std::endl;
         }
         return 0;
+    } else if (*idsConfigCmd) {
+        if (show) {
+            // Show current configuration
+            QString threatsJson = client.getThreats();
+            if (!threatsJson.isEmpty()) {
+                std::cout << "Current IDS Configuration:" << std::endl;
+                std::cout << threatsJson.toStdString() << std::endl;
+            }
+            return 0;
+        } else if (reload) {
+            // Reload configuration
+            if (configFile.empty()) {
+                std::cerr << "Error: Configuration file required for reload" << std::endl;
+                return 1;
+            }
+            // Read file and configure
+            std::ifstream file(configFile);
+            if (!file.is_open()) {
+                std::cerr << "Error: Cannot open configuration file: " << configFile << std::endl;
+                return 1;
+            }
+            std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+            bool success = client.configureIDS(QString::fromStdString(content));
+            if (success) {
+                std::cout << "IDS configuration reloaded successfully" << std::endl;
+                return 0;
+            } else {
+                std::cerr << "Error: Failed to reload IDS configuration" << std::endl;
+                return 1;
+            }
+        } else {
+            std::cout << "Use --show or --reload with ids-config command" << std::endl;
+        }
     } else if (*captureCmd) {
         if (start) {
             bool success = client.startCapture(

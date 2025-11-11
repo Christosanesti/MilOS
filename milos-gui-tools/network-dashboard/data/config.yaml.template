@@ -78,3 +78,20 @@ dbus:
   # Enable D-Bus interface
   enabled: true
 
+# IDS Configuration
+ids:
+  # IDS rules configuration file
+  rules_file: "/etc/milos/network-dashboard/ids_rules.yaml"
+  
+  # Threat correlation window (seconds)
+  correlation_window: 60
+  
+  # Threat history database
+  history_db: "/var/lib/milos/network-dashboard/threats.db"
+  
+  # Threat history retention (days)
+  retention_days: 90
+  
+  # Enable automated response
+  automated_response_enabled: true
+
