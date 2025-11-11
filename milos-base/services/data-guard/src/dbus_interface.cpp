@@ -7,6 +7,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
+#include <QDateTime>
 #include <iostream>
 
 DBusInterface::DBusInterface(QObject* parent)
@@ -163,6 +164,36 @@ QString DBusInterface::GetPolicyStatus(const QString& policyId) {
     }
 
     QJsonDocument doc(status);
+    return QString::fromUtf8(doc.toJson());
+}
+
+QString DBusInterface::GetHealthStatus() {
+    // Get health status from service (via DataGuardService)
+    // For now, we'll construct it from available components
+    QJsonObject health;
+    
+    health["dbus_interface"] = isHealthy();
+    
+    if (m_networkEnforcement) {
+        QJsonObject network;
+        network["running"] = m_networkEnforcement->isRunning();
+        network["healthy"] = m_networkEnforcement->isHealthy();
+        network["blocked_count"] = static_cast<qint64>(m_networkEnforcement->getBlockedCount());
+        network["allowed_count"] = static_cast<qint64>(m_networkEnforcement->getAllowedCount());
+        health["network_enforcement"] = network;
+    }
+    
+    if (m_policyManager) {
+        QJsonObject policy;
+        policy["initialized"] = true;
+        policy["policy_count"] = static_cast<int>(m_policyManager->getPolicies().size());
+        health["policy_manager"] = policy;
+    }
+    
+    health["overall_health"] = (isHealthy() ? "healthy" : "unhealthy");
+    health["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+    
+    QJsonDocument doc(health);
     return QString::fromUtf8(doc.toJson());
 }
 

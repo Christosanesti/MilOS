@@ -64,6 +64,15 @@ public:
         return reply.value();
     }
 
+    QString getHealthStatus() {
+        QDBusReply<QString> reply = m_interface->call("GetHealthStatus");
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return QString();
+        }
+        return reply.value();
+    }
+
 private:
     QDBusConnection m_connection;
     QDBusInterface* m_interface;
@@ -149,6 +158,9 @@ int main(int argc, char* argv[]) {
     // Status command
     auto* statusCmd = cliApp.add_subcommand("status", "Display service status and transmission monitoring status");
     
+    // Health command
+    auto* healthCmd = cliApp.add_subcommand("health", "Display detailed service health status");
+    
     // Blocked command
     auto* blockedCmd = cliApp.add_subcommand("blocked", "List blocked transmissions");
     
@@ -191,6 +203,19 @@ int main(int argc, char* argv[]) {
             return 1;
         }
         printStatus(status);
+    } else if (*healthCmd) {
+        QString health = client.getHealthStatus();
+        if (health.isEmpty()) {
+            return 1;
+        }
+        // Print health status as formatted JSON
+        QJsonParseError error;
+        QJsonDocument doc = QJsonDocument::fromJson(health.toUtf8(), &error);
+        if (error.error == QJsonParseError::NoError) {
+            std::cout << doc.toJson(QJsonDocument::Indented).toStdString() << std::endl;
+        } else {
+            std::cout << health.toStdString() << std::endl;
+        }
     } else if (*blockedCmd) {
         QStringList blocked = client.getBlockedTransmissions();
         printBlockedTransmissions(blocked);

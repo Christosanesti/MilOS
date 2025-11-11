@@ -7,6 +7,8 @@
 #include <systemd/sd-daemon.h>
 #include <iostream>
 #include <stdexcept>
+#include <sstream>
+#include <ctime>
 
 DataGuardService::DataGuardService()
     : m_running(false)
@@ -136,7 +138,97 @@ bool DataGuardService::isHealthy() const {
         return false;
     }
 
+    // Check if configuration is loaded
+    if (!m_configParser || !m_configParser->isLoaded()) {
+        return false;
+    }
+
+    // Check if policy manager is initialized
+    if (!m_policyManager) {
+        return false;
+    }
+
     return true;
+}
+
+std::string DataGuardService::getHealthStatus() const {
+    std::ostringstream json;
+    json << "{";
+    json << "\"service_running\":" << (m_running ? "true" : "false") << ",";
+    json << "\"service_initialized\":" << (m_initialized ? "true" : "false") << ",";
+    json << "\"overall_health\":" << (isHealthy() ? "\"healthy\"" : "\"unhealthy\"") << ",";
+    json << "\"components\":{";
+    
+    // Network enforcement health
+    if (m_networkEnforcement) {
+        json << "\"network_enforcement\":{";
+        json << "\"initialized\":" << (m_networkEnforcement->isRunning() ? "true" : "false") << ",";
+        json << "\"healthy\":" << (m_networkEnforcement->isHealthy() ? "true" : "false") << ",";
+        json << "\"blocked_count\":" << m_networkEnforcement->getBlockedCount() << ",";
+        json << "\"allowed_count\":" << m_networkEnforcement->getAllowedCount();
+        json << "},";
+    } else {
+        json << "\"network_enforcement\":{\"initialized\":false,\"healthy\":false},";
+    }
+    
+    // D-Bus interface health
+    if (m_dbusInterface) {
+        json << "\"dbus_interface\":{";
+        json << "\"initialized\":" << (m_dbusInterface->isRunning() ? "true" : "false") << ",";
+        json << "\"healthy\":" << (m_dbusInterface->isHealthy() ? "true" : "false");
+        json << "},";
+    } else {
+        json << "\"dbus_interface\":{\"initialized\":false,\"healthy\":false},";
+    }
+    
+    // Policy manager health
+    if (m_policyManager) {
+        json << "\"policy_manager\":{";
+        json << "\"initialized\":true,";
+        json << "\"policy_count\":" << m_policyManager->getPolicies().size();
+        json << "},";
+    } else {
+        json << "\"policy_manager\":{\"initialized\":false},";
+    }
+    
+    // Configuration health
+    if (m_configParser) {
+        json << "\"configuration\":{";
+        json << "\"loaded\":" << (m_configParser->isLoaded() ? "true" : "false");
+        json << "}";
+    } else {
+        json << "\"configuration\":{\"loaded\":false}";
+    }
+    
+    json << "},";
+    json << "\"timestamp\":\"" << std::time(nullptr) << "\"";
+    json << "}";
+    
+    return json.str();
+}
+
+void DataGuardService::performHealthCheck() {
+    // Perform health check
+    bool healthy = isHealthy();
+    
+    // Update systemd watchdog
+    updateWatchdog();
+    
+    // Log health status if unhealthy
+    if (!healthy) {
+        std::cerr << "Health check failed: Service is unhealthy" << std::endl;
+        std::cerr << "Health status: " << getHealthStatus() << std::endl;
+    }
+}
+
+void DataGuardService::updateWatchdog() {
+    // Notify systemd watchdog that service is alive
+    // This should be called periodically (within watchdog timeout)
+    sd_notify(0, "WATCHDOG=1");
+}
+
+std::string DataGuardService::getComponentHealthStatus() const {
+    return getHealthStatus();
 }
 
 bool DataGuardService::reloadConfiguration() {

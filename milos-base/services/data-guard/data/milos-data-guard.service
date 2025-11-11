@@ -12,6 +12,7 @@ Restart=on-failure
 RestartSec=5s
 TimeoutStartSec=30s
 TimeoutStopSec=10s
+WatchdogSec=60s
 
 # Security hardening
 PrivateTmp=true

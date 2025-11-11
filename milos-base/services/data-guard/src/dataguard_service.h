@@ -51,10 +51,22 @@ public:
     bool isHealthy() const;
 
     /**
+     * @brief Get detailed health status information
+     * @return JSON string with health status details
+     */
+    std::string getHealthStatus() const;
+
+    /**
      * @brief Reload configuration
      * @return true if reload successful, false otherwise
      */
     bool reloadConfiguration();
+
+    /**
+     * @brief Perform periodic health check and update systemd watchdog
+     * This should be called periodically (e.g., every 30 seconds)
+     */
+    void performHealthCheck();
 
 private:
     bool m_running;
@@ -90,6 +102,16 @@ private:
      * @brief Notify systemd that service is ready
      */
     void notifySystemdReady();
+
+    /**
+     * @brief Update systemd watchdog
+     */
+    void updateWatchdog();
+
+    /**
+     * @brief Get component health status
+     */
+    std::string getComponentHealthStatus() const;
 };
 
 #endif // DATAGUARD_SERVICE_H

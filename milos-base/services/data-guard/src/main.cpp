@@ -1,5 +1,6 @@
 #include "dataguard_service.h"
 #include <QCoreApplication>
+#include <QTimer>
 #include <systemd/sd-daemon.h>
 #include <iostream>
 #include <csignal>
@@ -43,6 +44,13 @@ int main(int argc, char* argv[]) {
         sd_notify(0, "STATUS=Failed to start\n");
         return 1;
     }
+
+    // Set up periodic health check timer (every 30 seconds)
+    QTimer* healthCheckTimer = new QTimer(&app);
+    QObject::connect(healthCheckTimer, &QTimer::timeout, [&service]() {
+        service.performHealthCheck();
+    });
+    healthCheckTimer->start(30000);  // 30 seconds
 
     // Run Qt event loop (required for D-Bus)
     int result = app.exec();

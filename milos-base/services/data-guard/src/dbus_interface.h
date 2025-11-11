@@ -89,6 +89,12 @@ public Q_SLOTS:
      */
     QString GetPolicyStatus(const QString& policyId);
 
+    /**
+     * @brief Get detailed health status of the service
+     * @return JSON string with health status information
+     */
+    QString GetHealthStatus();
+
 Q_SIGNALS:
     /**
      * @brief Signal emitted when a transmission is blocked
