@@ -9,6 +9,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QDateTime>
+#include <QUuid>
 #include <iostream>
 
 DBusInterface::DBusInterface(QObject* parent)
