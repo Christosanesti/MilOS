@@ -1,0 +1,49 @@
+# MilOS Secure Clipboard Manager Configuration
+
+# Clipboard Settings
+clipboard:
+  # Timeout in seconds (0 = no timeout)
+  timeout_seconds: 300  # 5 minutes
+  
+  # Enable automatic timeout
+  auto_timeout_enabled: true
+  
+  # Maximum history entries
+  max_history_entries: 50
+
+# Encryption Settings
+encryption:
+  # Use PQC encryption
+  use_pqc: true
+  
+  # Encryption algorithm (from PQC library)
+  algorithm: "CRYSTALS-Kyber"
+
+# History Settings
+history:
+  # Enable clipboard history
+  enabled: true
+  
+  # History database path
+  database_path: "/var/lib/milos/clipboard-manager/history.db"
+  
+  # History retention (days)
+  retention_days: 30
+
+# D-Bus Settings
+dbus:
+  # D-Bus service name
+  service_name: "org.milos.ClipboardManager"
+  service_path: "/org/milos/ClipboardManager"
+  
+  # Enable D-Bus interface
+  enabled: true
+
+# Audit Logging
+audit:
+  # Enable audit logging
+  enabled: true
+  
+  # Audit service name
+  service_name: "org.milos.AuditService"
+
