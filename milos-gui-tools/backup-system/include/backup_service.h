@@ -13,6 +13,10 @@ class BackupEncryption;
 class BackupDestinationManager;
 class BackupMetadataManager;
 class BackupScheduler;
+class BackupIntegrityVerifier;
+class BackupRetentionManager;
+class BackupCompression;
+class BackupKeyRotationManager;
 
 /**
  * @brief Backup Service
@@ -79,6 +83,20 @@ public:
      */
     Q_INVOKABLE bool deleteBackup(const QString& backupId);
 
+    /**
+     * @brief Verify backup integrity
+     * @param backupId Backup ID to verify
+     * @return JSON string with integrity report
+     */
+    Q_INVOKABLE QString verifyBackupIntegrity(const QString& backupId);
+
+    /**
+     * @brief Get backup status
+     * @param backupId Backup ID
+     * @return JSON string with backup status
+     */
+    Q_INVOKABLE QString getBackupStatus(const QString& backupId) const;
+
 Q_SIGNALS:
     /**
      * @brief Emitted when backup status changes
@@ -110,6 +128,10 @@ private:
     std::unique_ptr<BackupDestinationManager> m_destinationManager;
     std::unique_ptr<BackupMetadataManager> m_metadataManager;
     std::unique_ptr<BackupScheduler> m_scheduler;
+    std::unique_ptr<BackupIntegrityVerifier> m_integrityVerifier;
+    std::unique_ptr<BackupRetentionManager> m_retentionManager;
+    std::unique_ptr<BackupCompression> m_compression;
+    std::unique_ptr<BackupKeyRotationManager> m_keyRotation;
 
     /**
      * @brief Perform backup operation

@@ -120,6 +120,16 @@ int main(int argc, char* argv[]) {
     std::string deleteBackupId;
     deleteCmd->add_option("backup-id", deleteBackupId, "Backup ID to delete")->required();
 
+    // Verify command
+    auto* verifyCmd = cliApp.add_subcommand("verify", "Verify backup integrity");
+    std::string verifyBackupId;
+    verifyCmd->add_option("backup-id", verifyBackupId, "Backup ID to verify")->required();
+
+    // Status command
+    auto* statusCmd = cliApp.add_subcommand("status", "Get backup status");
+    std::string statusBackupId;
+    statusCmd->add_option("backup-id", statusBackupId, "Backup ID")->required();
+
     try {
         cliApp.parse(argc, argv);
     } catch (const CLI::ParseError& e) {
@@ -178,6 +188,22 @@ int main(int argc, char* argv[]) {
             std::cerr << "Error: Failed to delete backup." << std::endl;
             return 1;
         }
+    } else if (*verifyCmd) {
+        QString report = client.verifyBackupIntegrity(QString::fromStdString(verifyBackupId));
+        if (report.isEmpty()) {
+            std::cerr << "Error: Failed to verify backup." << std::endl;
+            return 1;
+        }
+        std::cout << report.toStdString() << std::endl;
+        return 0;
+    } else if (*statusCmd) {
+        QString status = client.getBackupStatus(QString::fromStdString(statusBackupId));
+        if (status.isEmpty()) {
+            std::cerr << "Error: Failed to get backup status." << std::endl;
+            return 1;
+        }
+        std::cout << status.toStdString() << std::endl;
+        return 0;
     } else {
         std::cout << cliApp.help() << std::endl;
     }

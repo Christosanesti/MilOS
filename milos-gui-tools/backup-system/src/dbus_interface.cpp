@@ -131,3 +131,19 @@ bool DBusInterface::DeleteBackup(const QString& backupId) {
     return m_backupService->deleteBackup(backupId);
 }
 
+QString DBusInterface::VerifyBackupIntegrity(const QString& backupId) {
+    if (!m_backupService) {
+        return QString("{\"error\":\"Service not available\"}");
+    }
+
+    return m_backupService->verifyBackupIntegrity(backupId);
+}
+
+QString DBusInterface::GetBackupStatus(const QString& backupId) {
+    if (!m_backupService) {
+        return QString("{\"error\":\"Service not available\"}");
+    }
+
+    return m_backupService->getBackupStatus(backupId);
+}
+

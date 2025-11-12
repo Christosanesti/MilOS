@@ -19,6 +19,12 @@ find_package(CLI11 REQUIRED)
 # Find SQLite3 for backup metadata
 find_package(SQLite3 REQUIRED)
 
+# Find OpenSSL for integrity verification
+find_package(OpenSSL REQUIRED)
+
+# Find zlib for compression
+find_package(ZLIB REQUIRED)
+
 # Include directories
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
@@ -34,6 +40,10 @@ set(APPLICATION_SOURCES
     src/backup_destinations.cpp
     src/backup_scheduler.cpp
     src/backup_metadata.cpp
+    src/backup_integrity.cpp
+    src/backup_retention.cpp
+    src/backup_compression.cpp
+    src/backup_key_rotation.cpp
     src/dbus_interface.cpp
     src/config_parser.cpp
     src/audit_logger.cpp
@@ -46,6 +56,10 @@ set(APPLICATION_HEADERS
     include/backup_destinations.h
     include/backup_scheduler.h
     include/backup_metadata.h
+    include/backup_integrity.h
+    include/backup_retention.h
+    include/backup_compression.h
+    include/backup_key_rotation.h
     include/dbus_interface.h
     include/config_parser.h
     include/audit_logger.h
@@ -78,6 +92,9 @@ target_link_libraries(milos-backup-system
     yaml-cpp::yaml-cpp
     CLI11::CLI11
     SQLite3::SQLite3
+    OpenSSL::SSL
+    OpenSSL::Crypto
+    ZLIB::ZLIB
 )
 
 # Enable Qt MOC and QRC

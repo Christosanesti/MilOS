@@ -1,6 +1,8 @@
 #include "backup_scheduler.h"
 #include "backup_service.h"
 #include <QDateTime>
+#include <QCoreApplication>
+#include <algorithm>
 #include <iostream>
 
 BackupScheduler::BackupScheduler(QObject* parent)

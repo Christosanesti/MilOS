@@ -3,14 +3,20 @@
 #include "backup_destinations.h"
 #include "backup_metadata.h"
 #include "backup_scheduler.h"
+#include "backup_integrity.h"
+#include "backup_retention.h"
+#include "backup_compression.h"
+#include "backup_key_rotation.h"
 #include <QJsonDocument>
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QDateTime>
 #include <QUuid>
+#include <QCoreApplication>
 #include <fstream>
 #include <filesystem>
 #include <iostream>
+#include <algorithm>
 
 BackupService::BackupService(QObject* parent)
     : QObject(parent)
@@ -58,6 +64,34 @@ bool BackupService::initialize() {
         return false;
     }
 
+    // Initialize integrity verifier
+    m_integrityVerifier = std::make_unique<BackupIntegrityVerifier>();
+    if (!m_integrityVerifier->initialize()) {
+        std::cerr << "Failed to initialize backup integrity verifier" << std::endl;
+        return false;
+    }
+
+    // Initialize retention manager
+    m_retentionManager = std::make_unique<BackupRetentionManager>();
+    if (!m_retentionManager->initialize(m_metadataManager.get())) {
+        std::cerr << "Failed to initialize backup retention manager" << std::endl;
+        return false;
+    }
+
+    // Initialize compression
+    m_compression = std::make_unique<BackupCompression>();
+    if (!m_compression->initialize()) {
+        std::cerr << "Failed to initialize backup compression" << std::endl;
+        return false;
+    }
+
+    // Initialize key rotation
+    m_keyRotation = std::make_unique<BackupKeyRotationManager>();
+    if (!m_keyRotation->initialize(m_encryption.get(), m_metadataManager.get(), m_destinationManager.get())) {
+        std::cerr << "Failed to initialize backup key rotation manager" << std::endl;
+        return false;
+    }
+
     m_initialized = true;
     return true;
 }
@@ -79,6 +113,18 @@ bool BackupService::start() {
         return false;
     }
 
+    // Start retention manager
+    if (!m_retentionManager->start()) {
+        std::cerr << "Failed to start backup retention manager" << std::endl;
+        return false;
+    }
+
+    // Start key rotation manager
+    if (!m_keyRotation->start()) {
+        std::cerr << "Failed to start backup key rotation manager" << std::endl;
+        return false;
+    }
+
     m_running = true;
     m_currentStatus = "Ready";
     emit backupStatusChanged();
@@ -92,6 +138,14 @@ void BackupService::stop() {
 
     if (m_scheduler) {
         m_scheduler->stop();
+    }
+
+    if (m_retentionManager) {
+        m_retentionManager->stop();
+    }
+
+    if (m_keyRotation) {
+        m_keyRotation->stop();
     }
 
     m_running = false;
@@ -284,5 +338,58 @@ bool BackupService::deleteBackup(const QString& backupId) {
 
     // Delete metadata
     return m_metadataManager->deleteMetadata(backupId.toStdString());
+}
+
+QString BackupService::verifyBackupIntegrity(const QString& backupId) {
+    if (!m_integrityVerifier || !m_metadataManager || !m_destinationManager) {
+        return QString("{\"error\":\"Service not initialized\"}");
+    }
+
+    // Get backup metadata
+    BackupMetadata metadata = m_metadataManager->getMetadata(backupId.toStdString());
+    if (metadata.id.empty()) {
+        return QString("{\"error\":\"Backup not found\"}");
+    }
+
+    // Download backup
+    IBackupDestination* destination = m_destinationManager->getDestination(metadata.destination_id);
+    if (!destination) {
+        return QString("{\"error\":\"Destination not found\"}");
+    }
+
+    std::vector<uint8_t> backupData = destination->downloadBackup(backupId.toStdString());
+    if (backupData.empty()) {
+        return QString("{\"error\":\"Failed to download backup\"}");
+    }
+
+    // Verify integrity (would use stored checksum from metadata)
+    IntegrityResult result = m_integrityVerifier->verifyIntegrity(backupData, "", "SHA-256");
+    std::string report = m_integrityVerifier->generateIntegrityReport(backupId.toStdString(), result);
+
+    return QString::fromStdString(report);
+}
+
+QString BackupService::getBackupStatus(const QString& backupId) const {
+    if (!m_metadataManager) {
+        return QString("{\"error\":\"Service not initialized\"}");
+    }
+
+    BackupMetadata metadata = m_metadataManager->getMetadata(backupId.toStdString());
+    if (metadata.id.empty()) {
+        return QString("{\"error\":\"Backup not found\"}");
+    }
+
+    QJsonObject statusObj;
+    statusObj["id"] = QString::fromStdString(metadata.id);
+    statusObj["name"] = QString::fromStdString(metadata.name);
+    statusObj["destination_id"] = QString::fromStdString(metadata.destination_id);
+    statusObj["source_path"] = QString::fromStdString(metadata.source_path);
+    statusObj["timestamp"] = static_cast<qint64>(metadata.timestamp);
+    statusObj["size"] = static_cast<qint64>(metadata.size);
+    statusObj["encryption_algorithm"] = QString::fromStdString(metadata.encryption_algorithm);
+    statusObj["is_encrypted"] = metadata.is_encrypted;
+
+    QJsonDocument doc(statusObj);
+    return QString::fromUtf8(doc.toJson());
 }
 

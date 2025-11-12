@@ -1,0 +1,63 @@
+# MilOS Zero-Knowledge Backup System Configuration
+
+# Backup Settings
+backup:
+  # Default backup destination
+  default_destination: "local"
+  
+  # Backup compression
+  compression_enabled: true
+  
+  # Backup retention (days)
+  retention_days: 90
+
+# Encryption Settings
+encryption:
+  # Use PQC encryption
+  use_pqc: true
+  
+  # Encryption algorithm (from PQC library)
+  algorithm: "CRYSTALS-Kyber"
+  
+  # Zero-knowledge architecture (keys never sent to server)
+  zero_knowledge: true
+
+# Scheduling Settings
+scheduling:
+  # Enable automatic scheduling
+  enabled: true
+  
+  # Default backup interval (minutes, 0 = manual only)
+  default_interval_minutes: 1440  # 24 hours
+
+# D-Bus Settings
+dbus:
+  # D-Bus service name
+  service_name: "org.milos.BackupSystem"
+  service_path: "/org/milos/BackupSystem"
+  
+  # Enable D-Bus interface
+  enabled: true
+
+# Audit Logging
+audit:
+  # Enable audit logging
+  enabled: true
+  
+  # Audit service name
+  service_name: "org.milos.AuditService"
+
+# Destinations
+destinations:
+  local:
+    # Default local backup path
+    default_path: "/var/lib/milos/backups"
+  
+  network:
+    # Network destinations (SMB, NFS) - to be configured
+    enabled: false
+  
+  cloud:
+    # Cloud destinations - to be configured
+    enabled: false
+
