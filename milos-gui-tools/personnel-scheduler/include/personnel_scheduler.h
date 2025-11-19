@@ -3,6 +3,8 @@
 
 #include "device_manager.h"
 #include "device_health.h"
+#include "attendance_tracker.h"
+#include "attendance_storage.h"
 #include "dbus_interface.h"
 #include "audit_logger.h"
 #include "config_parser.h"
@@ -53,9 +55,16 @@ public:
      */
     PersonnelSchedulerDBusInterface* getDBusInterface() const { return m_dbusInterface; }
 
+    /**
+     * @brief Get attendance tracker
+     */
+    AttendanceTracker* getAttendanceTracker() const { return m_attendanceTracker; }
+
 private:
     DeviceManager* m_deviceManager;
     DeviceHealthMonitor* m_healthMonitor;
+    AttendanceTracker* m_attendanceTracker;
+    AttendanceStorage* m_attendanceStorage;
     PersonnelSchedulerDBusInterface* m_dbusInterface;
     AuditLogger* m_auditLogger;
     ConfigParser* m_configParser;

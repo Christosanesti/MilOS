@@ -1,10 +1,16 @@
 #include "personnel_scheduler.h"
+#include "attendance_tracker.h"
+#include "attendance_storage.h"
+#include "audit_logger.h"
 #include <QDebug>
+#include <QStandardPaths>
 
 PersonnelScheduler::PersonnelScheduler(QObject* parent)
     : QObject(parent)
     , m_deviceManager(new DeviceManager(this))
     , m_healthMonitor(new DeviceHealthMonitor(this))
+    , m_attendanceTracker(new AttendanceTracker(m_deviceManager, this))
+    , m_attendanceStorage(new AttendanceStorage(this))
     , m_dbusInterface(new PersonnelSchedulerDBusInterface(this))
     , m_auditLogger(new AuditLogger(this))
     , m_configParser(new ConfigParser())
@@ -31,6 +37,19 @@ bool PersonnelScheduler::initialize() {
     // Initialize device manager
     if (!m_deviceManager->initialize()) {
         qWarning() << "Failed to initialize device manager";
+        return false;
+    }
+    
+    // Initialize attendance tracker
+    if (!m_attendanceTracker->initialize()) {
+        qWarning() << "Failed to initialize attendance tracker";
+        return false;
+    }
+    
+    // Initialize attendance storage
+    QString dbPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/attendance.db";
+    if (!m_attendanceStorage->initialize(dbPath)) {
+        qWarning() << "Failed to initialize attendance storage";
         return false;
     }
     
@@ -63,9 +82,31 @@ bool PersonnelScheduler::initialize() {
         m_auditLogger->logDeviceOperation("device_error", deviceId, eventData);
     });
     
+    // Connect attendance tracker signals
+    connect(m_attendanceTracker, &AttendanceTracker::attendanceRecorded, this, [this](const AttendanceRecord& record) {
+        // Store record
+        m_attendanceStorage->storeRecord(record);
+        
+        // Log to audit service
+        QVariantMap eventData;
+        eventData["record_id"] = record.recordId;
+        eventData["personnel_id"] = record.personnelId;
+        eventData["event_type"] = (record.eventType == AttendanceEventType::Entry) ? "entry" : "exit";
+        eventData["location"] = record.location;
+        m_auditLogger->logDeviceOperation("attendance_recorded", record.deviceId, eventData);
+    });
+    
+    connect(m_attendanceTracker, &AttendanceTracker::attendanceValidationFailed, this, [this](const QString& recordId, const QString& reason) {
+        QVariantMap eventData;
+        eventData["record_id"] = recordId;
+        eventData["reason"] = reason;
+        m_auditLogger->logDeviceOperation("attendance_validation_failed", QString(), eventData);
+    });
+    
     // Initialize D-Bus interface
     m_dbusInterface->setDeviceManager(m_deviceManager);
     m_dbusInterface->setDeviceHealthMonitor(m_healthMonitor);
+    m_dbusInterface->setAttendanceTracker(m_attendanceTracker);
     
     if (!m_dbusInterface->initialize()) {
         qWarning() << "Failed to initialize D-Bus interface";
@@ -90,6 +131,9 @@ bool PersonnelScheduler::start() {
     // Start device monitoring
     m_deviceManager->startMonitoring();
     
+    // Start attendance tracking
+    m_attendanceTracker->startTracking();
+    
     m_running = true;
     return true;
 }
@@ -101,6 +145,9 @@ void PersonnelScheduler::stop() {
     
     // Stop device monitoring
     m_deviceManager->stopMonitoring();
+    
+    // Stop attendance tracking
+    m_attendanceTracker->stopTracking();
     
     m_running = false;
 }

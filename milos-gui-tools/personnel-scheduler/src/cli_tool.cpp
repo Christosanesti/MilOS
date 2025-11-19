@@ -108,6 +108,51 @@ public:
         return reply.value();
     }
 
+    QString recordAttendanceEntry(const QString& deviceId, const QString& personnelId, const QString& location) {
+        QDBusReply<QString> reply = m_interface->call("RecordAttendanceEntry", deviceId, personnelId, location);
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return QString();
+        }
+        return reply.value();
+    }
+
+    QString recordAttendanceExit(const QString& deviceId, const QString& personnelId, const QString& location) {
+        QDBusReply<QString> reply = m_interface->call("RecordAttendanceExit", deviceId, personnelId, location);
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return QString();
+        }
+        return reply.value();
+    }
+
+    QString getAttendanceRecords(const QString& personnelId, const QString& startDate, const QString& endDate) {
+        QDBusReply<QString> reply = m_interface->call("GetAttendanceRecords", personnelId, startDate, endDate);
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return QString();
+        }
+        return reply.value();
+    }
+
+    QString getAttendanceRecord(const QString& recordId) {
+        QDBusReply<QString> reply = m_interface->call("GetAttendanceRecord", recordId);
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return QString();
+        }
+        return reply.value();
+    }
+
+    bool isPersonnelPresent(const QString& personnelId) {
+        QDBusReply<bool> reply = m_interface->call("IsPersonnelPresent", personnelId);
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return false;
+        }
+        return reply.value();
+    }
+
     QVariantMap getDeviceConfiguration(const QString& deviceId) {
         QDBusReply<QVariantMap> reply = m_interface->call("GetDeviceConfiguration", deviceId);
         if (!reply.isValid()) {
@@ -279,6 +324,91 @@ int main(int argc, char* argv[]) {
         } else {
             std::cerr << "Failed to enroll biometric" << std::endl;
         }
+    });
+
+    // Record attendance entry command
+    auto* entryCmd = cliApp.add_subcommand("entry", "Record attendance entry");
+    std::string entryDeviceId;
+    std::string entryPersonnelId;
+    std::string entryLocation;
+    entryCmd->add_option("--device", entryDeviceId, "Device ID")->required();
+    entryCmd->add_option("--personnel", entryPersonnelId, "Personnel ID")->required();
+    entryCmd->add_option("--location", entryLocation, "Location/area")->required();
+    entryCmd->callback([&]() {
+        QString recordId = client.recordAttendanceEntry(
+            QString::fromStdString(entryDeviceId),
+            QString::fromStdString(entryPersonnelId),
+            QString::fromStdString(entryLocation)
+        );
+        if (!recordId.isEmpty()) {
+            std::cout << "Attendance entry recorded: " << recordId.toStdString() << std::endl;
+        } else {
+            std::cerr << "Failed to record attendance entry" << std::endl;
+        }
+    });
+
+    // Record attendance exit command
+    auto* exitCmd = cliApp.add_subcommand("exit", "Record attendance exit");
+    std::string exitDeviceId;
+    std::string exitPersonnelId;
+    std::string exitLocation;
+    exitCmd->add_option("--device", exitDeviceId, "Device ID")->required();
+    exitCmd->add_option("--personnel", exitPersonnelId, "Personnel ID")->required();
+    exitCmd->add_option("--location", exitLocation, "Location/area")->required();
+    exitCmd->callback([&]() {
+        QString recordId = client.recordAttendanceExit(
+            QString::fromStdString(exitDeviceId),
+            QString::fromStdString(exitPersonnelId),
+            QString::fromStdString(exitLocation)
+        );
+        if (!recordId.isEmpty()) {
+            std::cout << "Attendance exit recorded: " << recordId.toStdString() << std::endl;
+        } else {
+            std::cerr << "Failed to record attendance exit" << std::endl;
+        }
+    });
+
+    // List attendance records command
+    auto* recordsCmd = cliApp.add_subcommand("records", "List attendance records");
+    std::string recordsPersonnelId;
+    std::string recordsStartDate;
+    std::string recordsEndDate;
+    recordsCmd->add_option("--personnel", recordsPersonnelId, "Personnel ID filter");
+    recordsCmd->add_option("--start", recordsStartDate, "Start date (ISO format)");
+    recordsCmd->add_option("--end", recordsEndDate, "End date (ISO format)");
+    recordsCmd->callback([&]() {
+        QString jsonRecords = client.getAttendanceRecords(
+            QString::fromStdString(recordsPersonnelId),
+            QString::fromStdString(recordsStartDate),
+            QString::fromStdString(recordsEndDate)
+        );
+        if (!jsonRecords.isEmpty()) {
+            std::cout << jsonRecords.toStdString() << std::endl;
+        } else {
+            std::cerr << "Failed to get attendance records" << std::endl;
+        }
+    });
+
+    // Get attendance record command
+    auto* recordCmd = cliApp.add_subcommand("record", "Get attendance record");
+    std::string recordId;
+    recordCmd->add_option("--id", recordId, "Record ID")->required();
+    recordCmd->callback([&]() {
+        QString jsonRecord = client.getAttendanceRecord(QString::fromStdString(recordId));
+        if (!jsonRecord.isEmpty()) {
+            std::cout << jsonRecord.toStdString() << std::endl;
+        } else {
+            std::cerr << "Record not found" << std::endl;
+        }
+    });
+
+    // Check personnel presence command
+    auto* presentCmd = cliApp.add_subcommand("present", "Check if personnel is present");
+    std::string presentPersonnelId;
+    presentCmd->add_option("--personnel", presentPersonnelId, "Personnel ID")->required();
+    presentCmd->callback([&]() {
+        bool present = client.isPersonnelPresent(QString::fromStdString(presentPersonnelId));
+        std::cout << "Personnel " << presentPersonnelId << " is " << (present ? "present" : "not present") << std::endl;
     });
 
     CLI11_PARSE(cliApp, argc, argv);

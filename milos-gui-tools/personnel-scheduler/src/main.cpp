@@ -37,6 +37,7 @@ int main(int argc, char* argv[]) {
     // Get components and expose to QML
     DeviceManager* deviceManager = scheduler.getDeviceManager();
     DeviceHealthMonitor* healthMonitor = scheduler.getDeviceHealthMonitor();
+    AttendanceTracker* attendanceTracker = scheduler.getAttendanceTracker();
     
     if (!deviceManager) {
         std::cerr << "Failed to get Device Manager" << std::endl;
@@ -49,6 +50,7 @@ int main(int argc, char* argv[]) {
     // Expose components to QML
     engine.rootContext()->setContextProperty("deviceManager", deviceManager);
     engine.rootContext()->setContextProperty("healthMonitor", healthMonitor);
+    engine.rootContext()->setContextProperty("attendanceTracker", attendanceTracker);
     
     // Load main QML file
     engine.load("qrc:/ui/main.qml");

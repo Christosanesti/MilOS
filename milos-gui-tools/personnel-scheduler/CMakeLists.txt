@@ -15,6 +15,7 @@ find_package(CLI11 REQUIRED)
 
 # Find SQLite3 for device configuration and status
 find_package(SQLite3 REQUIRED)
+find_package(Qt6 REQUIRED COMPONENTS Sql)
 
 # Optional: Find libfprint for fingerprint scanner support
 find_package(PkgConfig REQUIRED)
@@ -42,6 +43,11 @@ set(APPLICATION_SOURCES
     src/cli_tool.cpp
     src/config_parser.cpp
     src/audit_logger.cpp
+    src/attendance_tracker.cpp
+    src/biometric_capture.cpp
+    src/entry_exit_logger.cpp
+    src/attendance_storage.cpp
+    src/attendance_validator.cpp
 )
 
 # Header files
@@ -55,6 +61,11 @@ set(APPLICATION_HEADERS
     include/dbus_interface.h
     include/config_parser.h
     include/audit_logger.h
+    include/attendance_tracker.h
+    include/biometric_capture.h
+    include/entry_exit_logger.h
+    include/attendance_storage.h
+    include/attendance_validator.h
 )
 
 # QML files
@@ -62,6 +73,7 @@ set(QML_FILES
     ui/main.qml
     ui/DeviceStatusDashboard.qml
     ui/DeviceConfiguration.qml
+    ui/attendance_tracking.qml
 )
 
 # Create executable
@@ -78,9 +90,11 @@ target_link_libraries(milos-personnel-scheduler
     Qt6::Quick
     Qt6::QuickControls2
     Qt6::DBus
+    Qt6::Sql
     yaml-cpp
     CLI11::CLI11
     SQLite::SQLite3
+    milos-pqc
 )
 
 # Link optional libraries if available

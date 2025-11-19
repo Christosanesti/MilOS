@@ -1,16 +1,21 @@
 #include "dbus_interface.h"
 #include "device_manager.h"
 #include "device_health.h"
+#include "attendance_tracker.h"
 #include "biometric_abstraction.h"
 #include <QDBusConnection>
 #include <QDBusMetaType>
 #include <QDebug>
 #include <QByteArray>
+#include <QJsonDocument>
+#include <QJsonArray>
+#include <QJsonObject>
 
 PersonnelSchedulerDBusInterface::PersonnelSchedulerDBusInterface(QObject* parent)
     : QObject(parent)
     , m_deviceManager(nullptr)
     , m_healthMonitor(nullptr)
+    , m_attendanceTracker(nullptr)
     , m_initialized(false)
 {
 }
@@ -24,6 +29,10 @@ void PersonnelSchedulerDBusInterface::setDeviceManager(DeviceManager* deviceMana
 
 void PersonnelSchedulerDBusInterface::setDeviceHealthMonitor(DeviceHealthMonitor* healthMonitor) {
     m_healthMonitor = healthMonitor;
+}
+
+void PersonnelSchedulerDBusInterface::setAttendanceTracker(AttendanceTracker* attendanceTracker) {
+    m_attendanceTracker = attendanceTracker;
 }
 
 bool PersonnelSchedulerDBusInterface::initialize() {
@@ -249,5 +258,83 @@ bool PersonnelSchedulerDBusInterface::SetDeviceConfiguration(const QString& devi
     }
     
     return device->setConfiguration(config);
+}
+
+QString PersonnelSchedulerDBusInterface::RecordAttendanceEntry(const QString& deviceId, const QString& personnelId, const QString& location) {
+    if (!m_attendanceTracker) {
+        return QString();
+    }
+    
+    return m_attendanceTracker->recordEntry(deviceId, personnelId, location);
+}
+
+QString PersonnelSchedulerDBusInterface::RecordAttendanceExit(const QString& deviceId, const QString& personnelId, const QString& location) {
+    if (!m_attendanceTracker) {
+        return QString();
+    }
+    
+    return m_attendanceTracker->recordExit(deviceId, personnelId, location);
+}
+
+QString PersonnelSchedulerDBusInterface::GetAttendanceRecords(const QString& personnelId, const QString& startDate, const QString& endDate) {
+    if (!m_attendanceTracker) {
+        return QString();
+    }
+    
+    QDateTime startDateTime = startDate.isEmpty() ? QDateTime() : QDateTime::fromString(startDate, Qt::ISODate);
+    QDateTime endDateTime = endDate.isEmpty() ? QDateTime() : QDateTime::fromString(endDate, Qt::ISODate);
+    
+    QList<AttendanceRecord> records = m_attendanceTracker->getAttendanceRecords(personnelId, startDateTime, endDateTime);
+    
+    QJsonArray jsonArray;
+    for (const AttendanceRecord& record : records) {
+        QJsonObject obj;
+        obj["record_id"] = record.recordId;
+        obj["personnel_id"] = record.personnelId;
+        obj["device_id"] = record.deviceId;
+        obj["device_type"] = static_cast<int>(record.deviceType);
+        obj["event_type"] = static_cast<int>(record.eventType);
+        obj["timestamp"] = record.timestamp.toString(Qt::ISODate);
+        obj["location"] = record.location;
+        obj["match_score"] = record.matchScore;
+        obj["validated"] = record.validated;
+        jsonArray.append(obj);
+    }
+    
+    QJsonDocument doc(jsonArray);
+    return QString::fromUtf8(doc.toJson());
+}
+
+QString PersonnelSchedulerDBusInterface::GetAttendanceRecord(const QString& recordId) {
+    if (!m_attendanceTracker) {
+        return QString();
+    }
+    
+    AttendanceRecord record = m_attendanceTracker->getAttendanceRecord(recordId);
+    if (record.recordId.isEmpty()) {
+        return QString();
+    }
+    
+    QJsonObject obj;
+    obj["record_id"] = record.recordId;
+    obj["personnel_id"] = record.personnelId;
+    obj["device_id"] = record.deviceId;
+    obj["device_type"] = static_cast<int>(record.deviceType);
+    obj["event_type"] = static_cast<int>(record.eventType);
+    obj["timestamp"] = record.timestamp.toString(Qt::ISODate);
+    obj["location"] = record.location;
+    obj["match_score"] = record.matchScore;
+    obj["validated"] = record.validated;
+    
+    QJsonDocument doc(obj);
+    return QString::fromUtf8(doc.toJson());
+}
+
+bool PersonnelSchedulerDBusInterface::IsPersonnelPresent(const QString& personnelId) {
+    if (!m_attendanceTracker) {
+        return false;
+    }
+    
+    return m_attendanceTracker->isPersonnelPresent(personnelId);
 }
 

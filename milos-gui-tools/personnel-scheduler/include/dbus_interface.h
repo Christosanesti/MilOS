@@ -9,6 +9,7 @@
 
 class DeviceManager;
 class DeviceHealthMonitor;
+class AttendanceTracker;
 
 /**
  * @brief D-Bus Interface for Personnel Scheduler
@@ -32,6 +33,11 @@ public:
      * @brief Set device health monitor
      */
     void setDeviceHealthMonitor(DeviceHealthMonitor* healthMonitor);
+
+    /**
+     * @brief Set attendance tracker
+     */
+    void setAttendanceTracker(AttendanceTracker* attendanceTracker);
 
     /**
      * @brief Initialize D-Bus interface
@@ -122,6 +128,47 @@ public slots:
      */
     bool SetDeviceConfiguration(const QString& deviceId, const QVariantMap& config);
 
+    /**
+     * @brief Record attendance entry
+     * @param deviceId Device ID
+     * @param personnelId Personnel ID
+     * @param location Location/area
+     * @return Attendance record ID or empty string if failed
+     */
+    QString RecordAttendanceEntry(const QString& deviceId, const QString& personnelId, const QString& location);
+
+    /**
+     * @brief Record attendance exit
+     * @param deviceId Device ID
+     * @param personnelId Personnel ID
+     * @param location Location/area
+     * @return Attendance record ID or empty string if failed
+     */
+    QString RecordAttendanceExit(const QString& deviceId, const QString& personnelId, const QString& location);
+
+    /**
+     * @brief Get attendance records
+     * @param personnelId Optional personnel ID filter
+     * @param startDate Optional start date (ISO format)
+     * @param endDate Optional end date (ISO format)
+     * @return JSON string with attendance records
+     */
+    QString GetAttendanceRecords(const QString& personnelId, const QString& startDate, const QString& endDate);
+
+    /**
+     * @brief Get attendance record by ID
+     * @param recordId Record ID
+     * @return JSON string with attendance record
+     */
+    QString GetAttendanceRecord(const QString& recordId);
+
+    /**
+     * @brief Check if personnel is present
+     * @param personnelId Personnel ID
+     * @return true if present, false otherwise
+     */
+    bool IsPersonnelPresent(const QString& personnelId);
+
 Q_SIGNALS:
     /**
      * @brief Emitted when device is connected
@@ -146,6 +193,7 @@ Q_SIGNALS:
 private:
     DeviceManager* m_deviceManager;
     DeviceHealthMonitor* m_healthMonitor;
+    AttendanceTracker* m_attendanceTracker;
     bool m_initialized;
 };
 
