@@ -279,6 +279,51 @@ public:
         return reply.value();
     }
 
+    QString generateAttendanceReport(int reportType, const QString& startDate, const QString& endDate, const QString& personnelId) {
+        QDBusReply<QString> reply = m_interface->call("GenerateAttendanceReport", reportType, startDate, endDate, personnelId);
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return QString();
+        }
+        return reply.value();
+    }
+
+    QString generateAccessControlLog(const QString& startDate, const QString& endDate, const QString& personnelId, const QString& location) {
+        QDBusReply<QString> reply = m_interface->call("GenerateAccessControlLog", startDate, endDate, personnelId, location);
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return QString();
+        }
+        return reply.value();
+    }
+
+    QString generateComplianceReport(int standard, const QString& startDate, const QString& endDate) {
+        QDBusReply<QString> reply = m_interface->call("GenerateComplianceReport", standard, startDate, endDate);
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return QString();
+        }
+        return reply.value();
+    }
+
+    QString getDashboardData() {
+        QDBusReply<QString> reply = m_interface->call("GetDashboardData");
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return QString();
+        }
+        return reply.value();
+    }
+
+    bool exportReport(const QString& reportData, int format, const QString& filePath) {
+        QDBusReply<bool> reply = m_interface->call("ExportReport", reportData, format, filePath);
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return false;
+        }
+        return reply.value();
+    }
+
     QVariantMap getDeviceConfiguration(const QString& deviceId) {
         QDBusReply<QVariantMap> reply = m_interface->call("GetDeviceConfiguration", deviceId);
         if (!reply.isValid()) {
@@ -816,6 +861,107 @@ int main(int argc, char* argv[]) {
     checkPermCmd->callback([&]() {
         bool hasPermission = client.checkPermission(QString::fromStdString(checkPermPersonnelId), checkPermPermission);
         std::cout << "Permission: " << (hasPermission ? "Granted" : "Denied") << std::endl;
+    });
+
+    // Generate attendance report command
+    auto* reportCmd = cliApp.add_subcommand("report", "Generate attendance report");
+    int reportType = 0;
+    std::string reportStartDate;
+    std::string reportEndDate;
+    std::string reportPersonnelId;
+    reportCmd->add_option("--type", reportType, "Report type (0=Daily, 1=Weekly, 2=Monthly, 3=Custom)")->required();
+    reportCmd->add_option("--start", reportStartDate, "Start date (ISO format)")->required();
+    reportCmd->add_option("--end", reportEndDate, "End date (ISO format)")->required();
+    reportCmd->add_option("--personnel", reportPersonnelId, "Personnel ID filter");
+    reportCmd->callback([&]() {
+        QString jsonReport = client.generateAttendanceReport(
+            reportType,
+            QString::fromStdString(reportStartDate),
+            QString::fromStdString(reportEndDate),
+            QString::fromStdString(reportPersonnelId)
+        );
+        if (!jsonReport.isEmpty()) {
+            std::cout << jsonReport.toStdString() << std::endl;
+        } else {
+            std::cerr << "Failed to generate report" << std::endl;
+        }
+    });
+
+    // Generate access control log command
+    auto* auditLogCmd = cliApp.add_subcommand("audit-log", "Generate access control audit log");
+    std::string auditLogStartDate;
+    std::string auditLogEndDate;
+    std::string auditLogPersonnelId;
+    std::string auditLogLocation;
+    auditLogCmd->add_option("--start", auditLogStartDate, "Start date (ISO format)")->required();
+    auditLogCmd->add_option("--end", auditLogEndDate, "End date (ISO format)")->required();
+    auditLogCmd->add_option("--personnel", auditLogPersonnelId, "Personnel ID filter");
+    auditLogCmd->add_option("--location", auditLogLocation, "Location filter");
+    auditLogCmd->callback([&]() {
+        QString jsonLog = client.generateAccessControlLog(
+            QString::fromStdString(auditLogStartDate),
+            QString::fromStdString(auditLogEndDate),
+            QString::fromStdString(auditLogPersonnelId),
+            QString::fromStdString(auditLogLocation)
+        );
+        if (!jsonLog.isEmpty()) {
+            std::cout << jsonLog.toStdString() << std::endl;
+        } else {
+            std::cout << "No log entries found" << std::endl;
+        }
+    });
+
+    // Generate compliance report command
+    auto* complianceCmd = cliApp.add_subcommand("compliance", "Generate compliance report");
+    int complianceStandard = 0;
+    std::string complianceStartDate;
+    std::string complianceEndDate;
+    complianceCmd->add_option("--standard", complianceStandard, "Compliance standard (0=ISO27001, 1=NIST, 2=HIPAA, 3=Custom)")->required();
+    complianceCmd->add_option("--start", complianceStartDate, "Start date (ISO format)")->required();
+    complianceCmd->add_option("--end", complianceEndDate, "End date (ISO format)")->required();
+    complianceCmd->callback([&]() {
+        QString jsonReport = client.generateComplianceReport(
+            complianceStandard,
+            QString::fromStdString(complianceStartDate),
+            QString::fromStdString(complianceEndDate)
+        );
+        if (!jsonReport.isEmpty()) {
+            std::cout << jsonReport.toStdString() << std::endl;
+        } else {
+            std::cerr << "Failed to generate compliance report" << std::endl;
+        }
+    });
+
+    // Get dashboard data command
+    auto* dashboardCmd = cliApp.add_subcommand("dashboard", "Get analytics dashboard data");
+    dashboardCmd->callback([&]() {
+        QString jsonDashboard = client.getDashboardData();
+        if (!jsonDashboard.isEmpty()) {
+            std::cout << jsonDashboard.toStdString() << std::endl;
+        } else {
+            std::cerr << "Failed to get dashboard data" << std::endl;
+        }
+    });
+
+    // Export report command
+    auto* exportCmd = cliApp.add_subcommand("export", "Export report");
+    std::string exportReportData;
+    int exportFormat = 0;
+    std::string exportFilePath;
+    exportCmd->add_option("--data", exportReportData, "Report data (JSON string)")->required();
+    exportCmd->add_option("--format", exportFormat, "Export format (0=CSV, 1=PDF, 2=JSON)")->required();
+    exportCmd->add_option("--file", exportFilePath, "Output file path")->required();
+    exportCmd->callback([&]() {
+        bool success = client.exportReport(
+            QString::fromStdString(exportReportData),
+            exportFormat,
+            QString::fromStdString(exportFilePath)
+        );
+        if (success) {
+            std::cout << "Report exported to: " << exportFilePath << std::endl;
+        } else {
+            std::cerr << "Failed to export report" << std::endl;
+        }
     });
 
     CLI11_PARSE(cliApp, argc, argv);

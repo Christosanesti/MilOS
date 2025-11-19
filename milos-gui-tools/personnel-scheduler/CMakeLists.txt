@@ -56,6 +56,11 @@ set(APPLICATION_SOURCES
     src/access_control.cpp
     src/access_restrictions.cpp
     src/role_manager.cpp
+    src/report_generator.cpp
+    src/analytics_engine.cpp
+    src/export_manager.cpp
+    src/compliance_reporter.cpp
+    src/personnel_integration.cpp
 )
 
 # Header files
@@ -82,6 +87,11 @@ set(APPLICATION_HEADERS
     include/access_control.h
     include/access_restrictions.h
     include/role_manager.h
+    include/report_generator.h
+    include/analytics_engine.h
+    include/export_manager.h
+    include/compliance_reporter.h
+    include/personnel_integration.h
 )
 
 # QML files
@@ -93,6 +103,8 @@ set(QML_FILES
     ui/scheduling_calendar.qml
     ui/shift_management.qml
     ui/access_control.qml
+    ui/reporting_dashboard.qml
+    ui/analytics_dashboard.qml
 )
 
 # Create executable

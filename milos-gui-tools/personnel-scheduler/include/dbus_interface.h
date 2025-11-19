@@ -18,6 +18,11 @@ class CoverageManager;
 class AccessControl;
 class AccessRestrictionsManager;
 class RoleManager;
+class ReportGenerator;
+class AnalyticsEngine;
+class ExportManager;
+class ComplianceReporter;
+class PersonnelIntegration;
 
 /**
  * @brief D-Bus Interface for Personnel Scheduler
@@ -86,6 +91,31 @@ public:
      * @brief Set role manager
      */
     void setRoleManager(RoleManager* roleManager);
+
+    /**
+     * @brief Set report generator
+     */
+    void setReportGenerator(ReportGenerator* reportGenerator);
+
+    /**
+     * @brief Set analytics engine
+     */
+    void setAnalyticsEngine(AnalyticsEngine* analyticsEngine);
+
+    /**
+     * @brief Set export manager
+     */
+    void setExportManager(ExportManager* exportManager);
+
+    /**
+     * @brief Set compliance reporter
+     */
+    void setComplianceReporter(ComplianceReporter* complianceReporter);
+
+    /**
+     * @brief Set personnel integration
+     */
+    void setPersonnelIntegration(PersonnelIntegration* personnelIntegration);
 
     /**
      * @brief Initialize D-Bus interface
@@ -343,6 +373,50 @@ public slots:
      */
     bool CheckPermission(const QString& personnelId, int permission);
 
+    /**
+     * @brief Generate attendance report
+     * @param reportType Report type (0=Daily, 1=Weekly, 2=Monthly, 3=Custom)
+     * @param startDate Start date (ISO format)
+     * @param endDate End date (ISO format)
+     * @param personnelId Optional personnel ID filter
+     * @return JSON string with attendance report
+     */
+    QString GenerateAttendanceReport(int reportType, const QString& startDate, const QString& endDate, const QString& personnelId);
+
+    /**
+     * @brief Generate access control audit log
+     * @param startDate Start date (ISO format)
+     * @param endDate End date (ISO format)
+     * @param personnelId Optional personnel ID filter
+     * @param location Optional location filter
+     * @return JSON string with access control log
+     */
+    QString GenerateAccessControlLog(const QString& startDate, const QString& endDate, const QString& personnelId, const QString& location);
+
+    /**
+     * @brief Generate compliance report
+     * @param standard Compliance standard (0=ISO27001, 1=NIST, 2=HIPAA, 3=Custom)
+     * @param startDate Start date (ISO format)
+     * @param endDate End date (ISO format)
+     * @return JSON string with compliance report
+     */
+    QString GenerateComplianceReport(int standard, const QString& startDate, const QString& endDate);
+
+    /**
+     * @brief Get analytics dashboard data
+     * @return JSON string with dashboard data
+     */
+    QString GetDashboardData();
+
+    /**
+     * @brief Export report
+     * @param reportData Report data (JSON string)
+     * @param format Export format (0=CSV, 1=PDF, 2=JSON)
+     * @param filePath Output file path
+     * @return true if export successful, false otherwise
+     */
+    bool ExportReport(const QString& reportData, int format, const QString& filePath);
+
 Q_SIGNALS:
     /**
      * @brief Emitted when device is connected
@@ -376,6 +450,11 @@ private:
     AccessControl* m_accessControl;
     AccessRestrictionsManager* m_restrictionsManager;
     RoleManager* m_roleManager;
+    ReportGenerator* m_reportGenerator;
+    AnalyticsEngine* m_analyticsEngine;
+    ExportManager* m_exportManager;
+    ComplianceReporter* m_complianceReporter;
+    PersonnelIntegration* m_personnelIntegration;
     bool m_initialized;
 };
 

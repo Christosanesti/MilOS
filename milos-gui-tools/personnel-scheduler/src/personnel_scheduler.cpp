@@ -9,6 +9,11 @@
 #include "access_control.h"
 #include "access_restrictions.h"
 #include "role_manager.h"
+#include "report_generator.h"
+#include "analytics_engine.h"
+#include "export_manager.h"
+#include "compliance_reporter.h"
+#include "personnel_integration.h"
 #include "audit_logger.h"
 #include <QDebug>
 #include <QStandardPaths>
@@ -27,6 +32,11 @@ PersonnelScheduler::PersonnelScheduler(QObject* parent)
     , m_accessControl(new AccessControl(this))
     , m_restrictionsManager(new AccessRestrictionsManager(this))
     , m_roleManager(new RoleManager(this))
+    , m_reportGenerator(new ReportGenerator(this))
+    , m_analyticsEngine(new AnalyticsEngine(this))
+    , m_exportManager(new ExportManager(this))
+    , m_complianceReporter(new ComplianceReporter(this))
+    , m_personnelIntegration(new PersonnelIntegration(this))
     , m_dbusInterface(new PersonnelSchedulerDBusInterface(this))
     , m_auditLogger(new AuditLogger(this))
     , m_configParser(new ConfigParser())
@@ -90,6 +100,30 @@ bool PersonnelScheduler::initialize() {
     // Initialize role manager
     if (!m_roleManager->initialize()) {
         qWarning() << "Failed to initialize role manager";
+        return false;
+    }
+    
+    // Initialize report generator
+    if (!m_reportGenerator->initialize()) {
+        qWarning() << "Failed to initialize report generator";
+        return false;
+    }
+    
+    // Initialize analytics engine
+    if (!m_analyticsEngine->initialize()) {
+        qWarning() << "Failed to initialize analytics engine";
+        return false;
+    }
+    
+    // Initialize export manager
+    if (!m_exportManager->initialize()) {
+        qWarning() << "Failed to initialize export manager";
+        return false;
+    }
+    
+    // Initialize compliance reporter
+    if (!m_complianceReporter->initialize()) {
+        qWarning() << "Failed to initialize compliance reporter";
         return false;
     }
     
@@ -204,6 +238,11 @@ bool PersonnelScheduler::initialize() {
     m_dbusInterface->setAccessControl(m_accessControl);
     m_dbusInterface->setAccessRestrictionsManager(m_restrictionsManager);
     m_dbusInterface->setRoleManager(m_roleManager);
+    m_dbusInterface->setReportGenerator(m_reportGenerator);
+    m_dbusInterface->setAnalyticsEngine(m_analyticsEngine);
+    m_dbusInterface->setExportManager(m_exportManager);
+    m_dbusInterface->setComplianceReporter(m_complianceReporter);
+    m_dbusInterface->setPersonnelIntegration(m_personnelIntegration);
     
     if (!m_dbusInterface->initialize()) {
         qWarning() << "Failed to initialize D-Bus interface";

@@ -13,6 +13,11 @@
 #include "access_control.h"
 #include "access_restrictions.h"
 #include "role_manager.h"
+#include "report_generator.h"
+#include "analytics_engine.h"
+#include "export_manager.h"
+#include "compliance_reporter.h"
+#include "personnel_integration.h"
 #include "dbus_interface.h"
 #include "audit_logger.h"
 #include "config_parser.h"
@@ -78,6 +83,16 @@ public:
      */
     AccessControl* getAccessControl() const { return m_accessControl; }
 
+    /**
+     * @brief Get report generator
+     */
+    ReportGenerator* getReportGenerator() const { return m_reportGenerator; }
+
+    /**
+     * @brief Get analytics engine
+     */
+    AnalyticsEngine* getAnalyticsEngine() const { return m_analyticsEngine; }
+
 private:
     DeviceManager* m_deviceManager;
     DeviceHealthMonitor* m_healthMonitor;
@@ -91,6 +106,11 @@ private:
     AccessControl* m_accessControl;
     AccessRestrictionsManager* m_restrictionsManager;
     RoleManager* m_roleManager;
+    ReportGenerator* m_reportGenerator;
+    AnalyticsEngine* m_analyticsEngine;
+    ExportManager* m_exportManager;
+    ComplianceReporter* m_complianceReporter;
+    PersonnelIntegration* m_personnelIntegration;
     PersonnelSchedulerDBusInterface* m_dbusInterface;
     AuditLogger* m_auditLogger;
     ConfigParser* m_configParser;

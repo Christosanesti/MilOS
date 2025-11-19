@@ -10,6 +10,11 @@
 #include "access_control.h"
 #include "access_restrictions.h"
 #include "role_manager.h"
+#include "report_generator.h"
+#include "analytics_engine.h"
+#include "export_manager.h"
+#include "compliance_reporter.h"
+#include "personnel_integration.h"
 #include "biometric_abstraction.h"
 #include <QDBusConnection>
 #include <QDBusMetaType>
@@ -32,6 +37,11 @@ PersonnelSchedulerDBusInterface::PersonnelSchedulerDBusInterface(QObject* parent
     , m_accessControl(nullptr)
     , m_restrictionsManager(nullptr)
     , m_roleManager(nullptr)
+    , m_reportGenerator(nullptr)
+    , m_analyticsEngine(nullptr)
+    , m_exportManager(nullptr)
+    , m_complianceReporter(nullptr)
+    , m_personnelIntegration(nullptr)
     , m_initialized(false)
 {
 }
@@ -81,6 +91,26 @@ void PersonnelSchedulerDBusInterface::setAccessRestrictionsManager(AccessRestric
 
 void PersonnelSchedulerDBusInterface::setRoleManager(RoleManager* roleManager) {
     m_roleManager = roleManager;
+}
+
+void PersonnelSchedulerDBusInterface::setReportGenerator(ReportGenerator* reportGenerator) {
+    m_reportGenerator = reportGenerator;
+}
+
+void PersonnelSchedulerDBusInterface::setAnalyticsEngine(AnalyticsEngine* analyticsEngine) {
+    m_analyticsEngine = analyticsEngine;
+}
+
+void PersonnelSchedulerDBusInterface::setExportManager(ExportManager* exportManager) {
+    m_exportManager = exportManager;
+}
+
+void PersonnelSchedulerDBusInterface::setComplianceReporter(ComplianceReporter* complianceReporter) {
+    m_complianceReporter = complianceReporter;
+}
+
+void PersonnelSchedulerDBusInterface::setPersonnelIntegration(PersonnelIntegration* personnelIntegration) {
+    m_personnelIntegration = personnelIntegration;
 }
 
 bool PersonnelSchedulerDBusInterface::initialize() {
@@ -573,5 +603,129 @@ bool PersonnelSchedulerDBusInterface::CheckPermission(const QString& personnelId
     }
     
     return m_roleManager->checkPermission(personnelId, static_cast<Permission>(permission));
+}
+
+QString PersonnelSchedulerDBusInterface::GenerateAttendanceReport(int reportType, const QString& startDate, const QString& endDate, const QString& personnelId) {
+    if (!m_reportGenerator) {
+        return QString();
+    }
+    
+    QDateTime startDateTime = QDateTime::fromString(startDate, Qt::ISODate);
+    QDateTime endDateTime = QDateTime::fromString(endDate, Qt::ISODate);
+    
+    if (!startDateTime.isValid() || !endDateTime.isValid()) {
+        return QString();
+    }
+    
+    AttendanceReport report = m_reportGenerator->generateAttendanceReport(
+        static_cast<ReportType>(reportType),
+        startDateTime,
+        endDateTime,
+        personnelId
+    );
+    
+    QJsonObject obj;
+    obj["report_id"] = report.reportId;
+    obj["report_type"] = static_cast<int>(report.reportType);
+    obj["start_date"] = report.startDate.toString(Qt::ISODate);
+    obj["end_date"] = report.endDate.toString(Qt::ISODate);
+    obj["statistics"] = QJsonObject::fromVariantMap(report.statistics);
+    
+    QJsonArray recordsArray;
+    for (const QVariantMap& record : report.attendanceRecords) {
+        recordsArray.append(QJsonObject::fromVariantMap(record));
+    }
+    obj["attendance_records"] = recordsArray;
+    
+    QJsonDocument doc(obj);
+    return QString::fromUtf8(doc.toJson());
+}
+
+QString PersonnelSchedulerDBusInterface::GenerateAccessControlLog(const QString& startDate, const QString& endDate, const QString& personnelId, const QString& location) {
+    if (!m_reportGenerator) {
+        return QString();
+    }
+    
+    QDateTime startDateTime = QDateTime::fromString(startDate, Qt::ISODate);
+    QDateTime endDateTime = QDateTime::fromString(endDate, Qt::ISODate);
+    
+    if (!startDateTime.isValid() || !endDateTime.isValid()) {
+        return QString();
+    }
+    
+    QList<QVariantMap> logEntries = m_reportGenerator->generateAccessControlLog(
+        startDateTime,
+        endDateTime,
+        personnelId,
+        location
+    );
+    
+    QJsonArray jsonArray;
+    for (const QVariantMap& entry : logEntries) {
+        jsonArray.append(QJsonObject::fromVariantMap(entry));
+    }
+    
+    QJsonDocument doc(jsonArray);
+    return QString::fromUtf8(doc.toJson());
+}
+
+QString PersonnelSchedulerDBusInterface::GenerateComplianceReport(int standard, const QString& startDate, const QString& endDate) {
+    if (!m_complianceReporter) {
+        return QString();
+    }
+    
+    QDateTime startDateTime = QDateTime::fromString(startDate, Qt::ISODate);
+    QDateTime endDateTime = QDateTime::fromString(endDate, Qt::ISODate);
+    
+    if (!startDateTime.isValid() || !endDateTime.isValid()) {
+        return QString();
+    }
+    
+    QVariantMap report = m_complianceReporter->generateComplianceReport(
+        static_cast<ComplianceStandard>(standard),
+        startDateTime,
+        endDateTime
+    );
+    
+    QJsonDocument doc(QJsonObject::fromVariantMap(report));
+    return QString::fromUtf8(doc.toJson());
+}
+
+QString PersonnelSchedulerDBusInterface::GetDashboardData() {
+    if (!m_analyticsEngine) {
+        return QString();
+    }
+    
+    QVariantMap dashboard = m_analyticsEngine->getDashboardData();
+    
+    QJsonDocument doc(QJsonObject::fromVariantMap(dashboard));
+    return QString::fromUtf8(doc.toJson());
+}
+
+bool PersonnelSchedulerDBusInterface::ExportReport(const QString& reportData, int format, const QString& filePath) {
+    if (!m_exportManager) {
+        return false;
+    }
+    
+    // Parse report data
+    QJsonDocument doc = QJsonDocument::fromJson(reportData.toUtf8());
+    if (doc.isNull()) {
+        return false;
+    }
+    
+    QVariantMap data = doc.object().toVariantMap();
+    
+    // Create placeholder report for export
+    AttendanceReport report;
+    report.reportId = data.value("report_id").toString();
+    report.reportType = static_cast<ReportType>(data.value("report_type", 0).toInt());
+    report.startDate = QDateTime::fromString(data.value("start_date").toString(), Qt::ISODate);
+    report.endDate = QDateTime::fromString(data.value("end_date").toString(), Qt::ISODate);
+    
+    return m_exportManager->exportAttendanceReport(
+        report,
+        static_cast<ExportFormat>(format),
+        filePath
+    );
 }
 
