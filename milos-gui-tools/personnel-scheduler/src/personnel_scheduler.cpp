@@ -1,6 +1,11 @@
 #include "personnel_scheduler.h"
 #include "attendance_tracker.h"
 #include "attendance_storage.h"
+#include "shift_scheduler.h"
+#include "conflict_detector.h"
+#include "leave_manager.h"
+#include "shift_swap.h"
+#include "coverage_manager.h"
 #include "audit_logger.h"
 #include <QDebug>
 #include <QStandardPaths>
@@ -11,6 +16,11 @@ PersonnelScheduler::PersonnelScheduler(QObject* parent)
     , m_healthMonitor(new DeviceHealthMonitor(this))
     , m_attendanceTracker(new AttendanceTracker(m_deviceManager, this))
     , m_attendanceStorage(new AttendanceStorage(this))
+    , m_shiftScheduler(new ShiftScheduler(this))
+    , m_conflictDetector(new ConflictDetector(this))
+    , m_leaveManager(new LeaveManager(this))
+    , m_swapManager(new ShiftSwapManager(this))
+    , m_coverageManager(new CoverageManager(this))
     , m_dbusInterface(new PersonnelSchedulerDBusInterface(this))
     , m_auditLogger(new AuditLogger(this))
     , m_configParser(new ConfigParser())
@@ -50,6 +60,12 @@ bool PersonnelScheduler::initialize() {
     QString dbPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/attendance.db";
     if (!m_attendanceStorage->initialize(dbPath)) {
         qWarning() << "Failed to initialize attendance storage";
+        return false;
+    }
+    
+    // Initialize shift scheduler
+    if (!m_shiftScheduler->initialize()) {
+        qWarning() << "Failed to initialize shift scheduler";
         return false;
     }
     
@@ -103,10 +119,43 @@ bool PersonnelScheduler::initialize() {
         m_auditLogger->logDeviceOperation("attendance_validation_failed", QString(), eventData);
     });
     
+    // Connect shift scheduler signals
+    connect(m_shiftScheduler, &ShiftScheduler::shiftCreated, this, [this](const QString& shiftId) {
+        QVariantMap eventData;
+        eventData["shift_id"] = shiftId;
+        m_auditLogger->logDeviceOperation("shift_created", QString(), eventData);
+    });
+    
+    connect(m_conflictDetector, &ConflictDetector::conflictDetected, this, [this](const Conflict conflict) {
+        QVariantMap eventData;
+        eventData["shift_id1"] = conflict.shiftId1;
+        eventData["shift_id2"] = conflict.shiftId2;
+        eventData["personnel_id"] = conflict.personnelId;
+        eventData["description"] = conflict.description;
+        m_auditLogger->logDeviceOperation("conflict_detected", QString(), eventData);
+    });
+    
+    connect(m_leaveManager, &LeaveManager::leaveRequestCreated, this, [this](const QString& requestId) {
+        QVariantMap eventData;
+        eventData["request_id"] = requestId;
+        m_auditLogger->logDeviceOperation("leave_request_created", QString(), eventData);
+    });
+    
+    connect(m_swapManager, &ShiftSwapManager::swapRequestCreated, this, [this](const QString& swapId) {
+        QVariantMap eventData;
+        eventData["swap_id"] = swapId;
+        m_auditLogger->logDeviceOperation("swap_request_created", QString(), eventData);
+    });
+    
     // Initialize D-Bus interface
     m_dbusInterface->setDeviceManager(m_deviceManager);
     m_dbusInterface->setDeviceHealthMonitor(m_healthMonitor);
     m_dbusInterface->setAttendanceTracker(m_attendanceTracker);
+    m_dbusInterface->setShiftScheduler(m_shiftScheduler);
+    m_dbusInterface->setConflictDetector(m_conflictDetector);
+    m_dbusInterface->setLeaveManager(m_leaveManager);
+    m_dbusInterface->setShiftSwapManager(m_swapManager);
+    m_dbusInterface->setCoverageManager(m_coverageManager);
     
     if (!m_dbusInterface->initialize()) {
         qWarning() << "Failed to initialize D-Bus interface";

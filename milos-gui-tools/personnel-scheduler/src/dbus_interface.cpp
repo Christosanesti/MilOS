@@ -2,6 +2,11 @@
 #include "device_manager.h"
 #include "device_health.h"
 #include "attendance_tracker.h"
+#include "shift_scheduler.h"
+#include "conflict_detector.h"
+#include "leave_manager.h"
+#include "shift_swap.h"
+#include "coverage_manager.h"
 #include "biometric_abstraction.h"
 #include <QDBusConnection>
 #include <QDBusMetaType>
@@ -16,6 +21,11 @@ PersonnelSchedulerDBusInterface::PersonnelSchedulerDBusInterface(QObject* parent
     , m_deviceManager(nullptr)
     , m_healthMonitor(nullptr)
     , m_attendanceTracker(nullptr)
+    , m_shiftScheduler(nullptr)
+    , m_conflictDetector(nullptr)
+    , m_leaveManager(nullptr)
+    , m_swapManager(nullptr)
+    , m_coverageManager(nullptr)
     , m_initialized(false)
 {
 }
@@ -33,6 +43,26 @@ void PersonnelSchedulerDBusInterface::setDeviceHealthMonitor(DeviceHealthMonitor
 
 void PersonnelSchedulerDBusInterface::setAttendanceTracker(AttendanceTracker* attendanceTracker) {
     m_attendanceTracker = attendanceTracker;
+}
+
+void PersonnelSchedulerDBusInterface::setShiftScheduler(ShiftScheduler* shiftScheduler) {
+    m_shiftScheduler = shiftScheduler;
+}
+
+void PersonnelSchedulerDBusInterface::setConflictDetector(ConflictDetector* conflictDetector) {
+    m_conflictDetector = conflictDetector;
+}
+
+void PersonnelSchedulerDBusInterface::setLeaveManager(LeaveManager* leaveManager) {
+    m_leaveManager = leaveManager;
+}
+
+void PersonnelSchedulerDBusInterface::setShiftSwapManager(ShiftSwapManager* swapManager) {
+    m_swapManager = swapManager;
+}
+
+void PersonnelSchedulerDBusInterface::setCoverageManager(CoverageManager* coverageManager) {
+    m_coverageManager = coverageManager;
 }
 
 bool PersonnelSchedulerDBusInterface::initialize() {
@@ -336,5 +366,122 @@ bool PersonnelSchedulerDBusInterface::IsPersonnelPresent(const QString& personne
     }
     
     return m_attendanceTracker->isPersonnelPresent(personnelId);
+}
+
+QString PersonnelSchedulerDBusInterface::CreateShift(const QString& personnelId, const QString& startDateTime, const QString& endDateTime, int shiftType, const QString& location) {
+    if (!m_shiftScheduler) {
+        return QString();
+    }
+    
+    QDateTime start = QDateTime::fromString(startDateTime, Qt::ISODate);
+    QDateTime end = QDateTime::fromString(endDateTime, Qt::ISODate);
+    
+    if (!start.isValid() || !end.isValid()) {
+        return QString();
+    }
+    
+    return m_shiftScheduler->createShift(personnelId, start, end, static_cast<ShiftType>(shiftType), location);
+}
+
+QString PersonnelSchedulerDBusInterface::GetShifts(const QString& personnelId, const QString& startDate, const QString& endDate) {
+    if (!m_shiftScheduler) {
+        return QString();
+    }
+    
+    QDateTime startDateTime = startDate.isEmpty() ? QDateTime() : QDateTime::fromString(startDate, Qt::ISODate);
+    QDateTime endDateTime = endDate.isEmpty() ? QDateTime() : QDateTime::fromString(endDate, Qt::ISODate);
+    
+    QList<ShiftAssignment> shifts = m_shiftScheduler->getShifts(personnelId, startDateTime, endDateTime);
+    
+    QJsonArray jsonArray;
+    for (const ShiftAssignment& shift : shifts) {
+        QJsonObject obj;
+        obj["shift_id"] = shift.shiftId;
+        obj["personnel_id"] = shift.personnelId;
+        obj["start_date_time"] = shift.startDateTime.toString(Qt::ISODate);
+        obj["end_date_time"] = shift.endDateTime.toString(Qt::ISODate);
+        obj["shift_type"] = static_cast<int>(shift.shiftType);
+        obj["location"] = shift.location;
+        obj["status"] = static_cast<int>(shift.status);
+        obj["notes"] = shift.notes;
+        jsonArray.append(obj);
+    }
+    
+    QJsonDocument doc(jsonArray);
+    return QString::fromUtf8(doc.toJson());
+}
+
+QString PersonnelSchedulerDBusInterface::DetectConflicts(const QString& startDate, const QString& endDate) {
+    if (!m_shiftScheduler || !m_conflictDetector) {
+        return QString();
+    }
+    
+    QDateTime startDateTime = startDate.isEmpty() ? QDateTime() : QDateTime::fromString(startDate, Qt::ISODate);
+    QDateTime endDateTime = endDate.isEmpty() ? QDateTime() : QDateTime::fromString(endDate, Qt::ISODate);
+    
+    QList<ShiftAssignment> shifts = m_shiftScheduler->getShifts(QString(), startDateTime, endDateTime);
+    QList<Conflict> conflicts = m_conflictDetector->detectConflicts(shifts);
+    
+    QJsonArray jsonArray;
+    for (const Conflict& conflict : conflicts) {
+        QJsonObject obj;
+        obj["type"] = static_cast<int>(conflict.type);
+        obj["shift_id1"] = conflict.shiftId1;
+        obj["shift_id2"] = conflict.shiftId2;
+        obj["personnel_id"] = conflict.personnelId;
+        obj["description"] = conflict.description;
+        obj["conflict_time"] = conflict.conflictTime.toString(Qt::ISODate);
+        jsonArray.append(obj);
+    }
+    
+    QJsonDocument doc(jsonArray);
+    return QString::fromUtf8(doc.toJson());
+}
+
+QString PersonnelSchedulerDBusInterface::CreateLeaveRequest(const QString& personnelId, const QString& startDate, const QString& endDate, int leaveType, const QString& reason) {
+    if (!m_leaveManager) {
+        return QString();
+    }
+    
+    QDateTime startDateTime = QDateTime::fromString(startDate, Qt::ISODate);
+    QDateTime endDateTime = QDateTime::fromString(endDate, Qt::ISODate);
+    
+    if (!startDateTime.isValid() || !endDateTime.isValid()) {
+        return QString();
+    }
+    
+    return m_leaveManager->createLeaveRequest(personnelId, startDateTime, endDateTime, static_cast<LeaveType>(leaveType), reason);
+}
+
+bool PersonnelSchedulerDBusInterface::ApproveLeaveRequest(const QString& requestId, const QString& approverId) {
+    if (!m_leaveManager) {
+        return false;
+    }
+    
+    return m_leaveManager->approveLeaveRequest(requestId, approverId);
+}
+
+QString PersonnelSchedulerDBusInterface::CreateSwapRequest(const QString& shiftId, const QString& requesterId, const QString& targetPersonnelId, const QString& reason) {
+    if (!m_swapManager) {
+        return QString();
+    }
+    
+    return m_swapManager->createSwapRequest(shiftId, requesterId, targetPersonnelId, reason);
+}
+
+bool PersonnelSchedulerDBusInterface::ApproveSwapRequest(const QString& swapId, const QString& approverId) {
+    if (!m_swapManager) {
+        return false;
+    }
+    
+    return m_swapManager->approveSwapRequest(swapId, approverId);
+}
+
+QString PersonnelSchedulerDBusInterface::CreateCoverageRequest(const QString& shiftId, const QString& requesterId, const QString& reason) {
+    if (!m_coverageManager) {
+        return QString();
+    }
+    
+    return m_coverageManager->createCoverageRequest(shiftId, requesterId, reason);
 }
 

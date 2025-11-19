@@ -153,6 +153,78 @@ public:
         return reply.value();
     }
 
+    QString createShift(const QString& personnelId, const QString& startDateTime, const QString& endDateTime, int shiftType, const QString& location) {
+        QDBusReply<QString> reply = m_interface->call("CreateShift", personnelId, startDateTime, endDateTime, shiftType, location);
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return QString();
+        }
+        return reply.value();
+    }
+
+    QString getShifts(const QString& personnelId, const QString& startDate, const QString& endDate) {
+        QDBusReply<QString> reply = m_interface->call("GetShifts", personnelId, startDate, endDate);
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return QString();
+        }
+        return reply.value();
+    }
+
+    QString detectConflicts(const QString& startDate, const QString& endDate) {
+        QDBusReply<QString> reply = m_interface->call("DetectConflicts", startDate, endDate);
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return QString();
+        }
+        return reply.value();
+    }
+
+    QString createLeaveRequest(const QString& personnelId, const QString& startDate, const QString& endDate, int leaveType, const QString& reason) {
+        QDBusReply<QString> reply = m_interface->call("CreateLeaveRequest", personnelId, startDate, endDate, leaveType, reason);
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return QString();
+        }
+        return reply.value();
+    }
+
+    bool approveLeaveRequest(const QString& requestId, const QString& approverId) {
+        QDBusReply<bool> reply = m_interface->call("ApproveLeaveRequest", requestId, approverId);
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return false;
+        }
+        return reply.value();
+    }
+
+    QString createSwapRequest(const QString& shiftId, const QString& requesterId, const QString& targetPersonnelId, const QString& reason) {
+        QDBusReply<QString> reply = m_interface->call("CreateSwapRequest", shiftId, requesterId, targetPersonnelId, reason);
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return QString();
+        }
+        return reply.value();
+    }
+
+    bool approveSwapRequest(const QString& swapId, const QString& approverId) {
+        QDBusReply<bool> reply = m_interface->call("ApproveSwapRequest", swapId, approverId);
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return false;
+        }
+        return reply.value();
+    }
+
+    QString createCoverageRequest(const QString& shiftId, const QString& requesterId, const QString& reason) {
+        QDBusReply<QString> reply = m_interface->call("CreateCoverageRequest", shiftId, requesterId, reason);
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return QString();
+        }
+        return reply.value();
+    }
+
     QVariantMap getDeviceConfiguration(const QString& deviceId) {
         QDBusReply<QVariantMap> reply = m_interface->call("GetDeviceConfiguration", deviceId);
         if (!reply.isValid()) {
@@ -409,6 +481,180 @@ int main(int argc, char* argv[]) {
     presentCmd->callback([&]() {
         bool present = client.isPersonnelPresent(QString::fromStdString(presentPersonnelId));
         std::cout << "Personnel " << presentPersonnelId << " is " << (present ? "present" : "not present") << std::endl;
+    });
+
+    // Create shift command
+    auto* shiftCreateCmd = cliApp.add_subcommand("shift-create", "Create shift assignment");
+    std::string shiftPersonnelId;
+    std::string shiftStartDateTime;
+    std::string shiftEndDateTime;
+    int shiftType = 0;
+    std::string shiftLocation;
+    shiftCreateCmd->add_option("--personnel", shiftPersonnelId, "Personnel ID")->required();
+    shiftCreateCmd->add_option("--start", shiftStartDateTime, "Start date/time (ISO format)")->required();
+    shiftCreateCmd->add_option("--end", shiftEndDateTime, "End date/time (ISO format)")->required();
+    shiftCreateCmd->add_option("--type", shiftType, "Shift type (0=Day, 1=Night, 2=Swing, 3=Custom)")->default_val(0);
+    shiftCreateCmd->add_option("--location", shiftLocation, "Location/area")->required();
+    shiftCreateCmd->callback([&]() {
+        QString shiftId = client.createShift(
+            QString::fromStdString(shiftPersonnelId),
+            QString::fromStdString(shiftStartDateTime),
+            QString::fromStdString(shiftEndDateTime),
+            shiftType,
+            QString::fromStdString(shiftLocation)
+        );
+        if (!shiftId.isEmpty()) {
+            std::cout << "Shift created: " << shiftId.toStdString() << std::endl;
+        } else {
+            std::cerr << "Failed to create shift" << std::endl;
+        }
+    });
+
+    // Get shifts command
+    auto* shiftsCmd = cliApp.add_subcommand("shifts", "List shift assignments");
+    std::string shiftsPersonnelId;
+    std::string shiftsStartDate;
+    std::string shiftsEndDate;
+    shiftsCmd->add_option("--personnel", shiftsPersonnelId, "Personnel ID filter");
+    shiftsCmd->add_option("--start", shiftsStartDate, "Start date (ISO format)");
+    shiftsCmd->add_option("--end", shiftsEndDate, "End date (ISO format)");
+    shiftsCmd->callback([&]() {
+        QString jsonShifts = client.getShifts(
+            QString::fromStdString(shiftsPersonnelId),
+            QString::fromStdString(shiftsStartDate),
+            QString::fromStdString(shiftsEndDate)
+        );
+        if (!jsonShifts.isEmpty()) {
+            std::cout << jsonShifts.toStdString() << std::endl;
+        } else {
+            std::cerr << "Failed to get shifts" << std::endl;
+        }
+    });
+
+    // Detect conflicts command
+    auto* conflictsCmd = cliApp.add_subcommand("conflicts", "Detect scheduling conflicts");
+    std::string conflictsStartDate;
+    std::string conflictsEndDate;
+    conflictsCmd->add_option("--start", conflictsStartDate, "Start date (ISO format)");
+    conflictsCmd->add_option("--end", conflictsEndDate, "End date (ISO format)");
+    conflictsCmd->callback([&]() {
+        QString jsonConflicts = client.detectConflicts(
+            QString::fromStdString(conflictsStartDate),
+            QString::fromStdString(conflictsEndDate)
+        );
+        if (!jsonConflicts.isEmpty()) {
+            std::cout << jsonConflicts.toStdString() << std::endl;
+        } else {
+            std::cout << "No conflicts detected" << std::endl;
+        }
+    });
+
+    // Create leave request command
+    auto* leaveCmd = cliApp.add_subcommand("leave", "Create leave request");
+    std::string leavePersonnelId;
+    std::string leaveStartDate;
+    std::string leaveEndDate;
+    int leaveType = 0;
+    std::string leaveReason;
+    leaveCmd->add_option("--personnel", leavePersonnelId, "Personnel ID")->required();
+    leaveCmd->add_option("--start", leaveStartDate, "Start date (ISO format)")->required();
+    leaveCmd->add_option("--end", leaveEndDate, "End date (ISO format)")->required();
+    leaveCmd->add_option("--type", leaveType, "Leave type (0=Vacation, 1=Sick, 2=Personal, 3=Emergency, 4=Other)")->default_val(0);
+    leaveCmd->add_option("--reason", leaveReason, "Reason for leave")->required();
+    leaveCmd->callback([&]() {
+        QString requestId = client.createLeaveRequest(
+            QString::fromStdString(leavePersonnelId),
+            QString::fromStdString(leaveStartDate),
+            QString::fromStdString(leaveEndDate),
+            leaveType,
+            QString::fromStdString(leaveReason)
+        );
+        if (!requestId.isEmpty()) {
+            std::cout << "Leave request created: " << requestId.toStdString() << std::endl;
+        } else {
+            std::cerr << "Failed to create leave request" << std::endl;
+        }
+    });
+
+    // Approve leave request command
+    auto* approveLeaveCmd = cliApp.add_subcommand("leave-approve", "Approve leave request");
+    std::string approveLeaveRequestId;
+    std::string approveLeaveApproverId;
+    approveLeaveCmd->add_option("--request", approveLeaveRequestId, "Request ID")->required();
+    approveLeaveCmd->add_option("--approver", approveLeaveApproverId, "Approver ID")->required();
+    approveLeaveCmd->callback([&]() {
+        bool success = client.approveLeaveRequest(
+            QString::fromStdString(approveLeaveRequestId),
+            QString::fromStdString(approveLeaveApproverId)
+        );
+        if (success) {
+            std::cout << "Leave request approved" << std::endl;
+        } else {
+            std::cerr << "Failed to approve leave request" << std::endl;
+        }
+    });
+
+    // Create swap request command
+    auto* swapCmd = cliApp.add_subcommand("swap", "Create shift swap request");
+    std::string swapShiftId;
+    std::string swapRequesterId;
+    std::string swapTargetId;
+    std::string swapReason;
+    swapCmd->add_option("--shift", swapShiftId, "Shift ID")->required();
+    swapCmd->add_option("--requester", swapRequesterId, "Requester personnel ID")->required();
+    swapCmd->add_option("--target", swapTargetId, "Target personnel ID")->required();
+    swapCmd->add_option("--reason", swapReason, "Reason for swap")->required();
+    swapCmd->callback([&]() {
+        QString swapId = client.createSwapRequest(
+            QString::fromStdString(swapShiftId),
+            QString::fromStdString(swapRequesterId),
+            QString::fromStdString(swapTargetId),
+            QString::fromStdString(swapReason)
+        );
+        if (!swapId.isEmpty()) {
+            std::cout << "Swap request created: " << swapId.toStdString() << std::endl;
+        } else {
+            std::cerr << "Failed to create swap request" << std::endl;
+        }
+    });
+
+    // Approve swap request command
+    auto* approveSwapCmd = cliApp.add_subcommand("swap-approve", "Approve shift swap request");
+    std::string approveSwapId;
+    std::string approveSwapApproverId;
+    approveSwapCmd->add_option("--swap", approveSwapId, "Swap ID")->required();
+    approveSwapCmd->add_option("--approver", approveSwapApproverId, "Approver ID")->required();
+    approveSwapCmd->callback([&]() {
+        bool success = client.approveSwapRequest(
+            QString::fromStdString(approveSwapId),
+            QString::fromStdString(approveSwapApproverId)
+        );
+        if (success) {
+            std::cout << "Swap request approved" << std::endl;
+        } else {
+            std::cerr << "Failed to approve swap request" << std::endl;
+        }
+    });
+
+    // Create coverage request command
+    auto* coverageCmd = cliApp.add_subcommand("coverage", "Create coverage request");
+    std::string coverageShiftId;
+    std::string coverageRequesterId;
+    std::string coverageReason;
+    coverageCmd->add_option("--shift", coverageShiftId, "Shift ID")->required();
+    coverageCmd->add_option("--requester", coverageRequesterId, "Requester personnel ID")->required();
+    coverageCmd->add_option("--reason", coverageReason, "Reason for coverage request")->required();
+    coverageCmd->callback([&]() {
+        QString requestId = client.createCoverageRequest(
+            QString::fromStdString(coverageShiftId),
+            QString::fromStdString(coverageRequesterId),
+            QString::fromStdString(coverageReason)
+        );
+        if (!requestId.isEmpty()) {
+            std::cout << "Coverage request created: " << requestId.toStdString() << std::endl;
+        } else {
+            std::cerr << "Failed to create coverage request" << std::endl;
+        }
     });
 
     CLI11_PARSE(cliApp, argc, argv);

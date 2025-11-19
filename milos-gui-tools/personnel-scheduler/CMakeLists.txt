@@ -48,6 +48,11 @@ set(APPLICATION_SOURCES
     src/entry_exit_logger.cpp
     src/attendance_storage.cpp
     src/attendance_validator.cpp
+    src/shift_scheduler.cpp
+    src/conflict_detector.cpp
+    src/leave_manager.cpp
+    src/shift_swap.cpp
+    src/coverage_manager.cpp
 )
 
 # Header files
@@ -66,6 +71,11 @@ set(APPLICATION_HEADERS
     include/entry_exit_logger.h
     include/attendance_storage.h
     include/attendance_validator.h
+    include/shift_scheduler.h
+    include/conflict_detector.h
+    include/leave_manager.h
+    include/shift_swap.h
+    include/coverage_manager.h
 )
 
 # QML files
@@ -74,6 +84,8 @@ set(QML_FILES
     ui/DeviceStatusDashboard.qml
     ui/DeviceConfiguration.qml
     ui/attendance_tracking.qml
+    ui/scheduling_calendar.qml
+    ui/shift_management.qml
 )
 
 # Create executable

@@ -10,6 +10,11 @@
 class DeviceManager;
 class DeviceHealthMonitor;
 class AttendanceTracker;
+class ShiftScheduler;
+class ConflictDetector;
+class LeaveManager;
+class ShiftSwapManager;
+class CoverageManager;
 
 /**
  * @brief D-Bus Interface for Personnel Scheduler
@@ -38,6 +43,31 @@ public:
      * @brief Set attendance tracker
      */
     void setAttendanceTracker(AttendanceTracker* attendanceTracker);
+
+    /**
+     * @brief Set shift scheduler
+     */
+    void setShiftScheduler(ShiftScheduler* shiftScheduler);
+
+    /**
+     * @brief Set conflict detector
+     */
+    void setConflictDetector(ConflictDetector* conflictDetector);
+
+    /**
+     * @brief Set leave manager
+     */
+    void setLeaveManager(LeaveManager* leaveManager);
+
+    /**
+     * @brief Set shift swap manager
+     */
+    void setShiftSwapManager(ShiftSwapManager* swapManager);
+
+    /**
+     * @brief Set coverage manager
+     */
+    void setCoverageManager(CoverageManager* coverageManager);
 
     /**
      * @brief Initialize D-Bus interface
@@ -169,6 +199,80 @@ public slots:
      */
     bool IsPersonnelPresent(const QString& personnelId);
 
+    /**
+     * @brief Create shift assignment
+     * @param personnelId Personnel ID
+     * @param startDateTime Start date/time (ISO format)
+     * @param endDateTime End date/time (ISO format)
+     * @param shiftType Shift type (0=Day, 1=Night, 2=Swing, 3=Custom)
+     * @param location Location/area
+     * @return Shift ID or empty string if failed
+     */
+    QString CreateShift(const QString& personnelId, const QString& startDateTime, const QString& endDateTime, int shiftType, const QString& location);
+
+    /**
+     * @brief Get shift assignments
+     * @param personnelId Optional personnel ID filter
+     * @param startDate Optional start date (ISO format)
+     * @param endDate Optional end date (ISO format)
+     * @return JSON string with shift assignments
+     */
+    QString GetShifts(const QString& personnelId, const QString& startDate, const QString& endDate);
+
+    /**
+     * @brief Detect conflicts in schedule
+     * @param startDate Optional start date (ISO format)
+     * @param endDate Optional end date (ISO format)
+     * @return JSON string with detected conflicts
+     */
+    QString DetectConflicts(const QString& startDate, const QString& endDate);
+
+    /**
+     * @brief Create leave request
+     * @param personnelId Personnel ID
+     * @param startDate Start date (ISO format)
+     * @param endDate End date (ISO format)
+     * @param leaveType Leave type (0=Vacation, 1=Sick, 2=Personal, 3=Emergency, 4=Other)
+     * @param reason Reason for leave
+     * @return Request ID or empty string if failed
+     */
+    QString CreateLeaveRequest(const QString& personnelId, const QString& startDate, const QString& endDate, int leaveType, const QString& reason);
+
+    /**
+     * @brief Approve leave request
+     * @param requestId Request ID
+     * @param approverId Approver ID
+     * @return true if approval successful, false otherwise
+     */
+    bool ApproveLeaveRequest(const QString& requestId, const QString& approverId);
+
+    /**
+     * @brief Create shift swap request
+     * @param shiftId Shift ID
+     * @param requesterId Requester personnel ID
+     * @param targetPersonnelId Target personnel ID
+     * @param reason Reason for swap
+     * @return Swap ID or empty string if failed
+     */
+    QString CreateSwapRequest(const QString& shiftId, const QString& requesterId, const QString& targetPersonnelId, const QString& reason);
+
+    /**
+     * @brief Approve shift swap request
+     * @param swapId Swap ID
+     * @param approverId Approver ID
+     * @return true if approval successful, false otherwise
+     */
+    bool ApproveSwapRequest(const QString& swapId, const QString& approverId);
+
+    /**
+     * @brief Create coverage request
+     * @param shiftId Shift ID
+     * @param requesterId Requester personnel ID
+     * @param reason Reason for coverage request
+     * @return Request ID or empty string if failed
+     */
+    QString CreateCoverageRequest(const QString& shiftId, const QString& requesterId, const QString& reason);
+
 Q_SIGNALS:
     /**
      * @brief Emitted when device is connected
@@ -194,6 +298,11 @@ private:
     DeviceManager* m_deviceManager;
     DeviceHealthMonitor* m_healthMonitor;
     AttendanceTracker* m_attendanceTracker;
+    ShiftScheduler* m_shiftScheduler;
+    ConflictDetector* m_conflictDetector;
+    LeaveManager* m_leaveManager;
+    ShiftSwapManager* m_swapManager;
+    CoverageManager* m_coverageManager;
     bool m_initialized;
 };
 

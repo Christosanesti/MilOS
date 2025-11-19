@@ -5,6 +5,11 @@
 #include "device_health.h"
 #include "attendance_tracker.h"
 #include "attendance_storage.h"
+#include "shift_scheduler.h"
+#include "conflict_detector.h"
+#include "leave_manager.h"
+#include "shift_swap.h"
+#include "coverage_manager.h"
 #include "dbus_interface.h"
 #include "audit_logger.h"
 #include "config_parser.h"
@@ -60,11 +65,21 @@ public:
      */
     AttendanceTracker* getAttendanceTracker() const { return m_attendanceTracker; }
 
+    /**
+     * @brief Get shift scheduler
+     */
+    ShiftScheduler* getShiftScheduler() const { return m_shiftScheduler; }
+
 private:
     DeviceManager* m_deviceManager;
     DeviceHealthMonitor* m_healthMonitor;
     AttendanceTracker* m_attendanceTracker;
     AttendanceStorage* m_attendanceStorage;
+    ShiftScheduler* m_shiftScheduler;
+    ConflictDetector* m_conflictDetector;
+    LeaveManager* m_leaveManager;
+    ShiftSwapManager* m_swapManager;
+    CoverageManager* m_coverageManager;
     PersonnelSchedulerDBusInterface* m_dbusInterface;
     AuditLogger* m_auditLogger;
     ConfigParser* m_configParser;
