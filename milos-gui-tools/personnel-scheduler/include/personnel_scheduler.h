@@ -10,6 +10,9 @@
 #include "leave_manager.h"
 #include "shift_swap.h"
 #include "coverage_manager.h"
+#include "access_control.h"
+#include "access_restrictions.h"
+#include "role_manager.h"
 #include "dbus_interface.h"
 #include "audit_logger.h"
 #include "config_parser.h"
@@ -70,6 +73,11 @@ public:
      */
     ShiftScheduler* getShiftScheduler() const { return m_shiftScheduler; }
 
+    /**
+     * @brief Get access control
+     */
+    AccessControl* getAccessControl() const { return m_accessControl; }
+
 private:
     DeviceManager* m_deviceManager;
     DeviceHealthMonitor* m_healthMonitor;
@@ -80,6 +88,9 @@ private:
     LeaveManager* m_leaveManager;
     ShiftSwapManager* m_swapManager;
     CoverageManager* m_coverageManager;
+    AccessControl* m_accessControl;
+    AccessRestrictionsManager* m_restrictionsManager;
+    RoleManager* m_roleManager;
     PersonnelSchedulerDBusInterface* m_dbusInterface;
     AuditLogger* m_auditLogger;
     ConfigParser* m_configParser;

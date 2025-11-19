@@ -7,6 +7,9 @@
 #include "leave_manager.h"
 #include "shift_swap.h"
 #include "coverage_manager.h"
+#include "access_control.h"
+#include "access_restrictions.h"
+#include "role_manager.h"
 #include "biometric_abstraction.h"
 #include <QDBusConnection>
 #include <QDBusMetaType>
@@ -26,6 +29,9 @@ PersonnelSchedulerDBusInterface::PersonnelSchedulerDBusInterface(QObject* parent
     , m_leaveManager(nullptr)
     , m_swapManager(nullptr)
     , m_coverageManager(nullptr)
+    , m_accessControl(nullptr)
+    , m_restrictionsManager(nullptr)
+    , m_roleManager(nullptr)
     , m_initialized(false)
 {
 }
@@ -63,6 +69,18 @@ void PersonnelSchedulerDBusInterface::setShiftSwapManager(ShiftSwapManager* swap
 
 void PersonnelSchedulerDBusInterface::setCoverageManager(CoverageManager* coverageManager) {
     m_coverageManager = coverageManager;
+}
+
+void PersonnelSchedulerDBusInterface::setAccessControl(AccessControl* accessControl) {
+    m_accessControl = accessControl;
+}
+
+void PersonnelSchedulerDBusInterface::setAccessRestrictionsManager(AccessRestrictionsManager* restrictionsManager) {
+    m_restrictionsManager = restrictionsManager;
+}
+
+void PersonnelSchedulerDBusInterface::setRoleManager(RoleManager* roleManager) {
+    m_roleManager = roleManager;
 }
 
 bool PersonnelSchedulerDBusInterface::initialize() {
@@ -483,5 +501,77 @@ QString PersonnelSchedulerDBusInterface::CreateCoverageRequest(const QString& sh
     }
     
     return m_coverageManager->createCoverageRequest(shiftId, requesterId, reason);
+}
+
+int PersonnelSchedulerDBusInterface::RequestAccess(const QString& personnelId, const QString& location, const QString& deviceId, const QString& biometricData) {
+    if (!m_accessControl) {
+        return static_cast<int>(AccessResult::Denied);
+    }
+    
+    QByteArray biometricBytes = QByteArray::fromBase64(biometricData.toUtf8());
+    AccessResult result = m_accessControl->requestAccess(personnelId, location, deviceId, biometricBytes);
+    
+    return static_cast<int>(result);
+}
+
+bool PersonnelSchedulerDBusInterface::GrantAccessPermission(const QString& personnelId, const QString& location, const QString& startTime, const QString& endTime) {
+    if (!m_accessControl) {
+        return false;
+    }
+    
+    QDateTime startDateTime = startTime.isEmpty() ? QDateTime() : QDateTime::fromString(startTime, Qt::ISODate);
+    QDateTime endDateTime = endTime.isEmpty() ? QDateTime() : QDateTime::fromString(endTime, Qt::ISODate);
+    
+    return m_accessControl->grantAccessPermission(personnelId, location, startDateTime, endDateTime);
+}
+
+bool PersonnelSchedulerDBusInterface::RevokeAccessPermission(const QString& personnelId, const QString& location) {
+    if (!m_accessControl) {
+        return false;
+    }
+    
+    return m_accessControl->revokeAccessPermission(personnelId, location);
+}
+
+QString PersonnelSchedulerDBusInterface::GetAccessPermissions(const QString& personnelId, const QString& location) {
+    if (!m_accessControl) {
+        return QString();
+    }
+    
+    QList<QVariantMap> permissions = m_accessControl->getAccessPermissions(personnelId, location);
+    
+    QJsonArray jsonArray;
+    for (const QVariantMap& permission : permissions) {
+        QJsonObject obj;
+        obj["personnel_id"] = permission["personnel_id"].toString();
+        obj["location"] = permission["location"].toString();
+        obj["enabled"] = permission["enabled"].toBool();
+        if (permission.contains("start_time")) {
+            obj["start_time"] = permission["start_time"].toDateTime().toString(Qt::ISODate);
+        }
+        if (permission.contains("end_time")) {
+            obj["end_time"] = permission["end_time"].toDateTime().toString(Qt::ISODate);
+        }
+        jsonArray.append(obj);
+    }
+    
+    QJsonDocument doc(jsonArray);
+    return QString::fromUtf8(doc.toJson());
+}
+
+bool PersonnelSchedulerDBusInterface::AssignRole(const QString& personnelId, int role) {
+    if (!m_roleManager) {
+        return false;
+    }
+    
+    return m_roleManager->assignRole(personnelId, static_cast<Role>(role));
+}
+
+bool PersonnelSchedulerDBusInterface::CheckPermission(const QString& personnelId, int permission) {
+    if (!m_roleManager) {
+        return false;
+    }
+    
+    return m_roleManager->checkPermission(personnelId, static_cast<Permission>(permission));
 }
 

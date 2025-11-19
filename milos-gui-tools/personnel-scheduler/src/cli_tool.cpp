@@ -225,6 +225,60 @@ public:
         return reply.value();
     }
 
+    int requestAccess(const QString& personnelId, const QString& location, const QString& deviceId, const QString& biometricData) {
+        QDBusReply<int> reply = m_interface->call("RequestAccess", personnelId, location, deviceId, biometricData);
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return 1;  // Denied
+        }
+        return reply.value();
+    }
+
+    bool grantAccessPermission(const QString& personnelId, const QString& location, const QString& startTime, const QString& endTime) {
+        QDBusReply<bool> reply = m_interface->call("GrantAccessPermission", personnelId, location, startTime, endTime);
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return false;
+        }
+        return reply.value();
+    }
+
+    bool revokeAccessPermission(const QString& personnelId, const QString& location) {
+        QDBusReply<bool> reply = m_interface->call("RevokeAccessPermission", personnelId, location);
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return false;
+        }
+        return reply.value();
+    }
+
+    QString getAccessPermissions(const QString& personnelId, const QString& location) {
+        QDBusReply<QString> reply = m_interface->call("GetAccessPermissions", personnelId, location);
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return QString();
+        }
+        return reply.value();
+    }
+
+    bool assignRole(const QString& personnelId, int role) {
+        QDBusReply<bool> reply = m_interface->call("AssignRole", personnelId, role);
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return false;
+        }
+        return reply.value();
+    }
+
+    bool checkPermission(const QString& personnelId, int permission) {
+        QDBusReply<bool> reply = m_interface->call("CheckPermission", personnelId, permission);
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return false;
+        }
+        return reply.value();
+    }
+
     QVariantMap getDeviceConfiguration(const QString& deviceId) {
         QDBusReply<QVariantMap> reply = m_interface->call("GetDeviceConfiguration", deviceId);
         if (!reply.isValid()) {
@@ -655,6 +709,113 @@ int main(int argc, char* argv[]) {
         } else {
             std::cerr << "Failed to create coverage request" << std::endl;
         }
+    });
+
+    // Request access command
+    auto* accessCmd = cliApp.add_subcommand("access", "Request access");
+    std::string accessPersonnelId;
+    std::string accessLocation;
+    std::string accessDeviceId;
+    std::string accessBiometricData;
+    accessCmd->add_option("--personnel", accessPersonnelId, "Personnel ID")->required();
+    accessCmd->add_option("--location", accessLocation, "Location/area")->required();
+    accessCmd->add_option("--device", accessDeviceId, "Device ID")->required();
+    accessCmd->add_option("--biometric", accessBiometricData, "Biometric data (base64)")->required();
+    accessCmd->callback([&]() {
+        int result = client.requestAccess(
+            QString::fromStdString(accessPersonnelId),
+            QString::fromStdString(accessLocation),
+            QString::fromStdString(accessDeviceId),
+            QString::fromStdString(accessBiometricData)
+        );
+        const char* results[] = {"Granted", "Denied", "TimeRestricted", "LocationRestricted", "RoleRestricted"};
+        std::cout << "Access result: " << (result >= 0 && result < 5 ? results[result] : "Unknown") << std::endl;
+    });
+
+    // Grant access permission command
+    auto* grantAccessCmd = cliApp.add_subcommand("access-grant", "Grant access permission");
+    std::string grantAccessPersonnelId;
+    std::string grantAccessLocation;
+    std::string grantAccessStartTime;
+    std::string grantAccessEndTime;
+    grantAccessCmd->add_option("--personnel", grantAccessPersonnelId, "Personnel ID")->required();
+    grantAccessCmd->add_option("--location", grantAccessLocation, "Location/area")->required();
+    grantAccessCmd->add_option("--start", grantAccessStartTime, "Start time (ISO format)");
+    grantAccessCmd->add_option("--end", grantAccessEndTime, "End time (ISO format)");
+    grantAccessCmd->callback([&]() {
+        bool success = client.grantAccessPermission(
+            QString::fromStdString(grantAccessPersonnelId),
+            QString::fromStdString(grantAccessLocation),
+            QString::fromStdString(grantAccessStartTime),
+            QString::fromStdString(grantAccessEndTime)
+        );
+        if (success) {
+            std::cout << "Access permission granted" << std::endl;
+        } else {
+            std::cerr << "Failed to grant access permission" << std::endl;
+        }
+    });
+
+    // Revoke access permission command
+    auto* revokeAccessCmd = cliApp.add_subcommand("access-revoke", "Revoke access permission");
+    std::string revokeAccessPersonnelId;
+    std::string revokeAccessLocation;
+    revokeAccessCmd->add_option("--personnel", revokeAccessPersonnelId, "Personnel ID")->required();
+    revokeAccessCmd->add_option("--location", revokeAccessLocation, "Location/area")->required();
+    revokeAccessCmd->callback([&]() {
+        bool success = client.revokeAccessPermission(
+            QString::fromStdString(revokeAccessPersonnelId),
+            QString::fromStdString(revokeAccessLocation)
+        );
+        if (success) {
+            std::cout << "Access permission revoked" << std::endl;
+        } else {
+            std::cerr << "Failed to revoke access permission" << std::endl;
+        }
+    });
+
+    // Get access permissions command
+    auto* permissionsCmd = cliApp.add_subcommand("permissions", "List access permissions");
+    std::string permissionsPersonnelId;
+    std::string permissionsLocation;
+    permissionsCmd->add_option("--personnel", permissionsPersonnelId, "Personnel ID filter");
+    permissionsCmd->add_option("--location", permissionsLocation, "Location filter");
+    permissionsCmd->callback([&]() {
+        QString jsonPermissions = client.getAccessPermissions(
+            QString::fromStdString(permissionsPersonnelId),
+            QString::fromStdString(permissionsLocation)
+        );
+        if (!jsonPermissions.isEmpty()) {
+            std::cout << jsonPermissions.toStdString() << std::endl;
+        } else {
+            std::cout << "No permissions found" << std::endl;
+        }
+    });
+
+    // Assign role command
+    auto* roleCmd = cliApp.add_subcommand("role", "Assign role to personnel");
+    std::string rolePersonnelId;
+    int roleType = 0;
+    roleCmd->add_option("--personnel", rolePersonnelId, "Personnel ID")->required();
+    roleCmd->add_option("--type", roleType, "Role (0=Administrator, 1=SecurityOfficer, 2=Personnel, 3=Guest)")->required();
+    roleCmd->callback([&]() {
+        bool success = client.assignRole(QString::fromStdString(rolePersonnelId), roleType);
+        if (success) {
+            std::cout << "Role assigned" << std::endl;
+        } else {
+            std::cerr << "Failed to assign role" << std::endl;
+        }
+    });
+
+    // Check permission command
+    auto* checkPermCmd = cliApp.add_subcommand("check-permission", "Check permission");
+    std::string checkPermPersonnelId;
+    int checkPermPermission = 0;
+    checkPermCmd->add_option("--personnel", checkPermPersonnelId, "Personnel ID")->required();
+    checkPermCmd->add_option("--permission", checkPermPermission, "Permission (0=ViewAttendance, 1=ManageShifts, 2=ManageAccess, 3=ManageRoles, 4=ViewReports, 5=ManageBiometricDevices)")->required();
+    checkPermCmd->callback([&]() {
+        bool hasPermission = client.checkPermission(QString::fromStdString(checkPermPersonnelId), checkPermPermission);
+        std::cout << "Permission: " << (hasPermission ? "Granted" : "Denied") << std::endl;
     });
 
     CLI11_PARSE(cliApp, argc, argv);

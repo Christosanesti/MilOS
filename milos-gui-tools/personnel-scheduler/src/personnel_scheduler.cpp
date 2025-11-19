@@ -6,6 +6,9 @@
 #include "leave_manager.h"
 #include "shift_swap.h"
 #include "coverage_manager.h"
+#include "access_control.h"
+#include "access_restrictions.h"
+#include "role_manager.h"
 #include "audit_logger.h"
 #include <QDebug>
 #include <QStandardPaths>
@@ -21,6 +24,9 @@ PersonnelScheduler::PersonnelScheduler(QObject* parent)
     , m_leaveManager(new LeaveManager(this))
     , m_swapManager(new ShiftSwapManager(this))
     , m_coverageManager(new CoverageManager(this))
+    , m_accessControl(new AccessControl(this))
+    , m_restrictionsManager(new AccessRestrictionsManager(this))
+    , m_roleManager(new RoleManager(this))
     , m_dbusInterface(new PersonnelSchedulerDBusInterface(this))
     , m_auditLogger(new AuditLogger(this))
     , m_configParser(new ConfigParser())
@@ -68,6 +74,28 @@ bool PersonnelScheduler::initialize() {
         qWarning() << "Failed to initialize shift scheduler";
         return false;
     }
+    
+    // Initialize access control
+    if (!m_accessControl->initialize()) {
+        qWarning() << "Failed to initialize access control";
+        return false;
+    }
+    
+    // Initialize restrictions manager
+    if (!m_restrictionsManager->initialize()) {
+        qWarning() << "Failed to initialize restrictions manager";
+        return false;
+    }
+    
+    // Initialize role manager
+    if (!m_roleManager->initialize()) {
+        qWarning() << "Failed to initialize role manager";
+        return false;
+    }
+    
+    // Connect access control components
+    m_accessControl->setRestrictionsManager(m_restrictionsManager);
+    m_accessControl->setRoleManager(m_roleManager);
     
     // Set up device health monitoring
     QList<QString> devices = m_deviceManager->getRegisteredDevices();
@@ -147,6 +175,23 @@ bool PersonnelScheduler::initialize() {
         m_auditLogger->logDeviceOperation("swap_request_created", QString(), eventData);
     });
     
+    connect(m_accessControl, &AccessControl::accessGranted, this, [this](const QString& personnelId, const QString& location, const QDateTime& time) {
+        QVariantMap eventData;
+        eventData["personnel_id"] = personnelId;
+        eventData["location"] = location;
+        eventData["time"] = time.toString(Qt::ISODate);
+        m_auditLogger->logDeviceOperation("access_granted", QString(), eventData);
+    });
+    
+    connect(m_accessControl, &AccessControl::accessDenied, this, [this](const QString& personnelId, const QString& location, const QString& reason, const QDateTime& time) {
+        QVariantMap eventData;
+        eventData["personnel_id"] = personnelId;
+        eventData["location"] = location;
+        eventData["reason"] = reason;
+        eventData["time"] = time.toString(Qt::ISODate);
+        m_auditLogger->logDeviceOperation("access_denied", QString(), eventData);
+    });
+    
     // Initialize D-Bus interface
     m_dbusInterface->setDeviceManager(m_deviceManager);
     m_dbusInterface->setDeviceHealthMonitor(m_healthMonitor);
@@ -156,6 +201,9 @@ bool PersonnelScheduler::initialize() {
     m_dbusInterface->setLeaveManager(m_leaveManager);
     m_dbusInterface->setShiftSwapManager(m_swapManager);
     m_dbusInterface->setCoverageManager(m_coverageManager);
+    m_dbusInterface->setAccessControl(m_accessControl);
+    m_dbusInterface->setAccessRestrictionsManager(m_restrictionsManager);
+    m_dbusInterface->setRoleManager(m_roleManager);
     
     if (!m_dbusInterface->initialize()) {
         qWarning() << "Failed to initialize D-Bus interface";

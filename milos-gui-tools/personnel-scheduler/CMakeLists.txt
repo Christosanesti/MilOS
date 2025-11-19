@@ -53,6 +53,9 @@ set(APPLICATION_SOURCES
     src/leave_manager.cpp
     src/shift_swap.cpp
     src/coverage_manager.cpp
+    src/access_control.cpp
+    src/access_restrictions.cpp
+    src/role_manager.cpp
 )
 
 # Header files
@@ -76,6 +79,9 @@ set(APPLICATION_HEADERS
     include/leave_manager.h
     include/shift_swap.h
     include/coverage_manager.h
+    include/access_control.h
+    include/access_restrictions.h
+    include/role_manager.h
 )
 
 # QML files
@@ -86,6 +92,7 @@ set(QML_FILES
     ui/attendance_tracking.qml
     ui/scheduling_calendar.qml
     ui/shift_management.qml
+    ui/access_control.qml
 )
 
 # Create executable

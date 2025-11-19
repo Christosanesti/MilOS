@@ -15,6 +15,9 @@ class ConflictDetector;
 class LeaveManager;
 class ShiftSwapManager;
 class CoverageManager;
+class AccessControl;
+class AccessRestrictionsManager;
+class RoleManager;
 
 /**
  * @brief D-Bus Interface for Personnel Scheduler
@@ -68,6 +71,21 @@ public:
      * @brief Set coverage manager
      */
     void setCoverageManager(CoverageManager* coverageManager);
+
+    /**
+     * @brief Set access control
+     */
+    void setAccessControl(AccessControl* accessControl);
+
+    /**
+     * @brief Set access restrictions manager
+     */
+    void setAccessRestrictionsManager(AccessRestrictionsManager* restrictionsManager);
+
+    /**
+     * @brief Set role manager
+     */
+    void setRoleManager(RoleManager* roleManager);
 
     /**
      * @brief Initialize D-Bus interface
@@ -273,6 +291,58 @@ public slots:
      */
     QString CreateCoverageRequest(const QString& shiftId, const QString& requesterId, const QString& reason);
 
+    /**
+     * @brief Request access
+     * @param personnelId Personnel ID
+     * @param location Location/area
+     * @param deviceId Device ID
+     * @param biometricData Biometric data (base64 encoded)
+     * @return Access result (0=Granted, 1=Denied, 2=TimeRestricted, 3=LocationRestricted, 4=RoleRestricted)
+     */
+    int RequestAccess(const QString& personnelId, const QString& location, const QString& deviceId, const QString& biometricData);
+
+    /**
+     * @brief Grant access permission
+     * @param personnelId Personnel ID
+     * @param location Location/area
+     * @param startTime Optional start time (ISO format)
+     * @param endTime Optional end time (ISO format)
+     * @return true if grant successful, false otherwise
+     */
+    bool GrantAccessPermission(const QString& personnelId, const QString& location, const QString& startTime, const QString& endTime);
+
+    /**
+     * @brief Revoke access permission
+     * @param personnelId Personnel ID
+     * @param location Location/area
+     * @return true if revoke successful, false otherwise
+     */
+    bool RevokeAccessPermission(const QString& personnelId, const QString& location);
+
+    /**
+     * @brief Get access permissions
+     * @param personnelId Optional personnel ID filter
+     * @param location Optional location filter
+     * @return JSON string with access permissions
+     */
+    QString GetAccessPermissions(const QString& personnelId, const QString& location);
+
+    /**
+     * @brief Assign role to personnel
+     * @param personnelId Personnel ID
+     * @param role Role (0=Administrator, 1=SecurityOfficer, 2=Personnel, 3=Guest)
+     * @return true if assignment successful, false otherwise
+     */
+    bool AssignRole(const QString& personnelId, int role);
+
+    /**
+     * @brief Check permission
+     * @param personnelId Personnel ID
+     * @param permission Permission (0=ViewAttendance, 1=ManageShifts, 2=ManageAccess, 3=ManageRoles, 4=ViewReports, 5=ManageBiometricDevices)
+     * @return true if permission granted, false otherwise
+     */
+    bool CheckPermission(const QString& personnelId, int permission);
+
 Q_SIGNALS:
     /**
      * @brief Emitted when device is connected
@@ -303,6 +373,9 @@ private:
     LeaveManager* m_leaveManager;
     ShiftSwapManager* m_swapManager;
     CoverageManager* m_coverageManager;
+    AccessControl* m_accessControl;
+    AccessRestrictionsManager* m_restrictionsManager;
+    RoleManager* m_roleManager;
     bool m_initialized;
 };
 
