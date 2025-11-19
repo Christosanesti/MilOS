@@ -72,9 +72,44 @@ public:
     Q_SCRIPTABLE QStringList GetSegmentsByNetwork(const QString& networkAddress);
 
     /**
-     * @brief Set tool manager
+     * @brief Generate firewall rules from segments
+     * @return true if generation successful, false otherwise
+     */
+    Q_SCRIPTABLE bool GenerateFirewallRules();
+
+    /**
+     * @brief Validate firewall rules
+     * @return Validation result as JSON string
+     */
+    Q_SCRIPTABLE QString ValidateFirewallRules();
+
+    /**
+     * @brief Preview firewall rules
+     * @return Rules preview as string
+     */
+    Q_SCRIPTABLE QString PreviewFirewallRules();
+
+    /**
+     * @brief Apply firewall rules
+     * @return true if application successful, false otherwise
+     */
+    Q_SCRIPTABLE bool ApplyFirewallRules();
+
+    /**
+     * @brief Rollback firewall rules
+     * @return true if rollback successful, false otherwise
+     */
+    Q_SCRIPTABLE bool RollbackFirewallRules();
+
+    /**
+     * @brief Set segment manager
      */
     void setSegmentManager(class SegmentManager* segmentManager);
+
+    /**
+     * @brief Set firewall manager
+     */
+    void setFirewallManager(class FirewallManager* firewallManager);
 
 Q_SIGNALS:
     /**
@@ -95,6 +130,7 @@ Q_SIGNALS:
 private:
     bool m_initialized;
     class SegmentManager* m_segmentManager;
+    class FirewallManager* m_firewallManager;
 };
 
 #endif // DBUS_INTERFACE_H

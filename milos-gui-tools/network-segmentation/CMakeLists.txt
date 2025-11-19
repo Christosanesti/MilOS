@@ -29,6 +29,9 @@ set(APPLICATION_SOURCES
     src/segment_manager.cpp
     src/segment_config.cpp
     src/topology_display.cpp
+    src/firewall_rule_generator.cpp
+    src/firewall_rule_validator.cpp
+    src/firewall_manager.cpp
     src/dbus_interface.cpp
     src/cli_tool.cpp
     src/audit_logger.cpp
@@ -39,6 +42,9 @@ set(APPLICATION_HEADERS
     include/segment_manager.h
     include/segment_config.h
     include/topology_display.h
+    include/firewall_rule_generator.h
+    include/firewall_rule_validator.h
+    include/firewall_manager.h
     include/dbus_interface.h
     include/audit_logger.h
 )

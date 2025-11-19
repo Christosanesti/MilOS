@@ -64,11 +64,65 @@ ApplicationWindow {
             Layout.fillHeight: true
             color: "#0a0a0a"
             
-            TopologyView {
-                id: topologyView
+            ColumnLayout {
                 anchors.fill: parent
-                nodes: topologyDisplay.nodes
-                edges: topologyDisplay.edges
+                spacing: 0
+                
+                // Toolbar
+                Rectangle {
+                    Layout.fillWidth: true
+                    height: 50
+                    color: "#1a1a1a"
+                    
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.margins: 10
+                        spacing: 10
+                        
+                        Button {
+                            text: "Generate Firewall Rules"
+                            onClicked: {
+                                firewallManager.generateRulesFromSegments(segmentManager.segments)
+                            }
+                        }
+                        
+                        Button {
+                            text: "Preview Rules"
+                            onClicked: {
+                                var preview = firewallManager.previewRules()
+                                rulePreview.previewText = preview
+                                rulePreview.visible = true
+                            }
+                        }
+                        
+                        Button {
+                            text: "Validate Rules"
+                            onClicked: {
+                                var validation = firewallManager.validateRules()
+                                console.log("Validation result:", validation)
+                            }
+                        }
+                        
+                        Button {
+                            text: "Rule Builder"
+                            onClicked: {
+                                ruleBuilder.visible = true
+                            }
+                        }
+                        
+                        Item {
+                            Layout.fillWidth: true
+                        }
+                    }
+                }
+                
+                // Topology view
+                EnhancedTopologyView {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    nodes: topologyDisplay.nodes
+                    edges: topologyDisplay.edges
+                }
             }
         }
     }
@@ -83,6 +137,20 @@ ApplicationWindow {
                 segmentManager.updateSegment(segmentId, name, networkAddress, description)
             }
         }
+    }
+    
+    // Firewall rule builder
+    FirewallRuleBuilder {
+        id: ruleBuilder
+        onRuleCreated: {
+            // Create custom firewall rule
+            console.log("Rule created:", name, source, destination, action, protocol)
+        }
+    }
+    
+    // Firewall rule preview
+    FirewallRulePreview {
+        id: rulePreview
     }
 }
 

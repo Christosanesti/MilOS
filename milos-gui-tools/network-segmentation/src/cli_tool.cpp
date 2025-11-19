@@ -46,6 +46,14 @@ int main(int argc, char* argv[]) {
     std::string getSegmentId;
     getCmd->add_option("segment-id", getSegmentId, "Segment ID")->required();
 
+    // Firewall rule commands
+    auto* firewallCmd = cliApp.add_subcommand("firewall", "Firewall rule management");
+    auto* generateRulesCmd = firewallCmd->add_subcommand("generate", "Generate firewall rules from segments");
+    auto* validateRulesCmd = firewallCmd->add_subcommand("validate", "Validate firewall rules");
+    auto* previewRulesCmd = firewallCmd->add_subcommand("preview", "Preview firewall rules");
+    auto* applyRulesCmd = firewallCmd->add_subcommand("apply", "Apply firewall rules");
+    auto* rollbackRulesCmd = firewallCmd->add_subcommand("rollback", "Rollback firewall rules");
+
     try {
         cliApp.parse(argc, argv);
     } catch (const CLI::ParseError& e) {
@@ -136,6 +144,61 @@ int main(int argc, char* argv[]) {
         }
         std::cout << json.toStdString() << std::endl;
         return 0;
+    } else if (*generateRulesCmd) {
+        QDBusReply<bool> reply = interface.call("GenerateFirewallRules");
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return 1;
+        }
+        if (reply.value()) {
+            std::cout << "Firewall rules generated successfully" << std::endl;
+            return 0;
+        } else {
+            std::cerr << "Error: Failed to generate firewall rules." << std::endl;
+            return 1;
+        }
+    } else if (*validateRulesCmd) {
+        QDBusReply<QString> reply = interface.call("ValidateFirewallRules");
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return 1;
+        }
+        std::cout << reply.value().toStdString() << std::endl;
+        return 0;
+    } else if (*previewRulesCmd) {
+        QDBusReply<QString> reply = interface.call("PreviewFirewallRules");
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return 1;
+        }
+        std::cout << reply.value().toStdString() << std::endl;
+        return 0;
+    } else if (*applyRulesCmd) {
+        QDBusReply<bool> reply = interface.call("ApplyFirewallRules");
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return 1;
+        }
+        if (reply.value()) {
+            std::cout << "Firewall rules applied successfully" << std::endl;
+            return 0;
+        } else {
+            std::cerr << "Error: Failed to apply firewall rules." << std::endl;
+            return 1;
+        }
+    } else if (*rollbackRulesCmd) {
+        QDBusReply<bool> reply = interface.call("RollbackFirewallRules");
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return 1;
+        }
+        if (reply.value()) {
+            std::cout << "Firewall rules rolled back successfully" << std::endl;
+            return 0;
+        } else {
+            std::cerr << "Error: Failed to rollback firewall rules." << std::endl;
+            return 1;
+        }
     } else {
         std::cout << cliApp.help() << std::endl;
     }

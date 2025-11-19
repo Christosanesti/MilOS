@@ -7,6 +7,7 @@
 #include <QQmlContext>
 #include "segment_manager.h"
 #include "topology_display.h"
+#include "firewall_manager.h"
 
 /**
  * @brief Network Segmentation Application

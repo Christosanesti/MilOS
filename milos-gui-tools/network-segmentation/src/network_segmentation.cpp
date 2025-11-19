@@ -1,6 +1,7 @@
 #include "network_segmentation.h"
 #include "segment_manager.h"
 #include "topology_display.h"
+#include "firewall_manager.h"
 #include "dbus_interface.h"
 #include "audit_logger.h"
 #include <QApplication>
@@ -50,9 +51,22 @@ bool NetworkSegmentation::initialize() {
         return false;
     }
 
+    // Initialize firewall manager
+    FirewallManager* firewallManager = new FirewallManager(this);
+    if (!firewallManager->initialize()) {
+        std::cerr << "Failed to initialize firewall manager" << std::endl;
+        return false;
+    }
+
+    // Generate firewall rules when segments change
+    connect(m_segmentManager, &SegmentManager::segmentsChanged, [firewallManager, this]() {
+        firewallManager->generateRulesFromSegments(m_segmentManager->segments());
+    });
+
     // Initialize D-Bus interface
     DBusInterface* dbusInterface = new DBusInterface(this);
     dbusInterface->setSegmentManager(m_segmentManager);
+    dbusInterface->setFirewallManager(firewallManager);
     if (!dbusInterface->initialize()) {
         std::cerr << "Warning: Failed to initialize D-Bus interface (continuing without D-Bus)" << std::endl;
     }
@@ -82,6 +96,7 @@ bool NetworkSegmentation::initialize() {
     // Register with QML
     m_engine->rootContext()->setContextProperty("segmentManager", m_segmentManager);
     m_engine->rootContext()->setContextProperty("topologyDisplay", m_topologyDisplay);
+    m_engine->rootContext()->setContextProperty("firewallManager", firewallManager);
 
     // Load QML
     const QUrl qmlUrl(QStringLiteral("qrc:/ui/main.qml"));

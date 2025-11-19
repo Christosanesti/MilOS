@@ -10,6 +10,7 @@ DBusInterface::DBusInterface(QObject* parent)
     : QObject(parent)
     , m_initialized(false)
     , m_segmentManager(nullptr)
+    , m_firewallManager(nullptr)
 {
 }
 
@@ -49,6 +50,10 @@ void DBusInterface::setSegmentManager(class SegmentManager* segmentManager) {
         connect(segmentManager, &SegmentManager::segmentDeleted,
                 this, &DBusInterface::SegmentDeleted);
     }
+}
+
+void DBusInterface::setFirewallManager(class FirewallManager* firewallManager) {
+    m_firewallManager = firewallManager;
 }
 
 QString DBusInterface::CreateSegment(const QString& name, const QString& networkAddress, const QString& description) {
@@ -117,5 +122,45 @@ QStringList DBusInterface::GetSegmentsByNetwork(const QString& networkAddress) {
     }
 
     return m_segmentManager->getSegmentsByNetwork(networkAddress);
+}
+
+bool DBusInterface::GenerateFirewallRules() {
+    if (!m_firewallManager || !m_segmentManager) {
+        return false;
+    }
+
+    return m_firewallManager->generateRulesFromSegments(m_segmentManager->segments());
+}
+
+QString DBusInterface::ValidateFirewallRules() {
+    if (!m_firewallManager) {
+        return QString("{\"isValid\":false,\"errors\":[\"Firewall manager not available\"]}");
+    }
+
+    return m_firewallManager->validateRules();
+}
+
+QString DBusInterface::PreviewFirewallRules() {
+    if (!m_firewallManager) {
+        return QString();
+    }
+
+    return m_firewallManager->previewRules();
+}
+
+bool DBusInterface::ApplyFirewallRules() {
+    if (!m_firewallManager) {
+        return false;
+    }
+
+    return m_firewallManager->applyRules();
+}
+
+bool DBusInterface::RollbackFirewallRules() {
+    if (!m_firewallManager) {
+        return false;
+    }
+
+    return m_firewallManager->rollbackRules();
 }
 
