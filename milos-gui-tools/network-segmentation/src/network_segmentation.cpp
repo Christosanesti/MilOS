@@ -2,6 +2,7 @@
 #include "segment_manager.h"
 #include "topology_display.h"
 #include "firewall_manager.h"
+#include "isolation_enforcement.h"
 #include "dbus_interface.h"
 #include "audit_logger.h"
 #include <QApplication>
@@ -58,15 +59,43 @@ bool NetworkSegmentation::initialize() {
         return false;
     }
 
+    // Initialize isolation enforcement
+    IsolationEnforcement* isolationEnforcement = new IsolationEnforcement(this);
+    if (!isolationEnforcement->initialize()) {
+        std::cerr << "Warning: Failed to initialize isolation enforcement (continuing without isolation)" << std::endl;
+    }
+
     // Generate firewall rules when segments change
     connect(m_segmentManager, &SegmentManager::segmentsChanged, [firewallManager, this]() {
         firewallManager->generateRulesFromSegments(m_segmentManager->segments());
+    });
+
+    // Enforce isolation when segments are created/updated
+    connect(m_segmentManager, &SegmentManager::segmentCreated, [isolationEnforcement, this](const QString& segmentId) {
+        SegmentConfig segment = m_segmentManager->getSegmentConfig(segmentId);
+        if (!segment.segmentId.isEmpty() && segment.isIsolated) {
+            isolationEnforcement->enforceIsolation(segment);
+        }
+    });
+    connect(m_segmentManager, &SegmentManager::segmentUpdated, [isolationEnforcement, this](const QString& segmentId) {
+        SegmentConfig segment = m_segmentManager->getSegmentConfig(segmentId);
+        if (!segment.segmentId.isEmpty()) {
+            if (segment.isIsolated) {
+                isolationEnforcement->enforceIsolation(segment);
+            } else {
+                isolationEnforcement->removeIsolation(segmentId);
+            }
+        }
+    });
+    connect(m_segmentManager, &SegmentManager::segmentDeleted, [isolationEnforcement](const QString& segmentId) {
+        isolationEnforcement->removeIsolation(segmentId);
     });
 
     // Initialize D-Bus interface
     DBusInterface* dbusInterface = new DBusInterface(this);
     dbusInterface->setSegmentManager(m_segmentManager);
     dbusInterface->setFirewallManager(firewallManager);
+    dbusInterface->setIsolationEnforcement(isolationEnforcement);
     if (!dbusInterface->initialize()) {
         std::cerr << "Warning: Failed to initialize D-Bus interface (continuing without D-Bus)" << std::endl;
     }
@@ -97,6 +126,7 @@ bool NetworkSegmentation::initialize() {
     m_engine->rootContext()->setContextProperty("segmentManager", m_segmentManager);
     m_engine->rootContext()->setContextProperty("topologyDisplay", m_topologyDisplay);
     m_engine->rootContext()->setContextProperty("firewallManager", firewallManager);
+    m_engine->rootContext()->setContextProperty("isolationEnforcement", isolationEnforcement);
 
     // Load QML
     const QUrl qmlUrl(QStringLiteral("qrc:/ui/main.qml"));

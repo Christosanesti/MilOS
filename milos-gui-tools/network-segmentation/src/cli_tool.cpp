@@ -54,6 +54,18 @@ int main(int argc, char* argv[]) {
     auto* applyRulesCmd = firewallCmd->add_subcommand("apply", "Apply firewall rules");
     auto* rollbackRulesCmd = firewallCmd->add_subcommand("rollback", "Rollback firewall rules");
 
+    // Isolation enforcement commands
+    auto* isolationCmd = cliApp.add_subcommand("isolation", "Network isolation enforcement");
+    auto* enforceIsolationCmd = isolationCmd->add_subcommand("enforce", "Enforce isolation for segment");
+    std::string enforceSegmentId;
+    enforceIsolationCmd->add_option("segment-id", enforceSegmentId, "Segment ID")->required();
+    auto* removeIsolationCmd = isolationCmd->add_subcommand("remove", "Remove isolation for segment");
+    std::string removeSegmentId;
+    removeIsolationCmd->add_option("segment-id", removeSegmentId, "Segment ID")->required();
+    auto* verifyIsolationCmd = isolationCmd->add_subcommand("verify", "Verify segment isolation");
+    std::string verifySegmentId;
+    verifyIsolationCmd->add_option("segment-id", verifySegmentId, "Segment ID")->required();
+
     try {
         cliApp.parse(argc, argv);
     } catch (const CLI::ParseError& e) {
@@ -197,6 +209,45 @@ int main(int argc, char* argv[]) {
             return 0;
         } else {
             std::cerr << "Error: Failed to rollback firewall rules." << std::endl;
+            return 1;
+        }
+    } else if (*enforceIsolationCmd) {
+        QDBusReply<bool> reply = interface.call("EnforceIsolation", QString::fromStdString(enforceSegmentId));
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return 1;
+        }
+        if (reply.value()) {
+            std::cout << "Isolation enforced successfully" << std::endl;
+            return 0;
+        } else {
+            std::cerr << "Error: Failed to enforce isolation." << std::endl;
+            return 1;
+        }
+    } else if (*removeIsolationCmd) {
+        QDBusReply<bool> reply = interface.call("RemoveIsolation", QString::fromStdString(removeSegmentId));
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return 1;
+        }
+        if (reply.value()) {
+            std::cout << "Isolation removed successfully" << std::endl;
+            return 0;
+        } else {
+            std::cerr << "Error: Failed to remove isolation." << std::endl;
+            return 1;
+        }
+    } else if (*verifyIsolationCmd) {
+        QDBusReply<bool> reply = interface.call("VerifyIsolation", QString::fromStdString(verifySegmentId));
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return 1;
+        }
+        if (reply.value()) {
+            std::cout << "Segment is isolated" << std::endl;
+            return 0;
+        } else {
+            std::cout << "Segment is not isolated" << std::endl;
             return 1;
         }
     } else {

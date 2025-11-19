@@ -32,6 +32,10 @@ set(APPLICATION_SOURCES
     src/firewall_rule_generator.cpp
     src/firewall_rule_validator.cpp
     src/firewall_manager.cpp
+    src/network_isolation.cpp
+    src/security_zone_enforcement.cpp
+    src/access_control.cpp
+    src/isolation_enforcement.cpp
     src/dbus_interface.cpp
     src/cli_tool.cpp
     src/audit_logger.cpp
@@ -45,6 +49,10 @@ set(APPLICATION_HEADERS
     include/firewall_rule_generator.h
     include/firewall_rule_validator.h
     include/firewall_manager.h
+    include/network_isolation.h
+    include/security_zone_enforcement.h
+    include/access_control.h
+    include/isolation_enforcement.h
     include/dbus_interface.h
     include/audit_logger.h
 )

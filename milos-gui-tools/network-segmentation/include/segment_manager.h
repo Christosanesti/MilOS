@@ -62,9 +62,16 @@ public:
     /**
      * @brief Get segment
      * @param segmentId Segment ID
-     * @return Segment configuration
+     * @return Segment configuration as QVariantMap
      */
     Q_INVOKABLE QVariantMap getSegment(const QString& segmentId) const;
+
+    /**
+     * @brief Get segment config object
+     * @param segmentId Segment ID
+     * @return Segment configuration
+     */
+    SegmentConfig getSegmentConfig(const QString& segmentId) const;
 
     /**
      * @brief Get segments by network

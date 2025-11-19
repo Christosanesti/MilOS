@@ -11,6 +11,7 @@ DBusInterface::DBusInterface(QObject* parent)
     , m_initialized(false)
     , m_segmentManager(nullptr)
     , m_firewallManager(nullptr)
+    , m_isolationEnforcement(nullptr)
 {
 }
 
@@ -54,6 +55,10 @@ void DBusInterface::setSegmentManager(class SegmentManager* segmentManager) {
 
 void DBusInterface::setFirewallManager(class FirewallManager* firewallManager) {
     m_firewallManager = firewallManager;
+}
+
+void DBusInterface::setIsolationEnforcement(class IsolationEnforcement* isolationEnforcement) {
+    m_isolationEnforcement = isolationEnforcement;
 }
 
 QString DBusInterface::CreateSegment(const QString& name, const QString& networkAddress, const QString& description) {
@@ -162,5 +167,34 @@ bool DBusInterface::RollbackFirewallRules() {
     }
 
     return m_firewallManager->rollbackRules();
+}
+
+bool DBusInterface::EnforceIsolation(const QString& segmentId) {
+    if (!m_isolationEnforcement || !m_segmentManager) {
+        return false;
+    }
+
+    SegmentConfig segment = m_segmentManager->getSegmentConfig(segmentId);
+    if (segment.segmentId.isEmpty()) {
+        return false;
+    }
+
+    return m_isolationEnforcement->enforceIsolation(segment);
+}
+
+bool DBusInterface::RemoveIsolation(const QString& segmentId) {
+    if (!m_isolationEnforcement) {
+        return false;
+    }
+
+    return m_isolationEnforcement->removeIsolation(segmentId);
+}
+
+bool DBusInterface::VerifyIsolation(const QString& segmentId) {
+    if (!m_isolationEnforcement) {
+        return false;
+    }
+
+    return m_isolationEnforcement->verifyIsolation(segmentId);
 }
 

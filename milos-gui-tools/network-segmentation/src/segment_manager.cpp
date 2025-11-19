@@ -123,6 +123,14 @@ QStringList SegmentManager::getSegmentsByNetwork(const QString& networkAddress) 
     return segmentIds;
 }
 
+SegmentConfig SegmentManager::getSegmentConfig(const QString& segmentId) const {
+    if (!m_configManager) {
+        return SegmentConfig();
+    }
+
+    return m_configManager->getSegment(segmentId);
+}
+
 void SegmentManager::onSegmentCreated(const QString& segmentId) {
     updateSegmentsList();
     emit segmentCreated(segmentId);

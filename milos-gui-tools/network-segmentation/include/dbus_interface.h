@@ -102,6 +102,27 @@ public:
     Q_SCRIPTABLE bool RollbackFirewallRules();
 
     /**
+     * @brief Enforce isolation for segment
+     * @param segmentId Segment ID
+     * @return true if enforcement successful, false otherwise
+     */
+    Q_SCRIPTABLE bool EnforceIsolation(const QString& segmentId);
+
+    /**
+     * @brief Remove isolation for segment
+     * @param segmentId Segment ID
+     * @return true if removal successful, false otherwise
+     */
+    Q_SCRIPTABLE bool RemoveIsolation(const QString& segmentId);
+
+    /**
+     * @brief Verify segment isolation
+     * @param segmentId Segment ID
+     * @return true if segment is isolated, false otherwise
+     */
+    Q_SCRIPTABLE bool VerifyIsolation(const QString& segmentId);
+
+    /**
      * @brief Set segment manager
      */
     void setSegmentManager(class SegmentManager* segmentManager);
@@ -110,6 +131,11 @@ public:
      * @brief Set firewall manager
      */
     void setFirewallManager(class FirewallManager* firewallManager);
+
+    /**
+     * @brief Set isolation enforcement
+     */
+    void setIsolationEnforcement(class IsolationEnforcement* isolationEnforcement);
 
 Q_SIGNALS:
     /**
@@ -131,6 +157,7 @@ private:
     bool m_initialized;
     class SegmentManager* m_segmentManager;
     class FirewallManager* m_firewallManager;
+    class IsolationEnforcement* m_isolationEnforcement;
 };
 
 #endif // DBUS_INTERFACE_H
