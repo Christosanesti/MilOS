@@ -40,6 +40,9 @@ int main(int argc, char* argv[]) {
     KeyManager* keyMgr = messenger.getKeyManager();
     UserEnrollment* enrollment = messenger.getUserEnrollment();
     RoleManager* roleMgr = messenger.getRoleManager();
+    MeshNetwork* meshNetwork = messenger.getMeshNetwork();
+    NetworkManager* networkManager = messenger.getNetworkManager();
+    NetworkHealthMonitor* healthMonitor = messenger.getNetworkHealthMonitor();
 
     if (!usbAuth) {
         std::cerr << "Failed to get USB Authorization" << std::endl;
@@ -55,6 +58,9 @@ int main(int argc, char* argv[]) {
     engine.rootContext()->setContextProperty("keyMgr", keyMgr);
     engine.rootContext()->setContextProperty("enrollment", enrollment);
     engine.rootContext()->setContextProperty("roleMgr", roleMgr);
+    engine.rootContext()->setContextProperty("meshNetwork", meshNetwork);
+    engine.rootContext()->setContextProperty("networkManager", networkManager);
+    engine.rootContext()->setContextProperty("healthMonitor", healthMonitor);
 
     // Load main QML file
     engine.load("qrc:/ui/main.qml");

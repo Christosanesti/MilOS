@@ -25,6 +25,11 @@ set(APPLICATION_SOURCES
     src/key_manager.cpp
     src/user_enrollment.cpp
     src/role_manager.cpp
+    src/mesh_network.cpp
+    src/peer_discovery.cpp
+    src/network_manager.cpp
+    src/network_health.cpp
+    src/ethernet_enforcement.cpp
     src/dbus_interface.cpp
     src/audit_logger.cpp
 )
@@ -37,6 +42,11 @@ set(APPLICATION_HEADERS
     include/key_manager.h
     include/user_enrollment.h
     include/role_manager.h
+    include/mesh_network.h
+    include/peer_discovery.h
+    include/network_manager.h
+    include/network_health.h
+    include/ethernet_enforcement.h
     include/dbus_interface.h
     include/audit_logger.h
 )
@@ -63,6 +73,7 @@ target_link_libraries(milos-secure-messenger
     Qt6::Quick
     Qt6::QuickControls2
     Qt6::DBus
+    Qt6::Network
     CLI11::CLI11
 )
 

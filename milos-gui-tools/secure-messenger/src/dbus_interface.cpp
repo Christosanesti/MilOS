@@ -4,6 +4,11 @@
 #include "key_manager.h"
 #include "user_enrollment.h"
 #include "role_manager.h"
+#include "mesh_network.h"
+#include "peer_discovery.h"
+#include "network_manager.h"
+#include "network_health.h"
+#include "ethernet_enforcement.h"
 #include <QDBusConnection>
 #include <QDBusMetaType>
 #include <QDebug>
@@ -18,6 +23,11 @@ SecureMessengerDBusInterface::SecureMessengerDBusInterface(QObject* parent)
     , m_keyMgr(nullptr)
     , m_enrollment(nullptr)
     , m_roleMgr(nullptr)
+    , m_meshNetwork(nullptr)
+    , m_peerDiscovery(nullptr)
+    , m_networkManager(nullptr)
+    , m_healthMonitor(nullptr)
+    , m_enforcement(nullptr)
     , m_initialized(false)
 {
 }
@@ -43,6 +53,26 @@ void SecureMessengerDBusInterface::setUserEnrollment(UserEnrollment* enrollment)
 
 void SecureMessengerDBusInterface::setRoleManager(RoleManager* roleMgr) {
     m_roleMgr = roleMgr;
+}
+
+void SecureMessengerDBusInterface::setMeshNetwork(MeshNetwork* meshNetwork) {
+    m_meshNetwork = meshNetwork;
+}
+
+void SecureMessengerDBusInterface::setPeerDiscovery(PeerDiscovery* peerDiscovery) {
+    m_peerDiscovery = peerDiscovery;
+}
+
+void SecureMessengerDBusInterface::setNetworkManager(NetworkManager* networkManager) {
+    m_networkManager = networkManager;
+}
+
+void SecureMessengerDBusInterface::setNetworkHealthMonitor(NetworkHealthMonitor* healthMonitor) {
+    m_healthMonitor = healthMonitor;
+}
+
+void SecureMessengerDBusInterface::setEthernetEnforcement(EthernetEnforcement* enforcement) {
+    m_enforcement = enforcement;
 }
 
 bool SecureMessengerDBusInterface::initialize() {
@@ -280,5 +310,165 @@ bool SecureMessengerDBusInterface::CheckPermission(const QString& userId, int pe
     }
 
     return m_roleMgr->checkPermission(userId, static_cast<Permission>(permission));
+}
+
+QString SecureMessengerDBusInterface::GetNetworkInterfaces() {
+    if (!m_networkManager) {
+        return QString();
+    }
+
+    QList<NetworkInterfaceInfo> interfaces = m_networkManager->getNetworkInterfaces();
+    
+    QJsonArray jsonArray;
+    for (const NetworkInterfaceInfo& iface : interfaces) {
+        QJsonObject obj;
+        obj["name"] = iface.name;
+        obj["type"] = static_cast<int>(iface.type);
+        obj["address"] = iface.address.toString();
+        obj["subnet"] = iface.subnet;
+        obj["is_active"] = iface.isActive;
+        obj["is_authorized"] = iface.isAuthorized;
+        jsonArray.append(obj);
+    }
+
+    QJsonDocument doc(jsonArray);
+    return QString::fromUtf8(doc.toJson());
+}
+
+QString SecureMessengerDBusInterface::GetAuthorizedInterfaces() {
+    if (!m_networkManager) {
+        return QString();
+    }
+
+    QList<NetworkInterfaceInfo> interfaces = m_networkManager->getAuthorizedInterfaces();
+    
+    QJsonArray jsonArray;
+    for (const NetworkInterfaceInfo& iface : interfaces) {
+        QJsonObject obj;
+        obj["name"] = iface.name;
+        obj["type"] = static_cast<int>(iface.type);
+        obj["address"] = iface.address.toString();
+        obj["subnet"] = iface.subnet;
+        jsonArray.append(obj);
+    }
+
+    QJsonDocument doc(jsonArray);
+    return QString::fromUtf8(doc.toJson());
+}
+
+QString SecureMessengerDBusInterface::DetectSegmentation() {
+    if (!m_networkManager) {
+        return QString();
+    }
+
+    QList<QString> subnets = m_networkManager->detectSegmentation();
+    
+    QJsonArray jsonArray;
+    for (const QString& subnet : subnets) {
+        jsonArray.append(subnet);
+    }
+
+    QJsonDocument doc(jsonArray);
+    return QString::fromUtf8(doc.toJson());
+}
+
+QString SecureMessengerDBusInterface::DiscoverPeers() {
+    if (!m_peerDiscovery) {
+        return QString();
+    }
+
+    QList<QString> peers = m_peerDiscovery->discoverPeers();
+    
+    QJsonArray jsonArray;
+    for (const QString& peerId : peers) {
+        jsonArray.append(peerId);
+    }
+
+    QJsonDocument doc(jsonArray);
+    return QString::fromUtf8(doc.toJson());
+}
+
+QString SecureMessengerDBusInterface::GetAllPeers() {
+    if (!m_meshNetwork) {
+        return QString();
+    }
+
+    QList<PeerInfo> peers = m_meshNetwork->getAllPeers();
+    
+    QJsonArray jsonArray;
+    for (const PeerInfo& peer : peers) {
+        QJsonObject obj;
+        obj["peer_id"] = peer.peerId;
+        obj["address"] = peer.address.toString();
+        obj["port"] = peer.port;
+        obj["status"] = static_cast<int>(peer.status);
+        obj["user_id"] = peer.userId;
+        obj["last_seen"] = peer.lastSeen.toString(Qt::ISODate);
+        obj["hop_count"] = peer.hopCount;
+        jsonArray.append(obj);
+    }
+
+    QJsonDocument doc(jsonArray);
+    return QString::fromUtf8(doc.toJson());
+}
+
+QString SecureMessengerDBusInterface::GetNetworkHealthMetrics() {
+    if (!m_healthMonitor) {
+        return QString();
+    }
+
+    NetworkHealthMetrics metrics = m_healthMonitor->getHealthMetrics();
+    
+    QJsonObject obj;
+    obj["status"] = static_cast<int>(metrics.status);
+    obj["connected_peers"] = metrics.connectedPeers;
+    obj["average_latency"] = metrics.averageLatency;
+    obj["bandwidth_utilization"] = metrics.bandwidthUtilization;
+    obj["packet_loss"] = metrics.packetLoss;
+    obj["last_update"] = metrics.lastUpdate.toString(Qt::ISODate);
+
+    QJsonDocument doc(obj);
+    return QString::fromUtf8(doc.toJson());
+}
+
+QString SecureMessengerDBusInterface::GetNetworkTopology() {
+    if (!m_healthMonitor) {
+        return QString();
+    }
+
+    QVariantMap topology = m_healthMonitor->getTopology();
+    
+    QJsonDocument doc(QJsonObject::fromVariantMap(topology));
+    return QString::fromUtf8(doc.toJson());
+}
+
+bool SecureMessengerDBusInterface::ConnectVPN(const QString& vpnConfig) {
+    if (!m_networkManager) {
+        return false;
+    }
+
+    QJsonDocument doc = QJsonDocument::fromJson(vpnConfig.toUtf8());
+    if (doc.isNull()) {
+        return false;
+    }
+
+    QVariantMap config = doc.object().toVariantMap();
+    return m_networkManager->connectVPN(config);
+}
+
+bool SecureMessengerDBusInterface::DisconnectVPN() {
+    if (!m_networkManager) {
+        return false;
+    }
+
+    return m_networkManager->disconnectVPN();
+}
+
+bool SecureMessengerDBusInterface::BlockUnauthorizedInterfaces() {
+    if (!m_enforcement) {
+        return false;
+    }
+
+    return m_enforcement->blockUnauthorizedInterfaces();
 }
 

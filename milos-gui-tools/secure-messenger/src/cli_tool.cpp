@@ -153,6 +153,96 @@ public:
         return reply.value();
     }
 
+    QString getNetworkInterfaces() {
+        QDBusReply<QString> reply = m_interface->call("GetNetworkInterfaces");
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return QString();
+        }
+        return reply.value();
+    }
+
+    QString getAuthorizedInterfaces() {
+        QDBusReply<QString> reply = m_interface->call("GetAuthorizedInterfaces");
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return QString();
+        }
+        return reply.value();
+    }
+
+    QString detectSegmentation() {
+        QDBusReply<QString> reply = m_interface->call("DetectSegmentation");
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return QString();
+        }
+        return reply.value();
+    }
+
+    QString discoverPeers() {
+        QDBusReply<QString> reply = m_interface->call("DiscoverPeers");
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return QString();
+        }
+        return reply.value();
+    }
+
+    QString getAllPeers() {
+        QDBusReply<QString> reply = m_interface->call("GetAllPeers");
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return QString();
+        }
+        return reply.value();
+    }
+
+    QString getNetworkHealthMetrics() {
+        QDBusReply<QString> reply = m_interface->call("GetNetworkHealthMetrics");
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return QString();
+        }
+        return reply.value();
+    }
+
+    QString getNetworkTopology() {
+        QDBusReply<QString> reply = m_interface->call("GetNetworkTopology");
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return QString();
+        }
+        return reply.value();
+    }
+
+    bool connectVPN(const QString& vpnConfig) {
+        QDBusReply<bool> reply = m_interface->call("ConnectVPN", vpnConfig);
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return false;
+        }
+        return reply.value();
+    }
+
+    bool disconnectVPN() {
+        QDBusReply<bool> reply = m_interface->call("DisconnectVPN");
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return false;
+        }
+        return reply.value();
+    }
+
+    bool blockUnauthorizedInterfaces() {
+        QDBusReply<bool> reply = m_interface->call("BlockUnauthorizedInterfaces");
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return false;
+        }
+        return reply.value();
+    }
+
 private:
     QDBusConnection m_connection;
     QDBusInterface* m_interface;
@@ -363,6 +453,118 @@ int main(int argc, char* argv[]) {
     checkPermCmd->callback([&]() {
         bool hasPermission = client.checkPermission(QString::fromStdString(checkPermUserId), checkPermPermission);
         std::cout << "Permission: " << (hasPermission ? "Granted" : "Denied") << std::endl;
+    });
+
+    // Get network interfaces command
+    auto* interfacesCmd = cliApp.add_subcommand("interfaces", "List network interfaces");
+    interfacesCmd->callback([&]() {
+        QString jsonInterfaces = client.getNetworkInterfaces();
+        if (!jsonInterfaces.isEmpty()) {
+            std::cout << jsonInterfaces.toStdString() << std::endl;
+        } else {
+            std::cout << "No network interfaces found" << std::endl;
+        }
+    });
+
+    // Get authorized interfaces command
+    auto* authorizedCmd = cliApp.add_subcommand("authorized-interfaces", "List authorized network interfaces");
+    authorizedCmd->callback([&]() {
+        QString jsonInterfaces = client.getAuthorizedInterfaces();
+        if (!jsonInterfaces.isEmpty()) {
+            std::cout << jsonInterfaces.toStdString() << std::endl;
+        } else {
+            std::cout << "No authorized interfaces found" << std::endl;
+        }
+    });
+
+    // Detect segmentation command
+    auto* segmentationCmd = cliApp.add_subcommand("segmentation", "Detect network segmentation");
+    segmentationCmd->callback([&]() {
+        QString jsonSubnets = client.detectSegmentation();
+        if (!jsonSubnets.isEmpty()) {
+            std::cout << jsonSubnets.toStdString() << std::endl;
+        } else {
+            std::cout << "No network segments detected" << std::endl;
+        }
+    });
+
+    // Discover peers command
+    auto* discoverCmd = cliApp.add_subcommand("discover-peers", "Discover peers");
+    discoverCmd->callback([&]() {
+        QString jsonPeers = client.discoverPeers();
+        if (!jsonPeers.isEmpty()) {
+            std::cout << jsonPeers.toStdString() << std::endl;
+        } else {
+            std::cout << "No peers discovered" << std::endl;
+        }
+    });
+
+    // Get all peers command
+    auto* peersCmd = cliApp.add_subcommand("peers", "List all peers");
+    peersCmd->callback([&]() {
+        QString jsonPeers = client.getAllPeers();
+        if (!jsonPeers.isEmpty()) {
+            std::cout << jsonPeers.toStdString() << std::endl;
+        } else {
+            std::cout << "No peers found" << std::endl;
+        }
+    });
+
+    // Get network health metrics command
+    auto* healthCmd = cliApp.add_subcommand("network-health", "Get network health metrics");
+    healthCmd->callback([&]() {
+        QString jsonHealth = client.getNetworkHealthMetrics();
+        if (!jsonHealth.isEmpty()) {
+            std::cout << jsonHealth.toStdString() << std::endl;
+        } else {
+            std::cerr << "Failed to get network health metrics" << std::endl;
+        }
+    });
+
+    // Get network topology command
+    auto* topologyCmd = cliApp.add_subcommand("topology", "Get network topology");
+    topologyCmd->callback([&]() {
+        QString jsonTopology = client.getNetworkTopology();
+        if (!jsonTopology.isEmpty()) {
+            std::cout << jsonTopology.toStdString() << std::endl;
+        } else {
+            std::cerr << "Failed to get network topology" << std::endl;
+        }
+    });
+
+    // Connect VPN command
+    auto* vpnConnectCmd = cliApp.add_subcommand("vpn-connect", "Connect VPN");
+    std::string vpnConfig;
+    vpnConnectCmd->add_option("--config", vpnConfig, "VPN configuration (JSON string)")->required();
+    vpnConnectCmd->callback([&]() {
+        bool success = client.connectVPN(QString::fromStdString(vpnConfig));
+        if (success) {
+            std::cout << "VPN connected" << std::endl;
+        } else {
+            std::cerr << "Failed to connect VPN" << std::endl;
+        }
+    });
+
+    // Disconnect VPN command
+    auto* vpnDisconnectCmd = cliApp.add_subcommand("vpn-disconnect", "Disconnect VPN");
+    vpnDisconnectCmd->callback([&]() {
+        bool success = client.disconnectVPN();
+        if (success) {
+            std::cout << "VPN disconnected" << std::endl;
+        } else {
+            std::cerr << "Failed to disconnect VPN" << std::endl;
+        }
+    });
+
+    // Block unauthorized interfaces command
+    auto* blockCmd = cliApp.add_subcommand("block-interfaces", "Block unauthorized interfaces");
+    blockCmd->callback([&]() {
+        bool success = client.blockUnauthorizedInterfaces();
+        if (success) {
+            std::cout << "Unauthorized interfaces blocked" << std::endl;
+        } else {
+            std::cerr << "Failed to block unauthorized interfaces" << std::endl;
+        }
     });
 
     CLI11_PARSE(cliApp, argc, argv);

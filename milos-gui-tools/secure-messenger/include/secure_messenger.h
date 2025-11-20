@@ -6,6 +6,11 @@
 #include "key_manager.h"
 #include "user_enrollment.h"
 #include "role_manager.h"
+#include "mesh_network.h"
+#include "peer_discovery.h"
+#include "network_manager.h"
+#include "network_health.h"
+#include "ethernet_enforcement.h"
 #include "dbus_interface.h"
 #include "audit_logger.h"
 #include <QObject>
@@ -60,12 +65,32 @@ public:
      */
     RoleManager* getRoleManager() const { return m_roleMgr; }
 
+    /**
+     * @brief Get mesh network
+     */
+    MeshNetwork* getMeshNetwork() const { return m_meshNetwork; }
+
+    /**
+     * @brief Get network manager
+     */
+    NetworkManager* getNetworkManager() const { return m_networkManager; }
+
+    /**
+     * @brief Get network health monitor
+     */
+    NetworkHealthMonitor* getNetworkHealthMonitor() const { return m_healthMonitor; }
+
 private:
     USBAuthorization* m_usbAuth;
     KeyGenerator* m_keyGen;
     KeyManager* m_keyMgr;
     UserEnrollment* m_enrollment;
     RoleManager* m_roleMgr;
+    MeshNetwork* m_meshNetwork;
+    PeerDiscovery* m_peerDiscovery;
+    NetworkManager* m_networkManager;
+    NetworkHealthMonitor* m_healthMonitor;
+    EthernetEnforcement* m_enforcement;
     SecureMessengerDBusInterface* m_dbusInterface;
     AuditLogger* m_auditLogger;
     bool m_initialized;

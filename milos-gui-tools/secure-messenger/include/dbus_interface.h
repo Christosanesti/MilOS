@@ -12,6 +12,11 @@ class KeyGenerator;
 class KeyManager;
 class UserEnrollment;
 class RoleManager;
+class MeshNetwork;
+class PeerDiscovery;
+class NetworkManager;
+class NetworkHealthMonitor;
+class EthernetEnforcement;
 
 /**
  * @brief D-Bus Interface for Secure Messenger
@@ -50,6 +55,31 @@ public:
      * @brief Set role manager
      */
     void setRoleManager(RoleManager* roleMgr);
+
+    /**
+     * @brief Set mesh network
+     */
+    void setMeshNetwork(MeshNetwork* meshNetwork);
+
+    /**
+     * @brief Set peer discovery
+     */
+    void setPeerDiscovery(PeerDiscovery* peerDiscovery);
+
+    /**
+     * @brief Set network manager
+     */
+    void setNetworkManager(NetworkManager* networkManager);
+
+    /**
+     * @brief Set network health monitor
+     */
+    void setNetworkHealthMonitor(NetworkHealthMonitor* healthMonitor);
+
+    /**
+     * @brief Set ethernet enforcement
+     */
+    void setEthernetEnforcement(EthernetEnforcement* enforcement);
 
     /**
      * @brief Initialize D-Bus interface
@@ -164,6 +194,67 @@ public:
      */
     bool CheckPermission(const QString& userId, int permission);
 
+    /**
+     * @brief Get network interfaces
+     * @return JSON string with list of network interfaces
+     */
+    QString GetNetworkInterfaces();
+
+    /**
+     * @brief Get authorized network interfaces
+     * @return JSON string with list of authorized interfaces
+     */
+    QString GetAuthorizedInterfaces();
+
+    /**
+     * @brief Detect network segmentation
+     * @return JSON string with list of detected subnets
+     */
+    QString DetectSegmentation();
+
+    /**
+     * @brief Discover peers
+     * @return JSON string with list of discovered peer IDs
+     */
+    QString DiscoverPeers();
+
+    /**
+     * @brief Get all peers
+     * @return JSON string with list of peer information
+     */
+    QString GetAllPeers();
+
+    /**
+     * @brief Get network health metrics
+     * @return JSON string with network health metrics
+     */
+    QString GetNetworkHealthMetrics();
+
+    /**
+     * @brief Get network topology
+     * @return JSON string with network topology data
+     */
+    QString GetNetworkTopology();
+
+    /**
+     * @brief Connect VPN
+     * @param vpnConfig VPN configuration (JSON string)
+     * @return true if connection successful, false otherwise
+     */
+    bool ConnectVPN(const QString& vpnConfig);
+
+    /**
+     * @brief Disconnect VPN
+     * @return true if disconnection successful, false otherwise
+     */
+    bool DisconnectVPN();
+
+    /**
+     * @brief Block unauthorized interfaces
+     * @return true if blocking successful, false otherwise
+     */
+    bool BlockUnauthorizedInterfaces();
+
 Q_SIGNALS:
     /**
      * @brief Emitted when USB device is detected
@@ -186,6 +277,11 @@ private:
     KeyManager* m_keyMgr;
     UserEnrollment* m_enrollment;
     RoleManager* m_roleMgr;
+    MeshNetwork* m_meshNetwork;
+    PeerDiscovery* m_peerDiscovery;
+    NetworkManager* m_networkManager;
+    NetworkHealthMonitor* m_healthMonitor;
+    EthernetEnforcement* m_enforcement;
     bool m_initialized;
 };
 
