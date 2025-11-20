@@ -17,6 +17,11 @@ class PeerDiscovery;
 class NetworkManager;
 class NetworkHealthMonitor;
 class EthernetEnforcement;
+class MessagingCore;
+class TextMessaging;
+class MessageThreading;
+class ConversationManager;
+class MessageStorage;
 
 /**
  * @brief D-Bus Interface for Secure Messenger
@@ -80,6 +85,31 @@ public:
      * @brief Set ethernet enforcement
      */
     void setEthernetEnforcement(EthernetEnforcement* enforcement);
+
+    /**
+     * @brief Set messaging core
+     */
+    void setMessagingCore(MessagingCore* messagingCore);
+
+    /**
+     * @brief Set text messaging
+     */
+    void setTextMessaging(TextMessaging* textMessaging);
+
+    /**
+     * @brief Set message threading
+     */
+    void setMessageThreading(MessageThreading* threading);
+
+    /**
+     * @brief Set conversation manager
+     */
+    void setConversationManager(ConversationManager* conversationManager);
+
+    /**
+     * @brief Set message storage
+     */
+    void setMessageStorage(MessageStorage* messageStorage);
 
     /**
      * @brief Initialize D-Bus interface
@@ -255,6 +285,85 @@ public:
      */
     bool BlockUnauthorizedInterfaces();
 
+    /**
+     * @brief Send text message
+     * @param conversationId Conversation ID
+     * @param recipientId Recipient ID
+     * @param text Text content
+     * @param formatType Format type (0=Plain, 1=Markdown, 2=HTML)
+     * @return Message ID or empty string if failed
+     */
+    QString SendTextMessage(const QString& conversationId, const QString& recipientId, const QString& text, int formatType);
+
+    /**
+     * @brief Get message
+     * @param messageId Message ID
+     * @return JSON string with message information
+     */
+    QString GetMessage(const QString& messageId);
+
+    /**
+     * @brief Get messages for conversation
+     * @param conversationId Conversation ID
+     * @param limit Maximum number of messages
+     * @param offset Offset for pagination
+     * @return JSON string with list of messages
+     */
+    QString GetMessagesForConversation(const QString& conversationId, int limit, int offset);
+
+    /**
+     * @brief Mark message as read
+     * @param messageId Message ID
+     * @return true if mark successful, false otherwise
+     */
+    bool MarkMessageAsRead(const QString& messageId);
+
+    /**
+     * @brief Create conversation
+     * @param type Conversation type (0=Direct, 1=Group)
+     * @param participants List of participant IDs (JSON array string)
+     * @param title Conversation title
+     * @return Conversation ID or empty string if failed
+     */
+    QString CreateConversation(int type, const QString& participants, const QString& title);
+
+    /**
+     * @brief Get conversation
+     * @param conversationId Conversation ID
+     * @return JSON string with conversation information
+     */
+    QString GetConversation(const QString& conversationId);
+
+    /**
+     * @brief Get conversations for user
+     * @param userId User ID
+     * @return JSON string with list of conversations
+     */
+    QString GetConversationsForUser(const QString& userId);
+
+    /**
+     * @brief Search conversations
+     * @param query Search query
+     * @param userId Optional user ID filter
+     * @return JSON string with list of matching conversations
+     */
+    QString SearchConversations(const QString& query, const QString& userId);
+
+    /**
+     * @brief Create thread
+     * @param conversationId Conversation ID
+     * @param title Thread title
+     * @return Thread ID or empty string if failed
+     */
+    QString CreateThread(const QString& conversationId, const QString& title);
+
+    /**
+     * @brief Get threads for conversation
+     * @param conversationId Conversation ID
+     * @return JSON string with list of threads
+     */
+    QString GetThreadsForConversation(const QString& conversationId);
+
 Q_SIGNALS:
     /**
      * @brief Emitted when USB device is detected
@@ -282,6 +391,11 @@ private:
     NetworkManager* m_networkManager;
     NetworkHealthMonitor* m_healthMonitor;
     EthernetEnforcement* m_enforcement;
+    MessagingCore* m_messagingCore;
+    TextMessaging* m_textMessaging;
+    MessageThreading* m_threading;
+    ConversationManager* m_conversationManager;
+    MessageStorage* m_messageStorage;
     bool m_initialized;
 };
 

@@ -30,6 +30,11 @@ set(APPLICATION_SOURCES
     src/network_manager.cpp
     src/network_health.cpp
     src/ethernet_enforcement.cpp
+    src/messaging_core.cpp
+    src/text_messaging.cpp
+    src/message_threading.cpp
+    src/conversation_manager.cpp
+    src/message_storage.cpp
     src/dbus_interface.cpp
     src/audit_logger.cpp
 )
@@ -47,6 +52,11 @@ set(APPLICATION_HEADERS
     include/network_manager.h
     include/network_health.h
     include/ethernet_enforcement.h
+    include/messaging_core.h
+    include/text_messaging.h
+    include/message_threading.h
+    include/conversation_manager.h
+    include/message_storage.h
     include/dbus_interface.h
     include/audit_logger.h
 )
@@ -55,6 +65,7 @@ set(APPLICATION_HEADERS
 set(QML_FILES
     ui/main.qml
     ui/key_management.qml
+    ui/messaging_interface.qml
 )
 
 # Create executable
@@ -74,7 +85,9 @@ target_link_libraries(milos-secure-messenger
     Qt6::QuickControls2
     Qt6::DBus
     Qt6::Network
+    Qt6::Sql
     CLI11::CLI11
+    SQLite::SQLite3
 )
 
 # Add QML resources

@@ -13,21 +13,35 @@ ApplicationWindow {
         anchors.fill: parent
         color: "#0a0a0a"
 
-        ColumnLayout {
-            anchors.fill: parent
-            anchors.margins: 10
+        TabBar {
+            id: tabBar
+            anchors.top: parent.top
+            anchors.left: parent.left
+            anchors.right: parent.right
+            height: 40
 
-            Text {
-                text: "MilOS Secure Messenger"
-                font.pixelSize: 24
-                font.bold: true
-                color: "#00ff88"
+            TabButton {
+                text: "Key Management"
             }
 
-            Loader {
-                source: "key_management.qml"
-                Layout.fillWidth: true
-                Layout.fillHeight: true
+            TabButton {
+                text: "Messaging"
+            }
+        }
+
+        StackLayout {
+            anchors.top: tabBar.bottom
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            currentIndex: tabBar.currentIndex
+
+            KeyManagement {
+                anchors.fill: parent
+            }
+
+            MessagingInterface {
+                anchors.fill: parent
             }
         }
     }

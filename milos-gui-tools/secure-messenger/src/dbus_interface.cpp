@@ -9,6 +9,11 @@
 #include "network_manager.h"
 #include "network_health.h"
 #include "ethernet_enforcement.h"
+#include "messaging_core.h"
+#include "text_messaging.h"
+#include "message_threading.h"
+#include "conversation_manager.h"
+#include "message_storage.h"
 #include <QDBusConnection>
 #include <QDBusMetaType>
 #include <QDebug>
@@ -28,6 +33,11 @@ SecureMessengerDBusInterface::SecureMessengerDBusInterface(QObject* parent)
     , m_networkManager(nullptr)
     , m_healthMonitor(nullptr)
     , m_enforcement(nullptr)
+    , m_messagingCore(nullptr)
+    , m_textMessaging(nullptr)
+    , m_threading(nullptr)
+    , m_conversationManager(nullptr)
+    , m_messageStorage(nullptr)
     , m_initialized(false)
 {
 }
@@ -73,6 +83,26 @@ void SecureMessengerDBusInterface::setNetworkHealthMonitor(NetworkHealthMonitor*
 
 void SecureMessengerDBusInterface::setEthernetEnforcement(EthernetEnforcement* enforcement) {
     m_enforcement = enforcement;
+}
+
+void SecureMessengerDBusInterface::setMessagingCore(MessagingCore* messagingCore) {
+    m_messagingCore = messagingCore;
+}
+
+void SecureMessengerDBusInterface::setTextMessaging(TextMessaging* textMessaging) {
+    m_textMessaging = textMessaging;
+}
+
+void SecureMessengerDBusInterface::setMessageThreading(MessageThreading* threading) {
+    m_threading = threading;
+}
+
+void SecureMessengerDBusInterface::setConversationManager(ConversationManager* conversationManager) {
+    m_conversationManager = conversationManager;
+}
+
+void SecureMessengerDBusInterface::setMessageStorage(MessageStorage* messageStorage) {
+    m_messageStorage = messageStorage;
 }
 
 bool SecureMessengerDBusInterface::initialize() {
@@ -470,5 +500,208 @@ bool SecureMessengerDBusInterface::BlockUnauthorizedInterfaces() {
     }
 
     return m_enforcement->blockUnauthorizedInterfaces();
+}
+
+QString SecureMessengerDBusInterface::SendTextMessage(const QString& conversationId, const QString& recipientId, const QString& text, int formatType) {
+    if (!m_textMessaging) {
+        return QString();
+    }
+
+    return m_textMessaging->sendTextMessage(conversationId, recipientId, text, static_cast<TextFormatType>(formatType));
+}
+
+QString SecureMessengerDBusInterface::GetMessage(const QString& messageId) {
+    if (!m_messagingCore) {
+        return QString();
+    }
+
+    Message message = m_messagingCore->getMessage(messageId);
+    if (message.messageId.isEmpty()) {
+        return QString();
+    }
+
+    QJsonObject obj;
+    obj["message_id"] = message.messageId;
+    obj["conversation_id"] = message.conversationId;
+    obj["sender_id"] = message.senderId;
+    obj["recipient_id"] = message.recipientId;
+    obj["type"] = static_cast<int>(message.type);
+    obj["content"] = message.content;
+    obj["status"] = static_cast<int>(message.status);
+    obj["timestamp"] = message.timestamp.toString(Qt::ISODate);
+    if (message.deliveredAt.isValid()) {
+        obj["delivered_at"] = message.deliveredAt.toString(Qt::ISODate);
+    }
+    if (message.readAt.isValid()) {
+        obj["read_at"] = message.readAt.toString(Qt::ISODate);
+    }
+
+    QJsonDocument doc(obj);
+    return QString::fromUtf8(doc.toJson());
+}
+
+QString SecureMessengerDBusInterface::GetMessagesForConversation(const QString& conversationId, int limit, int offset) {
+    if (!m_messageStorage) {
+        return QString();
+    }
+
+    QList<Message> messages = m_messageStorage->getMessagesForConversation(conversationId, limit, offset);
+    
+    QJsonArray jsonArray;
+    for (const Message& message : messages) {
+        QJsonObject obj;
+        obj["message_id"] = message.messageId;
+        obj["conversation_id"] = message.conversationId;
+        obj["sender_id"] = message.senderId;
+        obj["recipient_id"] = message.recipientId;
+        obj["type"] = static_cast<int>(message.type);
+        obj["content"] = message.content;
+        obj["status"] = static_cast<int>(message.status);
+        obj["timestamp"] = message.timestamp.toString(Qt::ISODate);
+        if (message.deliveredAt.isValid()) {
+            obj["delivered_at"] = message.deliveredAt.toString(Qt::ISODate);
+        }
+        if (message.readAt.isValid()) {
+            obj["read_at"] = message.readAt.toString(Qt::ISODate);
+        }
+        jsonArray.append(obj);
+    }
+
+    QJsonDocument doc(jsonArray);
+    return QString::fromUtf8(doc.toJson());
+}
+
+bool SecureMessengerDBusInterface::MarkMessageAsRead(const QString& messageId) {
+    if (!m_messagingCore) {
+        return false;
+    }
+
+    return m_messagingCore->updateMessageStatus(messageId, MessageStatus::Read);
+}
+
+QString SecureMessengerDBusInterface::CreateConversation(int type, const QString& participants, const QString& title) {
+    if (!m_conversationManager) {
+        return QString();
+    }
+
+    QJsonDocument doc = QJsonDocument::fromJson(participants.toUtf8());
+    if (doc.isNull() || !doc.isArray()) {
+        return QString();
+    }
+
+    QList<QString> participantList;
+    QJsonArray array = doc.array();
+    for (const QJsonValue& value : array) {
+        participantList.append(value.toString());
+    }
+
+    return m_conversationManager->createConversation(static_cast<ConversationType>(type), participantList, title);
+}
+
+QString SecureMessengerDBusInterface::GetConversation(const QString& conversationId) {
+    if (!m_conversationManager) {
+        return QString();
+    }
+
+    Conversation conv = m_conversationManager->getConversation(conversationId);
+    if (conv.conversationId.isEmpty()) {
+        return QString();
+    }
+
+    QJsonObject obj;
+    obj["conversation_id"] = conv.conversationId;
+    obj["type"] = static_cast<int>(conv.type);
+    QJsonArray participantsArray;
+    for (const QString& participant : conv.participants) {
+        participantsArray.append(participant);
+    }
+    obj["participants"] = participantsArray;
+    obj["title"] = conv.title;
+    obj["created_at"] = conv.createdAt.toString(Qt::ISODate);
+    obj["last_message_at"] = conv.lastMessageAt.toString(Qt::ISODate);
+    obj["unread_count"] = conv.unreadCount;
+
+    QJsonDocument doc(obj);
+    return QString::fromUtf8(doc.toJson());
+}
+
+QString SecureMessengerDBusInterface::GetConversationsForUser(const QString& userId) {
+    if (!m_conversationManager) {
+        return QString();
+    }
+
+    QList<Conversation> conversations = m_conversationManager->getConversationsForUser(userId);
+    
+    QJsonArray jsonArray;
+    for (const Conversation& conv : conversations) {
+        QJsonObject obj;
+        obj["conversation_id"] = conv.conversationId;
+        obj["type"] = static_cast<int>(conv.type);
+        QJsonArray participantsArray;
+        for (const QString& participant : conv.participants) {
+            participantsArray.append(participant);
+        }
+        obj["participants"] = participantsArray;
+        obj["title"] = conv.title;
+        obj["created_at"] = conv.createdAt.toString(Qt::ISODate);
+        obj["last_message_at"] = conv.lastMessageAt.toString(Qt::ISODate);
+        obj["unread_count"] = conv.unreadCount;
+        jsonArray.append(obj);
+    }
+
+    QJsonDocument doc(jsonArray);
+    return QString::fromUtf8(doc.toJson());
+}
+
+QString SecureMessengerDBusInterface::SearchConversations(const QString& query, const QString& userId) {
+    if (!m_conversationManager) {
+        return QString();
+    }
+
+    QList<Conversation> conversations = m_conversationManager->searchConversations(query, userId);
+    
+    QJsonArray jsonArray;
+    for (const Conversation& conv : conversations) {
+        QJsonObject obj;
+        obj["conversation_id"] = conv.conversationId;
+        obj["type"] = static_cast<int>(conv.type);
+        obj["title"] = conv.title;
+        obj["created_at"] = conv.createdAt.toString(Qt::ISODate);
+        jsonArray.append(obj);
+    }
+
+    QJsonDocument doc(jsonArray);
+    return QString::fromUtf8(doc.toJson());
+}
+
+QString SecureMessengerDBusInterface::CreateThread(const QString& conversationId, const QString& title) {
+    if (!m_threading) {
+        return QString();
+    }
+
+    return m_threading->createThread(conversationId, title);
+}
+
+QString SecureMessengerDBusInterface::GetThreadsForConversation(const QString& conversationId) {
+    if (!m_threading) {
+        return QString();
+    }
+
+    QList<MessageThread> threads = m_threading->getThreadsForConversation(conversationId);
+    
+    QJsonArray jsonArray;
+    for (const MessageThread& thread : threads) {
+        QJsonObject obj;
+        obj["thread_id"] = thread.threadId;
+        obj["conversation_id"] = thread.conversationId;
+        obj["title"] = thread.title;
+        obj["created_at"] = thread.createdAt.toString(Qt::ISODate);
+        obj["last_message_at"] = thread.lastMessageAt.toString(Qt::ISODate);
+        obj["unread_count"] = thread.unreadCount;
+        jsonArray.append(obj);
+    }
+
+    QJsonDocument doc(jsonArray);
+    return QString::fromUtf8(doc.toJson());
 }
 

@@ -243,6 +243,96 @@ public:
         return reply.value();
     }
 
+    QString sendTextMessage(const QString& conversationId, const QString& recipientId, const QString& text, int formatType) {
+        QDBusReply<QString> reply = m_interface->call("SendTextMessage", conversationId, recipientId, text, formatType);
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return QString();
+        }
+        return reply.value();
+    }
+
+    QString getMessage(const QString& messageId) {
+        QDBusReply<QString> reply = m_interface->call("GetMessage", messageId);
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return QString();
+        }
+        return reply.value();
+    }
+
+    QString getMessagesForConversation(const QString& conversationId, int limit, int offset) {
+        QDBusReply<QString> reply = m_interface->call("GetMessagesForConversation", conversationId, limit, offset);
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return QString();
+        }
+        return reply.value();
+    }
+
+    bool markMessageAsRead(const QString& messageId) {
+        QDBusReply<bool> reply = m_interface->call("MarkMessageAsRead", messageId);
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return false;
+        }
+        return reply.value();
+    }
+
+    QString createConversation(int type, const QString& participants, const QString& title) {
+        QDBusReply<QString> reply = m_interface->call("CreateConversation", type, participants, title);
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return QString();
+        }
+        return reply.value();
+    }
+
+    QString getConversation(const QString& conversationId) {
+        QDBusReply<QString> reply = m_interface->call("GetConversation", conversationId);
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return QString();
+        }
+        return reply.value();
+    }
+
+    QString getConversationsForUser(const QString& userId) {
+        QDBusReply<QString> reply = m_interface->call("GetConversationsForUser", userId);
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return QString();
+        }
+        return reply.value();
+    }
+
+    QString searchConversations(const QString& query, const QString& userId) {
+        QDBusReply<QString> reply = m_interface->call("SearchConversations", query, userId);
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return QString();
+        }
+        return reply.value();
+    }
+
+    QString createThread(const QString& conversationId, const QString& title) {
+        QDBusReply<QString> reply = m_interface->call("CreateThread", conversationId, title);
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return QString();
+        }
+        return reply.value();
+    }
+
+    QString getThreadsForConversation(const QString& conversationId) {
+        QDBusReply<QString> reply = m_interface->call("GetThreadsForConversation", conversationId);
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return QString();
+        }
+        return reply.value();
+    }
+
 private:
     QDBusConnection m_connection;
     QDBusInterface* m_interface;
@@ -564,6 +654,163 @@ int main(int argc, char* argv[]) {
             std::cout << "Unauthorized interfaces blocked" << std::endl;
         } else {
             std::cerr << "Failed to block unauthorized interfaces" << std::endl;
+        }
+    });
+
+    // Send text message command
+    auto* sendMsgCmd = cliApp.add_subcommand("send", "Send text message");
+    std::string sendConversationId;
+    std::string sendRecipientId;
+    std::string sendText;
+    int sendFormatType = 0;
+    sendMsgCmd->add_option("--conversation", sendConversationId, "Conversation ID")->required();
+    sendMsgCmd->add_option("--recipient", sendRecipientId, "Recipient ID")->required();
+    sendMsgCmd->add_option("--text", sendText, "Message text")->required();
+    sendMsgCmd->add_option("--format", sendFormatType, "Format type (0=Plain, 1=Markdown, 2=HTML)");
+    sendMsgCmd->callback([&]() {
+        QString messageId = client.sendTextMessage(QString::fromStdString(sendConversationId),
+                                                   QString::fromStdString(sendRecipientId),
+                                                   QString::fromStdString(sendText),
+                                                   sendFormatType);
+        if (!messageId.isEmpty()) {
+            std::cout << "Message sent: " << messageId.toStdString() << std::endl;
+        } else {
+            std::cerr << "Failed to send message" << std::endl;
+        }
+    });
+
+    // Get message command
+    auto* getMsgCmd = cliApp.add_subcommand("message", "Get message");
+    std::string getMsgId;
+    getMsgCmd->add_option("--id", getMsgId, "Message ID")->required();
+    getMsgCmd->callback([&]() {
+        QString jsonMessage = client.getMessage(QString::fromStdString(getMsgId));
+        if (!jsonMessage.isEmpty()) {
+            std::cout << jsonMessage.toStdString() << std::endl;
+        } else {
+            std::cout << "Message not found" << std::endl;
+        }
+    });
+
+    // Get messages for conversation command
+    auto* getMsgsCmd = cliApp.add_subcommand("messages", "Get messages for conversation");
+    std::string getMsgsConversationId;
+    int getMsgsLimit = 100;
+    int getMsgsOffset = 0;
+    getMsgsCmd->add_option("--conversation", getMsgsConversationId, "Conversation ID")->required();
+    getMsgsCmd->add_option("--limit", getMsgsLimit, "Maximum number of messages");
+    getMsgsCmd->add_option("--offset", getMsgsOffset, "Offset for pagination");
+    getMsgsCmd->callback([&]() {
+        QString jsonMessages = client.getMessagesForConversation(QString::fromStdString(getMsgsConversationId),
+                                                                  getMsgsLimit,
+                                                                  getMsgsOffset);
+        if (!jsonMessages.isEmpty()) {
+            std::cout << jsonMessages.toStdString() << std::endl;
+        } else {
+            std::cout << "No messages found" << std::endl;
+        }
+    });
+
+    // Mark message as read command
+    auto* markReadCmd = cliApp.add_subcommand("mark-read", "Mark message as read");
+    std::string markReadMsgId;
+    markReadCmd->add_option("--id", markReadMsgId, "Message ID")->required();
+    markReadCmd->callback([&]() {
+        bool success = client.markMessageAsRead(QString::fromStdString(markReadMsgId));
+        if (success) {
+            std::cout << "Message marked as read" << std::endl;
+        } else {
+            std::cerr << "Failed to mark message as read" << std::endl;
+        }
+    });
+
+    // Create conversation command
+    auto* createConvCmd = cliApp.add_subcommand("create-conversation", "Create conversation");
+    int createConvType = 0;
+    std::string createConvParticipants;
+    std::string createConvTitle;
+    createConvCmd->add_option("--type", createConvType, "Conversation type (0=Direct, 1=Group)")->required();
+    createConvCmd->add_option("--participants", createConvParticipants, "Participant IDs (JSON array)")->required();
+    createConvCmd->add_option("--title", createConvTitle, "Conversation title");
+    createConvCmd->callback([&]() {
+        QString conversationId = client.createConversation(createConvType,
+                                                          QString::fromStdString(createConvParticipants),
+                                                          QString::fromStdString(createConvTitle));
+        if (!conversationId.isEmpty()) {
+            std::cout << "Conversation created: " << conversationId.toStdString() << std::endl;
+        } else {
+            std::cerr << "Failed to create conversation" << std::endl;
+        }
+    });
+
+    // Get conversation command
+    auto* getConvCmd = cliApp.add_subcommand("conversation", "Get conversation");
+    std::string getConvId;
+    getConvCmd->add_option("--id", getConvId, "Conversation ID")->required();
+    getConvCmd->callback([&]() {
+        QString jsonConversation = client.getConversation(QString::fromStdString(getConvId));
+        if (!jsonConversation.isEmpty()) {
+            std::cout << jsonConversation.toStdString() << std::endl;
+        } else {
+            std::cout << "Conversation not found" << std::endl;
+        }
+    });
+
+    // Get conversations for user command
+    auto* getConvsCmd = cliApp.add_subcommand("conversations", "Get conversations for user");
+    std::string getConvsUserId;
+    getConvsCmd->add_option("--user", getConvsUserId, "User ID")->required();
+    getConvsCmd->callback([&]() {
+        QString jsonConversations = client.getConversationsForUser(QString::fromStdString(getConvsUserId));
+        if (!jsonConversations.isEmpty()) {
+            std::cout << jsonConversations.toStdString() << std::endl;
+        } else {
+            std::cout << "No conversations found" << std::endl;
+        }
+    });
+
+    // Search conversations command
+    auto* searchConvsCmd = cliApp.add_subcommand("search-conversations", "Search conversations");
+    std::string searchQuery;
+    std::string searchUserId;
+    searchConvsCmd->add_option("--query", searchQuery, "Search query")->required();
+    searchConvsCmd->add_option("--user", searchUserId, "User ID filter");
+    searchConvsCmd->callback([&]() {
+        QString jsonConversations = client.searchConversations(QString::fromStdString(searchQuery),
+                                                               searchUserId.empty() ? QString() : QString::fromStdString(searchUserId));
+        if (!jsonConversations.isEmpty()) {
+            std::cout << jsonConversations.toStdString() << std::endl;
+        } else {
+            std::cout << "No conversations found" << std::endl;
+        }
+    });
+
+    // Create thread command
+    auto* createThreadCmd = cliApp.add_subcommand("create-thread", "Create thread");
+    std::string createThreadConversationId;
+    std::string createThreadTitle;
+    createThreadCmd->add_option("--conversation", createThreadConversationId, "Conversation ID")->required();
+    createThreadCmd->add_option("--title", createThreadTitle, "Thread title")->required();
+    createThreadCmd->callback([&]() {
+        QString threadId = client.createThread(QString::fromStdString(createThreadConversationId),
+                                              QString::fromStdString(createThreadTitle));
+        if (!threadId.isEmpty()) {
+            std::cout << "Thread created: " << threadId.toStdString() << std::endl;
+        } else {
+            std::cerr << "Failed to create thread" << std::endl;
+        }
+    });
+
+    // Get threads for conversation command
+    auto* getThreadsCmd = cliApp.add_subcommand("threads", "Get threads for conversation");
+    std::string getThreadsConversationId;
+    getThreadsCmd->add_option("--conversation", getThreadsConversationId, "Conversation ID")->required();
+    getThreadsCmd->callback([&]() {
+        QString jsonThreads = client.getThreadsForConversation(QString::fromStdString(getThreadsConversationId));
+        if (!jsonThreads.isEmpty()) {
+            std::cout << jsonThreads.toStdString() << std::endl;
+        } else {
+            std::cout << "No threads found" << std::endl;
         }
     });
 

@@ -11,6 +11,11 @@
 #include "network_manager.h"
 #include "network_health.h"
 #include "ethernet_enforcement.h"
+#include "messaging_core.h"
+#include "text_messaging.h"
+#include "message_threading.h"
+#include "conversation_manager.h"
+#include "message_storage.h"
 #include "dbus_interface.h"
 #include "audit_logger.h"
 #include <QObject>
@@ -80,6 +85,21 @@ public:
      */
     NetworkHealthMonitor* getNetworkHealthMonitor() const { return m_healthMonitor; }
 
+    /**
+     * @brief Get messaging core
+     */
+    MessagingCore* getMessagingCore() const { return m_messagingCore; }
+
+    /**
+     * @brief Get text messaging
+     */
+    TextMessaging* getTextMessaging() const { return m_textMessaging; }
+
+    /**
+     * @brief Get conversation manager
+     */
+    ConversationManager* getConversationManager() const { return m_conversationManager; }
+
 private:
     USBAuthorization* m_usbAuth;
     KeyGenerator* m_keyGen;
@@ -91,6 +111,11 @@ private:
     NetworkManager* m_networkManager;
     NetworkHealthMonitor* m_healthMonitor;
     EthernetEnforcement* m_enforcement;
+    MessagingCore* m_messagingCore;
+    TextMessaging* m_textMessaging;
+    MessageThreading* m_threading;
+    ConversationManager* m_conversationManager;
+    MessageStorage* m_messageStorage;
     SecureMessengerDBusInterface* m_dbusInterface;
     AuditLogger* m_auditLogger;
     bool m_initialized;

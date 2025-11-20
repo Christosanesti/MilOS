@@ -4,10 +4,17 @@
 #include "network_manager.h"
 #include "network_health.h"
 #include "ethernet_enforcement.h"
+#include "messaging_core.h"
+#include "text_messaging.h"
+#include "message_threading.h"
+#include "conversation_manager.h"
+#include "message_storage.h"
 #include <QDebug>
 #include <QNetworkInterface>
 #include <QHostAddress>
 #include <QAbstractSocket>
+#include <QStandardPaths>
+#include <QDir>
 
 SecureMessenger::SecureMessenger(QObject* parent)
     : QObject(parent)
@@ -21,6 +28,11 @@ SecureMessenger::SecureMessenger(QObject* parent)
     , m_networkManager(new NetworkManager(this))
     , m_healthMonitor(new NetworkHealthMonitor(this))
     , m_enforcement(new EthernetEnforcement(this))
+    , m_messagingCore(new MessagingCore(this))
+    , m_textMessaging(new TextMessaging(this))
+    , m_threading(new MessageThreading(this))
+    , m_conversationManager(new ConversationManager(this))
+    , m_messageStorage(new MessageStorage(this))
     , m_dbusInterface(new SecureMessengerDBusInterface(this))
     , m_auditLogger(new AuditLogger(this))
     , m_initialized(false)
@@ -116,6 +128,40 @@ bool SecureMessenger::initialize() {
         return false;
     }
 
+    // Initialize messaging components
+    if (!m_messagingCore->initialize()) {
+        qWarning() << "Failed to initialize messaging core";
+        return false;
+    }
+
+    if (!m_textMessaging->initialize()) {
+        qWarning() << "Failed to initialize text messaging";
+        return false;
+    }
+
+    // Set messaging core for text messaging
+    m_textMessaging->setMessagingCore(m_messagingCore);
+
+    if (!m_threading->initialize()) {
+        qWarning() << "Failed to initialize message threading";
+        return false;
+    }
+
+    if (!m_conversationManager->initialize()) {
+        qWarning() << "Failed to initialize conversation manager";
+        return false;
+    }
+
+    // Initialize message storage
+    QString dbPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    QDir().mkpath(dbPath);
+    dbPath += "/messages.db";
+    
+    if (!m_messageStorage->initialize(dbPath)) {
+        qWarning() << "Failed to initialize message storage";
+        return false;
+    }
+
     // Connect signals for audit logging
     connect(m_keyGen, &KeyGenerator::keyGenerated, this, [this](const QString& keyId) {
         QVariantMap eventData;
@@ -187,6 +233,25 @@ bool SecureMessenger::initialize() {
         m_auditLogger->logKeyOperation("unauthorized_interface_detected", QString(), eventData);
     });
 
+    connect(m_messagingCore, &MessagingCore::messageSent, this, [this](const QString& messageId) {
+        QVariantMap eventData;
+        eventData["message_id"] = messageId;
+        m_auditLogger->logKeyOperation("message_sent", QString(), eventData);
+    });
+
+    connect(m_messagingCore, &MessagingCore::messageReceived, this, [this](const QString& messageId) {
+        QVariantMap eventData;
+        eventData["message_id"] = messageId;
+        m_auditLogger->logKeyOperation("message_received", QString(), eventData);
+    });
+
+    connect(m_messagingCore, &MessagingCore::messageStatusUpdated, this, [this](const QString& messageId, MessageStatus status) {
+        QVariantMap eventData;
+        eventData["message_id"] = messageId;
+        eventData["status"] = static_cast<int>(status);
+        m_auditLogger->logKeyOperation("message_status_updated", QString(), eventData);
+    });
+
     // Initialize D-Bus interface
     m_dbusInterface->setUSBAuthorization(m_usbAuth);
     m_dbusInterface->setKeyGenerator(m_keyGen);
@@ -198,6 +263,11 @@ bool SecureMessenger::initialize() {
     m_dbusInterface->setNetworkManager(m_networkManager);
     m_dbusInterface->setNetworkHealthMonitor(m_healthMonitor);
     m_dbusInterface->setEthernetEnforcement(m_enforcement);
+    m_dbusInterface->setMessagingCore(m_messagingCore);
+    m_dbusInterface->setTextMessaging(m_textMessaging);
+    m_dbusInterface->setMessageThreading(m_threading);
+    m_dbusInterface->setConversationManager(m_conversationManager);
+    m_dbusInterface->setMessageStorage(m_messageStorage);
 
     if (!m_dbusInterface->initialize()) {
         qWarning() << "Failed to initialize D-Bus interface";
