@@ -19,12 +19,19 @@
 #include "video_messaging.h"
 #include "media_calls.h"
 #include "group_messaging.h"
+#include "e2e_encryption.h"
+#include "forward_secrecy.h"
+#include "key_exchange.h"
+#include "traffic_obfuscation.h"
+#include "encryption_storage.h"
+#include "message_expiration.h"
 #include <QDBusConnection>
 #include <QDBusMetaType>
 #include <QDebug>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
+#include <QByteArray>
 
 SecureMessengerDBusInterface::SecureMessengerDBusInterface(QObject* parent)
     : QObject(parent)
@@ -48,6 +55,12 @@ SecureMessengerDBusInterface::SecureMessengerDBusInterface(QObject* parent)
     , m_videoMessaging(nullptr)
     , m_mediaCalls(nullptr)
     , m_groupMessaging(nullptr)
+    , m_e2eEncryption(nullptr)
+    , m_forwardSecrecy(nullptr)
+    , m_keyExchange(nullptr)
+    , m_trafficObfuscation(nullptr)
+    , m_encryptionStorage(nullptr)
+    , m_messageExpiration(nullptr)
     , m_initialized(false)
 {
 }
@@ -868,5 +881,79 @@ QString SecureMessengerDBusInterface::GetGroupParticipants(const QString& conver
 
     QJsonDocument doc(jsonArray);
     return QString::fromUtf8(doc.toJson());
+}
+
+void SecureMessengerDBusInterface::setE2EEncryption(E2EEncryption* encryption) {
+    m_e2eEncryption = encryption;
+}
+
+void SecureMessengerDBusInterface::setForwardSecrecy(ForwardSecrecy* forwardSecrecy) {
+    m_forwardSecrecy = forwardSecrecy;
+}
+
+void SecureMessengerDBusInterface::setKeyExchange(KeyExchange* keyExchange) {
+    m_keyExchange = keyExchange;
+}
+
+void SecureMessengerDBusInterface::setTrafficObfuscation(TrafficObfuscation* obfuscation) {
+    m_trafficObfuscation = obfuscation;
+}
+
+void SecureMessengerDBusInterface::setEncryptionStorage(EncryptionStorage* storage) {
+    m_encryptionStorage = storage;
+}
+
+void SecureMessengerDBusInterface::setMessageExpiration(MessageExpiration* expiration) {
+    m_messageExpiration = expiration;
+}
+
+QString SecureMessengerDBusInterface::InitiateKeyExchange(const QString& participantId) {
+    if (!m_keyExchange) {
+        return QString();
+    }
+
+    return m_keyExchange->initiateKeyExchange(participantId);
+}
+
+bool SecureMessengerDBusInterface::CompleteKeyExchange(const QString& exchangeId, const QString& publicKey) {
+    if (!m_keyExchange) {
+        return false;
+    }
+
+    QByteArray publicKeyBytes = QByteArray::fromBase64(publicKey.toUtf8());
+    return m_keyExchange->completeKeyExchange(exchangeId, publicKeyBytes);
+}
+
+bool SecureMessengerDBusInterface::SetMessageExpirationPolicy(const QString& messageId, int policy, int expirationSeconds) {
+    if (!m_messageExpiration) {
+        return false;
+    }
+
+    return m_messageExpiration->setExpirationPolicy(messageId, static_cast<ExpirationPolicy>(policy), expirationSeconds);
+}
+
+bool SecureMessengerDBusInterface::IsMessageExpired(const QString& messageId) {
+    if (!m_messageExpiration) {
+        return false;
+    }
+
+    return m_messageExpiration->isMessageExpired(messageId);
+}
+
+int SecureMessengerDBusInterface::DeleteExpiredMessages() {
+    if (!m_messageExpiration) {
+        return 0;
+    }
+
+    return m_messageExpiration->deleteExpiredMessages();
+}
+
+bool SecureMessengerDBusInterface::SetEncryptionStorageEnabled(bool enabled) {
+    if (!m_encryptionStorage) {
+        return false;
+    }
+
+    m_encryptionStorage->setEnabled(enabled);
+    return true;
 }
 

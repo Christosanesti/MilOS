@@ -40,6 +40,12 @@ set(APPLICATION_SOURCES
     src/video_messaging.cpp
     src/media_calls.cpp
     src/group_messaging.cpp
+    src/e2e_encryption.cpp
+    src/forward_secrecy.cpp
+    src/key_exchange.cpp
+    src/traffic_obfuscation.cpp
+    src/encryption_storage.cpp
+    src/message_expiration.cpp
     src/dbus_interface.cpp
     src/audit_logger.cpp
 )
@@ -67,6 +73,12 @@ set(APPLICATION_HEADERS
     include/video_messaging.h
     include/media_calls.h
     include/group_messaging.h
+    include/e2e_encryption.h
+    include/forward_secrecy.h
+    include/key_exchange.h
+    include/traffic_obfuscation.h
+    include/encryption_storage.h
+    include/message_expiration.h
     include/dbus_interface.h
     include/audit_logger.h
 )

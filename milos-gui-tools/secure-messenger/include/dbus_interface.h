@@ -27,6 +27,12 @@ class VoiceMessaging;
 class VideoMessaging;
 class MediaCalls;
 class GroupMessaging;
+class E2EEncryption;
+class ForwardSecrecy;
+class KeyExchange;
+class TrafficObfuscation;
+class EncryptionStorage;
+class MessageExpiration;
 
 /**
  * @brief D-Bus Interface for Secure Messenger
@@ -489,6 +495,80 @@ public:
      */
     QString GetGroupParticipants(const QString& conversationId);
 
+    /**
+     * @brief Set E2E encryption
+     */
+    void setE2EEncryption(E2EEncryption* encryption);
+
+    /**
+     * @brief Set forward secrecy
+     */
+    void setForwardSecrecy(ForwardSecrecy* forwardSecrecy);
+
+    /**
+     * @brief Set key exchange
+     */
+    void setKeyExchange(KeyExchange* keyExchange);
+
+    /**
+     * @brief Set traffic obfuscation
+     */
+    void setTrafficObfuscation(TrafficObfuscation* obfuscation);
+
+    /**
+     * @brief Set encryption storage
+     */
+    void setEncryptionStorage(EncryptionStorage* storage);
+
+    /**
+     * @brief Set message expiration
+     */
+    void setMessageExpiration(MessageExpiration* expiration);
+
+    /**
+     * @brief Initiate key exchange
+     * @param participantId Participant ID
+     * @return Exchange ID or empty string if failed
+     */
+    QString InitiateKeyExchange(const QString& participantId);
+
+    /**
+     * @brief Complete key exchange
+     * @param exchangeId Exchange ID
+     * @param publicKey Public key (base64 encoded)
+     * @return true if completion successful, false otherwise
+     */
+    bool CompleteKeyExchange(const QString& exchangeId, const QString& publicKey);
+
+    /**
+     * @brief Set message expiration policy
+     * @param messageId Message ID
+     * @param policy Expiration policy (0=Never, 1=AfterRead, 2=AfterTime, 3=AfterDelivery)
+     * @param expirationSeconds Expiration time in seconds (for AfterTime policy)
+     * @return true if set successful, false otherwise
+     */
+    bool SetMessageExpirationPolicy(const QString& messageId, int policy, int expirationSeconds);
+
+    /**
+     * @brief Check if message is expired
+     * @param messageId Message ID
+     * @return true if expired, false otherwise
+     */
+    bool IsMessageExpired(const QString& messageId);
+
+    /**
+     * @brief Delete expired messages
+     * @return Number of messages deleted
+     */
+    int DeleteExpiredMessages();
+
+    /**
+     * @brief Enable/disable encrypted storage
+     * @param enabled Enabled state
+     * @return true if set successful, false otherwise
+     */
+    bool SetEncryptionStorageEnabled(bool enabled);
+
 Q_SIGNALS:
     /**
      * @brief Emitted when USB device is detected
@@ -526,6 +606,12 @@ private:
     VideoMessaging* m_videoMessaging;
     MediaCalls* m_mediaCalls;
     GroupMessaging* m_groupMessaging;
+    E2EEncryption* m_e2eEncryption;
+    ForwardSecrecy* m_forwardSecrecy;
+    KeyExchange* m_keyExchange;
+    TrafficObfuscation* m_trafficObfuscation;
+    EncryptionStorage* m_encryptionStorage;
+    MessageExpiration* m_messageExpiration;
     bool m_initialized;
 };
 
