@@ -22,6 +22,11 @@ class TextMessaging;
 class MessageThreading;
 class ConversationManager;
 class MessageStorage;
+class FileSharing;
+class VoiceMessaging;
+class VideoMessaging;
+class MediaCalls;
+class GroupMessaging;
 
 /**
  * @brief D-Bus Interface for Secure Messenger
@@ -364,6 +369,126 @@ public:
      */
     QString GetThreadsForConversation(const QString& conversationId);
 
+    /**
+     * @brief Set file sharing
+     */
+    void setFileSharing(FileSharing* fileSharing);
+
+    /**
+     * @brief Set voice messaging
+     */
+    void setVoiceMessaging(VoiceMessaging* voiceMessaging);
+
+    /**
+     * @brief Set video messaging
+     */
+    void setVideoMessaging(VideoMessaging* videoMessaging);
+
+    /**
+     * @brief Set media calls
+     */
+    void setMediaCalls(MediaCalls* mediaCalls);
+
+    /**
+     * @brief Set group messaging
+     */
+    void setGroupMessaging(GroupMessaging* groupMessaging);
+
+    /**
+     * @brief Send file
+     * @param conversationId Conversation ID
+     * @param recipientId Recipient ID
+     * @param filePath File path
+     * @return Transfer ID or empty string if failed
+     */
+    QString SendFile(const QString& conversationId, const QString& recipientId, const QString& filePath);
+
+    /**
+     * @brief Get file transfer info
+     * @param transferId Transfer ID
+     * @return JSON string with transfer information
+     */
+    QString GetFileTransferInfo(const QString& transferId);
+
+    /**
+     * @brief Send voice message
+     * @param conversationId Conversation ID
+     * @param recipientId Recipient ID
+     * @param audioFilePath Audio file path
+     * @return Message ID or empty string if failed
+     */
+    QString SendVoiceMessage(const QString& conversationId, const QString& recipientId, const QString& audioFilePath);
+
+    /**
+     * @brief Send video message
+     * @param conversationId Conversation ID
+     * @param recipientId Recipient ID
+     * @param videoFilePath Video file path
+     * @return Message ID or empty string if failed
+     */
+    QString SendVideoMessage(const QString& conversationId, const QString& recipientId, const QString& videoFilePath);
+
+    /**
+     * @brief Start call
+     * @param type Call type (0=Voice, 1=Video)
+     * @param recipientId Recipient ID
+     * @return Call ID or empty string if failed
+     */
+    QString StartCall(int type, const QString& recipientId);
+
+    /**
+     * @brief Accept call
+     * @param callId Call ID
+     * @return true if accept successful, false otherwise
+     */
+    bool AcceptCall(const QString& callId);
+
+    /**
+     * @brief Reject call
+     * @param callId Call ID
+     * @return true if reject successful, false otherwise
+     */
+    bool RejectCall(const QString& callId);
+
+    /**
+     * @brief End call
+     * @param callId Call ID
+     * @return true if end successful, false otherwise
+     */
+    bool EndCall(const QString& callId);
+
+    /**
+     * @brief Create group
+     * @param name Group name
+     * @param creatorId Creator user ID
+     * @param participants List of participant IDs (JSON array string)
+     * @return Conversation ID or empty string if failed
+     */
+    QString CreateGroup(const QString& name, const QString& creatorId, const QString& participants);
+
+    /**
+     * @brief Add participant to group
+     * @param conversationId Conversation ID
+     * @param participantId Participant ID
+     * @return true if add successful, false otherwise
+     */
+    bool AddGroupParticipant(const QString& conversationId, const QString& participantId);
+
+    /**
+     * @brief Remove participant from group
+     * @param conversationId Conversation ID
+     * @param participantId Participant ID
+     * @return true if remove successful, false otherwise
+     */
+    bool RemoveGroupParticipant(const QString& conversationId, const QString& participantId);
+
+    /**
+     * @brief Get group participants
+     * @param conversationId Conversation ID
+     * @return JSON string with list of participant IDs
+     */
+    QString GetGroupParticipants(const QString& conversationId);
+
 Q_SIGNALS:
     /**
      * @brief Emitted when USB device is detected
@@ -396,6 +521,11 @@ private:
     MessageThreading* m_threading;
     ConversationManager* m_conversationManager;
     MessageStorage* m_messageStorage;
+    FileSharing* m_fileSharing;
+    VoiceMessaging* m_voiceMessaging;
+    VideoMessaging* m_videoMessaging;
+    MediaCalls* m_mediaCalls;
+    GroupMessaging* m_groupMessaging;
     bool m_initialized;
 };
 

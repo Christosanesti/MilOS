@@ -35,6 +35,11 @@ set(APPLICATION_SOURCES
     src/message_threading.cpp
     src/conversation_manager.cpp
     src/message_storage.cpp
+    src/file_sharing.cpp
+    src/voice_messaging.cpp
+    src/video_messaging.cpp
+    src/media_calls.cpp
+    src/group_messaging.cpp
     src/dbus_interface.cpp
     src/audit_logger.cpp
 )
@@ -57,6 +62,11 @@ set(APPLICATION_HEADERS
     include/message_threading.h
     include/conversation_manager.h
     include/message_storage.h
+    include/file_sharing.h
+    include/voice_messaging.h
+    include/video_messaging.h
+    include/media_calls.h
+    include/group_messaging.h
     include/dbus_interface.h
     include/audit_logger.h
 )

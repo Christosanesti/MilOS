@@ -14,6 +14,11 @@
 #include "message_threading.h"
 #include "conversation_manager.h"
 #include "message_storage.h"
+#include "file_sharing.h"
+#include "voice_messaging.h"
+#include "video_messaging.h"
+#include "media_calls.h"
+#include "group_messaging.h"
 #include <QDBusConnection>
 #include <QDBusMetaType>
 #include <QDebug>
@@ -38,6 +43,11 @@ SecureMessengerDBusInterface::SecureMessengerDBusInterface(QObject* parent)
     , m_threading(nullptr)
     , m_conversationManager(nullptr)
     , m_messageStorage(nullptr)
+    , m_fileSharing(nullptr)
+    , m_voiceMessaging(nullptr)
+    , m_videoMessaging(nullptr)
+    , m_mediaCalls(nullptr)
+    , m_groupMessaging(nullptr)
     , m_initialized(false)
 {
 }
@@ -699,6 +709,161 @@ QString SecureMessengerDBusInterface::GetThreadsForConversation(const QString& c
         obj["last_message_at"] = thread.lastMessageAt.toString(Qt::ISODate);
         obj["unread_count"] = thread.unreadCount;
         jsonArray.append(obj);
+    }
+
+    QJsonDocument doc(jsonArray);
+    return QString::fromUtf8(doc.toJson());
+}
+
+void SecureMessengerDBusInterface::setFileSharing(FileSharing* fileSharing) {
+    m_fileSharing = fileSharing;
+}
+
+void SecureMessengerDBusInterface::setVoiceMessaging(VoiceMessaging* voiceMessaging) {
+    m_voiceMessaging = voiceMessaging;
+}
+
+void SecureMessengerDBusInterface::setVideoMessaging(VideoMessaging* videoMessaging) {
+    m_videoMessaging = videoMessaging;
+}
+
+void SecureMessengerDBusInterface::setMediaCalls(MediaCalls* mediaCalls) {
+    m_mediaCalls = mediaCalls;
+}
+
+void SecureMessengerDBusInterface::setGroupMessaging(GroupMessaging* groupMessaging) {
+    m_groupMessaging = groupMessaging;
+}
+
+QString SecureMessengerDBusInterface::SendFile(const QString& conversationId, const QString& recipientId, const QString& filePath) {
+    if (!m_fileSharing) {
+        return QString();
+    }
+
+    return m_fileSharing->sendFile(conversationId, recipientId, filePath);
+}
+
+QString SecureMessengerDBusInterface::GetFileTransferInfo(const QString& transferId) {
+    if (!m_fileSharing) {
+        return QString();
+    }
+
+    FileTransferInfo info = m_fileSharing->getTransferInfo(transferId);
+    if (info.transferId.isEmpty()) {
+        return QString();
+    }
+
+    QJsonObject obj;
+    obj["transfer_id"] = info.transferId;
+    obj["message_id"] = info.messageId;
+    obj["file_name"] = info.fileName;
+    obj["file_path"] = info.filePath;
+    obj["file_size"] = static_cast<qint64>(info.fileSize);
+    obj["bytes_transferred"] = static_cast<qint64>(info.bytesTransferred);
+    obj["status"] = static_cast<int>(info.status);
+    obj["mime_type"] = info.mimeType;
+    obj["started_at"] = info.startedAt.toString(Qt::ISODate);
+    if (info.completedAt.isValid()) {
+        obj["completed_at"] = info.completedAt.toString(Qt::ISODate);
+    }
+
+    QJsonDocument doc(obj);
+    return QString::fromUtf8(doc.toJson());
+}
+
+QString SecureMessengerDBusInterface::SendVoiceMessage(const QString& conversationId, const QString& recipientId, const QString& audioFilePath) {
+    if (!m_voiceMessaging) {
+        return QString();
+    }
+
+    return m_voiceMessaging->sendVoiceMessage(conversationId, recipientId, audioFilePath);
+}
+
+QString SecureMessengerDBusInterface::SendVideoMessage(const QString& conversationId, const QString& recipientId, const QString& videoFilePath) {
+    if (!m_videoMessaging) {
+        return QString();
+    }
+
+    return m_videoMessaging->sendVideoMessage(conversationId, recipientId, videoFilePath);
+}
+
+QString SecureMessengerDBusInterface::StartCall(int type, const QString& recipientId) {
+    if (!m_mediaCalls) {
+        return QString();
+    }
+
+    return m_mediaCalls->startCall(static_cast<CallType>(type), recipientId);
+}
+
+bool SecureMessengerDBusInterface::AcceptCall(const QString& callId) {
+    if (!m_mediaCalls) {
+        return false;
+    }
+
+    return m_mediaCalls->acceptCall(callId);
+}
+
+bool SecureMessengerDBusInterface::RejectCall(const QString& callId) {
+    if (!m_mediaCalls) {
+        return false;
+    }
+
+    return m_mediaCalls->rejectCall(callId);
+}
+
+bool SecureMessengerDBusInterface::EndCall(const QString& callId) {
+    if (!m_mediaCalls) {
+        return false;
+    }
+
+    return m_mediaCalls->endCall(callId);
+}
+
+QString SecureMessengerDBusInterface::CreateGroup(const QString& name, const QString& creatorId, const QString& participants) {
+    if (!m_groupMessaging) {
+        return QString();
+    }
+
+    QJsonDocument doc = QJsonDocument::fromJson(participants.toUtf8());
+    if (doc.isNull() || !doc.isArray()) {
+        return QString();
+    }
+
+    QStringList participantList;
+    QJsonArray array = doc.array();
+    for (const QJsonValue& value : array) {
+        participantList.append(value.toString());
+    }
+
+    return m_groupMessaging->createGroup(name, creatorId, participantList);
+}
+
+bool SecureMessengerDBusInterface::AddGroupParticipant(const QString& conversationId, const QString& participantId) {
+    if (!m_groupMessaging) {
+        return false;
+    }
+
+    return m_groupMessaging->addParticipant(conversationId, participantId);
+}
+
+bool SecureMessengerDBusInterface::RemoveGroupParticipant(const QString& conversationId, const QString& participantId) {
+    if (!m_groupMessaging) {
+        return false;
+    }
+
+    return m_groupMessaging->removeParticipant(conversationId, participantId);
+}
+
+QString SecureMessengerDBusInterface::GetGroupParticipants(const QString& conversationId) {
+    if (!m_groupMessaging) {
+        return QString();
+    }
+
+    QStringList participants = m_groupMessaging->getParticipants(conversationId);
+    
+    QJsonArray jsonArray;
+    for (const QString& participant : participants) {
+        jsonArray.append(participant);
     }
 
     QJsonDocument doc(jsonArray);
