@@ -38,3 +38,6 @@ void EmergencyWidget::registerServices(QQmlContext *context)
 
 
 
+
+
+

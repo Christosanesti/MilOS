@@ -3,6 +3,8 @@
 #include <QFileInfo>
 #include <QDir>
 #include <QStorageInfo>
+#include <QFile>
+#include <QTextStream>
 
 USBAuthorization::USBAuthorization(QObject* parent)
     : QObject(parent)
@@ -110,6 +112,35 @@ USBKeyInfo USBAuthorization::findKeyByDevicePath(const QString& devicePath) cons
     for (const USBKeyInfo& key : m_authorizedKeys) {
         if (key.devicePath == devicePath) {
             return key;
+        }
+    }
+    
+    // Try to read key from USB device file
+    QFileInfo info(devicePath);
+    if (info.isDir()) {
+        QString keyFilePath = QDir(devicePath).absoluteFilePath(".milos_key");
+        QFile keyFile(keyFilePath);
+        if (keyFile.exists() && keyFile.open(QIODevice::ReadOnly)) {
+            QTextStream stream(&keyFile);
+            USBKeyInfo keyInfo;
+            keyInfo.keyId = stream.readLine();
+            keyInfo.userId = stream.readLine();
+            QString keyDataBase64 = stream.readLine();
+            keyInfo.keyData = QByteArray::fromBase64(keyDataBase64.toUtf8());
+            int roleInt = stream.readLine().toInt();
+            keyInfo.role = static_cast<UserRole>(roleInt);
+            QString createdAtStr = stream.readLine();
+            keyInfo.createdAt = QDateTime::fromString(createdAtStr, Qt::ISODate);
+            if (!stream.atEnd()) {
+                QString expiresAtStr = stream.readLine();
+                if (!expiresAtStr.isEmpty()) {
+                    keyInfo.expiresAt = QDateTime::fromString(expiresAtStr, Qt::ISODate);
+                }
+            }
+            keyInfo.devicePath = devicePath;
+            keyInfo.status = USBKeyStatus::Active;
+            keyFile.close();
+            return keyInfo;
         }
     }
     
