@@ -42,6 +42,13 @@ public:
     bool executeShutdown(ShutdownReason reason, const QString& confirmationCode);
 
     /**
+     * @brief Execute emergency shutdown (simplified version with string reason)
+     * @param reason Shutdown reason as string
+     * @return true if shutdown successful, false otherwise
+     */
+    bool executeShutdown(const QString& reason);
+
+    /**
      * @brief Check if shutdown is in progress
      * @return true if shutting down, false otherwise
      */

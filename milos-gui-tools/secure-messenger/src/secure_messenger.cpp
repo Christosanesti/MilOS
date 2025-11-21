@@ -177,6 +177,9 @@ bool SecureMessenger::initialize() {
 
     // Set messaging core for text messaging
     m_textMessaging->setMessagingCore(m_messagingCore);
+    
+    // Set message storage for messaging core (automatic persistence)
+    m_messagingCore->setMessageStorage(m_messageStorage);
 
     if (!m_threading->initialize()) {
         qWarning() << "Failed to initialize message threading";

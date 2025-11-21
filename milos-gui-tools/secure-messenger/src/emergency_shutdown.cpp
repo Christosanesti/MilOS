@@ -76,3 +76,17 @@ bool EmergencyShutdown::saveState() {
     return true;
 }
 
+bool EmergencyShutdown::executeShutdown(const QString& reason) {
+    // Convert string reason to enum (default to Emergency)
+    ShutdownReason reasonEnum = ShutdownReason::Emergency;
+    if (reason.contains("compromise", Qt::CaseInsensitive)) {
+        reasonEnum = ShutdownReason::Compromise;
+    } else if (reason.contains("maintenance", Qt::CaseInsensitive)) {
+        reasonEnum = ShutdownReason::Maintenance;
+    } else if (reason.contains("user", Qt::CaseInsensitive)) {
+        reasonEnum = ShutdownReason::UserRequest;
+    }
+    
+    return executeShutdown(reasonEnum, "EMERGENCY_SHUTDOWN");
+}
+
