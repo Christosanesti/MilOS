@@ -28,25 +28,37 @@ public:
      * @brief Get network overview
      * @return Network overview data
      */
-    QVariantMap getNetworkOverview() const;
+    Q_INVOKABLE QVariantMap getNetworkOverview() const;
 
     /**
      * @brief Get system status
      * @return System status data
      */
-    QVariantMap getSystemStatus() const;
+    Q_INVOKABLE QVariantMap getSystemStatus() const;
 
     /**
      * @brief Get message delivery statistics
      * @return Delivery statistics
      */
-    QVariantMap getDeliveryStatistics() const;
+    Q_INVOKABLE QVariantMap getDeliveryStatistics() const;
 
     /**
      * @brief Get network connectivity status
      * @return Connectivity status
      */
-    QVariantMap getConnectivityStatus() const;
+    Q_INVOKABLE QVariantMap getConnectivityStatus() const;
+
+    /**
+     * @brief Get dashboard data (combined overview)
+     * @return Dashboard data map
+     */
+    Q_INVOKABLE QVariantMap getDashboardData() const;
+
+    /**
+     * @brief Get system statistics
+     * @return System statistics map
+     */
+    Q_INVOKABLE QVariantMap getSystemStatistics() const;
 
 Q_SIGNALS:
     /**

@@ -28,13 +28,13 @@ public:
      * @param confirmationCode Confirmation code
      * @return true if eject successful, false otherwise
      */
-    bool executeEject(const QString& confirmationCode);
+    Q_INVOKABLE bool executeEject(const QString& confirmationCode);
 
     /**
      * @brief Check if eject is in progress
      * @return true if ejecting, false otherwise
      */
-    bool isEjecting() const;
+    Q_INVOKABLE bool isEjecting() const;
 
 Q_SIGNALS:
     /**
