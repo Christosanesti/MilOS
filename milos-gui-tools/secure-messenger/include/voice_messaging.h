@@ -72,6 +72,16 @@ public:
      */
     void stopPlayback();
 
+    /**
+     * @brief Set messaging core
+     */
+    void setMessagingCore(MessagingCore* messagingCore);
+
+    /**
+     * @brief Set E2E encryption
+     */
+    void setE2EEncryption(class E2EEncryption* e2eEncryption);
+
 Q_SIGNALS:
     /**
      * @brief Emitted when recording is started
@@ -95,12 +105,14 @@ Q_SIGNALS:
 
 private:
     MessagingCore* m_messagingCore;
+    class E2EEncryption* m_e2eEncryption;
     bool m_recording;
     bool m_playing;
     QString m_currentRecordingPath;
     
     QString generateAudioFilePath() const;
     QAudioFormat getAudioFormat() const;
+    QByteArray readAudioFileData(const QString& filePath) const;
 };
 
 #endif // VOICE_MESSAGING_H

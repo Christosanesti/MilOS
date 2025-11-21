@@ -94,6 +94,16 @@ public:
      */
     bool isFileAllowed(const QString& filePath) const;
 
+    /**
+     * @brief Set messaging core
+     */
+    void setMessagingCore(MessagingCore* messagingCore);
+
+    /**
+     * @brief Set E2E encryption
+     */
+    void setE2EEncryption(class E2EEncryption* e2eEncryption);
+
 Q_SIGNALS:
     /**
      * @brief Emitted when file transfer progress is updated
@@ -112,6 +122,7 @@ Q_SIGNALS:
 
 private:
     MessagingCore* m_messagingCore;
+    class E2EEncryption* m_e2eEncryption;
     qint64 m_maxFileSize;
     QStringList m_allowedTypes;
     QMap<QString, FileTransferInfo> m_transfers;
@@ -119,6 +130,7 @@ private:
     QString generateTransferId() const;
     QString detectMimeType(const QString& filePath) const;
     bool validateFile(const QString& filePath) const;
+    QByteArray readFileData(const QString& filePath) const;
 };
 
 #endif // FILE_SHARING_H

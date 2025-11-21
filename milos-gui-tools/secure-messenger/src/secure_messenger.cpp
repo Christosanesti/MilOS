@@ -177,9 +177,20 @@ bool SecureMessenger::initialize() {
 
     // Set messaging core for text messaging
     m_textMessaging->setMessagingCore(m_messagingCore);
+    m_textMessaging->setE2EEncryption(m_e2eEncryption);
     
     // Set message storage for messaging core (automatic persistence)
     m_messagingCore->setMessageStorage(m_messageStorage);
+    
+    // Connect media components to messaging core and encryption
+    m_fileSharing->setMessagingCore(m_messagingCore);
+    m_fileSharing->setE2EEncryption(m_e2eEncryption);
+    
+    m_voiceMessaging->setMessagingCore(m_messagingCore);
+    m_voiceMessaging->setE2EEncryption(m_e2eEncryption);
+    
+    m_videoMessaging->setMessagingCore(m_messagingCore);
+    m_videoMessaging->setE2EEncryption(m_e2eEncryption);
 
     if (!m_threading->initialize()) {
         qWarning() << "Failed to initialize message threading";

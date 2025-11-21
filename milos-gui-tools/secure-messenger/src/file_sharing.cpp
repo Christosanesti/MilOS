@@ -1,7 +1,9 @@
 #include "file_sharing.h"
 #include "messaging_core.h"
+#include "e2e_encryption.h"
 #include <QUuid>
 #include <QFileInfo>
+#include <QFile>
 #include <QMimeDatabase>
 #include <QMimeType>
 #include <QDebug>
@@ -9,6 +11,7 @@
 FileSharing::FileSharing(QObject* parent)
     : QObject(parent)
     , m_messagingCore(nullptr)
+    , m_e2eEncryption(nullptr)
     , m_maxFileSize(100 * 1024 * 1024)  // 100 MB default
 {
 }
@@ -27,6 +30,11 @@ QString FileSharing::sendFile(const QString& conversationId, const QString& reci
         return QString();
     }
 
+    if (!m_messagingCore) {
+        qWarning() << "MessagingCore not set for FileSharing";
+        return QString();
+    }
+
     QFileInfo fileInfo(filePath);
     FileTransferInfo transfer;
     transfer.transferId = generateTransferId();
@@ -38,10 +46,47 @@ QString FileSharing::sendFile(const QString& conversationId, const QString& reci
     transfer.mimeType = detectMimeType(filePath);
     transfer.startedAt = QDateTime::currentDateTime();
 
+    // Read file data
+    QByteArray fileData = readFileData(filePath);
+    if (fileData.isEmpty()) {
+        qWarning() << "Failed to read file data:" << filePath;
+        return QString();
+    }
+
+    // Encrypt file data if E2E encryption is available
+    QByteArray encryptedData = fileData;
+    if (m_e2eEncryption) {
+        encryptedData = m_e2eEncryption->encryptFile(fileData, recipientId);
+        if (encryptedData.isEmpty()) {
+            qWarning() << "Failed to encrypt file data";
+            return QString();
+        }
+    }
+
+    // Create message with file metadata
+    Message message;
+    message.conversationId = conversationId;
+    message.recipientId = recipientId;
+    message.type = MessageType::File;
+    message.content = fileInfo.fileName();  // Store filename in content
+    message.data = encryptedData;  // Store encrypted file data
+    message.metadata["file_name"] = fileInfo.fileName();
+    message.metadata["file_size"] = fileInfo.size();
+    message.metadata["mime_type"] = transfer.mimeType;
+    message.metadata["transfer_id"] = transfer.transferId;
+    message.status = MessageStatus::Pending;
+
+    // Send message through messaging core
+    QString messageId = m_messagingCore->sendMessage(message);
+    if (messageId.isEmpty()) {
+        qWarning() << "Failed to send file message";
+        return QString();
+    }
+
+    transfer.messageId = messageId;
+    transfer.status = FileTransferStatus::Uploading;
     m_transfers[transfer.transferId] = transfer;
 
-    // In production, would create message and start transfer via mesh network
-    // For now, just emit signal
     emit transferProgressUpdated(transfer.transferId, 0, transfer.fileSize);
 
     return transfer.transferId;
@@ -117,5 +162,26 @@ bool FileSharing::validateFile(const QString& filePath) const {
     }
 
     return false;
+}
+
+void FileSharing::setMessagingCore(MessagingCore* messagingCore) {
+    m_messagingCore = messagingCore;
+}
+
+void FileSharing::setE2EEncryption(E2EEncryption* e2eEncryption) {
+    m_e2eEncryption = e2eEncryption;
+}
+
+QByteArray FileSharing::readFileData(const QString& filePath) const {
+    QFile file(filePath);
+    if (!file.open(QIODevice::ReadOnly)) {
+        qWarning() << "Failed to open file for reading:" << filePath;
+        return QByteArray();
+    }
+    
+    QByteArray data = file.readAll();
+    file.close();
+    
+    return data;
 }
 

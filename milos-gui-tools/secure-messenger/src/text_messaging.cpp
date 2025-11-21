@@ -1,10 +1,12 @@
 #include "text_messaging.h"
 #include "messaging_core.h"
+#include "e2e_encryption.h"
 #include <QDebug>
 
 TextMessaging::TextMessaging(QObject* parent)
     : QObject(parent)
     , m_messagingCore(nullptr)
+    , m_e2eEncryption(nullptr)
 {
 }
 
@@ -25,11 +27,25 @@ QString TextMessaging::sendTextMessage(const QString& conversationId,
     
     QString formattedText = formatText(text, formatType);
     
+    // Encrypt text content if E2E encryption is available
+    QByteArray textData = formattedText.toUtf8();
+    QByteArray encryptedData;
+    if (m_e2eEncryption) {
+        encryptedData = m_e2eEncryption->encryptMessage(textData, recipientId);
+        if (encryptedData.isEmpty()) {
+            qWarning() << "Failed to encrypt text message";
+            return QString();
+        }
+    } else {
+        encryptedData = textData;
+    }
+    
     Message message;
     message.conversationId = conversationId;
     message.recipientId = recipientId;
     message.type = MessageType::Text;
-    message.content = formattedText;
+    message.content = formattedText;  // Keep plain text for display, encrypted in data
+    message.data = encryptedData;  // Store encrypted data
     message.status = MessageStatus::Pending;
     
     QString messageId = m_messagingCore->sendMessage(message);
@@ -73,5 +89,9 @@ QString TextMessaging::formatHTML(const QString& text) const {
 
 void TextMessaging::setMessagingCore(MessagingCore* messagingCore) {
     m_messagingCore = messagingCore;
+}
+
+void TextMessaging::setE2EEncryption(E2EEncryption* e2eEncryption) {
+    m_e2eEncryption = e2eEncryption;
 }
 

@@ -66,6 +66,11 @@ public:
      */
     void setMessagingCore(MessagingCore* messagingCore);
 
+    /**
+     * @brief Set E2E encryption
+     */
+    void setE2EEncryption(class E2EEncryption* e2eEncryption);
+
 Q_SIGNALS:
     /**
      * @brief Emitted when text message is sent
@@ -74,6 +79,7 @@ Q_SIGNALS:
 
 private:
     MessagingCore* m_messagingCore;
+    class E2EEncryption* m_e2eEncryption;
     QString formatMarkdown(const QString& text) const;
     QString formatHTML(const QString& text) const;
 };

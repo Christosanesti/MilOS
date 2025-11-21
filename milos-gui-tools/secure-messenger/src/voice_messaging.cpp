@@ -1,14 +1,17 @@
 #include "voice_messaging.h"
 #include "messaging_core.h"
+#include "e2e_encryption.h"
 #include <QUuid>
 #include <QStandardPaths>
 #include <QDir>
+#include <QFile>
 #include <QAudioFormat>
 #include <QDebug>
 
 VoiceMessaging::VoiceMessaging(QObject* parent)
     : QObject(parent)
     , m_messagingCore(nullptr)
+    , m_e2eEncryption(nullptr)
     , m_recording(false)
     , m_playing(false)
 {
@@ -65,15 +68,57 @@ QString VoiceMessaging::sendVoiceMessage(const QString& conversationId, const QS
         return QString();
     }
 
+    // Read audio file data
+    QByteArray audioData = readAudioFileData(audioFilePath);
+    if (audioData.isEmpty()) {
+        qWarning() << "Failed to read audio file:" << audioFilePath;
+        return QString();
+    }
+
+    // Encrypt audio data if E2E encryption is available
+    QByteArray encryptedData = audioData;
+    if (m_e2eEncryption) {
+        encryptedData = m_e2eEncryption->encryptMedia(audioData, recipientId);
+        if (encryptedData.isEmpty()) {
+            qWarning() << "Failed to encrypt audio data";
+            return QString();
+        }
+    }
+
+    QFileInfo fileInfo(audioFilePath);
     Message message;
     message.conversationId = conversationId;
     message.recipientId = recipientId;
     message.type = MessageType::Voice;
-    message.content = audioFilePath;
+    message.content = fileInfo.fileName();
+    message.data = encryptedData;
+    message.metadata["audio_file"] = audioFilePath;
+    message.metadata["codec"] = "opus";
     message.status = MessageStatus::Pending;
 
     QString messageId = m_messagingCore->sendMessage(message);
     return messageId;
+}
+
+void VoiceMessaging::setMessagingCore(MessagingCore* messagingCore) {
+    m_messagingCore = messagingCore;
+}
+
+void VoiceMessaging::setE2EEncryption(E2EEncryption* e2eEncryption) {
+    m_e2eEncryption = e2eEncryption;
+}
+
+QByteArray VoiceMessaging::readAudioFileData(const QString& filePath) const {
+    QFile file(filePath);
+    if (!file.open(QIODevice::ReadOnly)) {
+        qWarning() << "Failed to open audio file for reading:" << filePath;
+        return QByteArray();
+    }
+    
+    QByteArray data = file.readAll();
+    file.close();
+    
+    return data;
 }
 
 bool VoiceMessaging::playVoiceMessage(const QString& messageId) {
