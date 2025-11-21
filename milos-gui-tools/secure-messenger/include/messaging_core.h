@@ -102,6 +102,11 @@ public:
      */
     QList<Message> getPendingMessages() const;
 
+    /**
+     * @brief Set message storage (for automatic persistence)
+     */
+    void setMessageStorage(class MessageStorage* messageStorage);
+
 Q_SIGNALS:
     /**
      * @brief Emitted when message is sent
@@ -121,6 +126,7 @@ Q_SIGNALS:
 private:
     QMap<QString, Message> m_messages;
     QList<QString> m_messageQueue;
+    class MessageStorage* m_messageStorage;
     
     QString generateMessageId() const;
     void queueMessage(const Message& message);

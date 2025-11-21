@@ -1,10 +1,12 @@
 #include "messaging_core.h"
+#include "message_storage.h"
 #include <QUuid>
 #include <QDebug>
 #include <QTimer>
 
 MessagingCore::MessagingCore(QObject* parent)
     : QObject(parent)
+    , m_messageStorage(nullptr)
 {
 }
 
@@ -31,6 +33,12 @@ QString MessagingCore::sendMessage(const Message& message) {
     msg.status = MessageStatus::Pending;
     
     m_messages[msg.messageId] = msg;
+    
+    // Automatically store message to persistent storage
+    if (m_messageStorage) {
+        m_messageStorage->storeMessage(msg);
+    }
+    
     queueMessage(msg);
     
     emit messageSent(msg.messageId);
@@ -50,6 +58,11 @@ bool MessagingCore::receiveMessage(const QString& messageId, const QByteArray& d
     
     m_messages[messageId] = msg;
     
+    // Automatically store received message to persistent storage
+    if (m_messageStorage) {
+        m_messageStorage->storeMessage(msg);
+    }
+    
     emit messageReceived(messageId);
     
     return true;
@@ -67,10 +80,16 @@ bool MessagingCore::updateMessageStatus(const QString& messageId, MessageStatus 
     Message& msg = m_messages[messageId];
     msg.status = status;
     
+    QDateTime timestamp = QDateTime::currentDateTime();
     if (status == MessageStatus::Delivered && !msg.deliveredAt.isValid()) {
-        msg.deliveredAt = QDateTime::currentDateTime();
+        msg.deliveredAt = timestamp;
     } else if (status == MessageStatus::Read && !msg.readAt.isValid()) {
-        msg.readAt = QDateTime::currentDateTime();
+        msg.readAt = timestamp;
+    }
+    
+    // Update status in persistent storage
+    if (m_messageStorage) {
+        m_messageStorage->updateMessageStatus(messageId, status, timestamp);
     }
     
     emit messageStatusUpdated(messageId, status);
@@ -115,5 +134,9 @@ void MessagingCore::processMessageQueue() {
     
     // Remove processed messages from queue
     m_messageQueue.clear();
+}
+
+void MessagingCore::setMessageStorage(MessageStorage* messageStorage) {
+    m_messageStorage = messageStorage;
 }
 
