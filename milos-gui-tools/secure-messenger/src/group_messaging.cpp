@@ -53,10 +53,13 @@ bool GroupMessaging::addParticipant(const QString& conversationId, const QString
         return false;  // Limit reached
     }
 
-    // In production, would update conversation with new participant
-    emit participantAdded(conversationId, participantId);
+    // Update conversation with new participant using ConversationManager
+    if (m_conversationManager->addParticipant(conversationId, participantId)) {
+        emit participantAdded(conversationId, participantId);
+        return true;
+    }
 
-    return true;
+    return false;
 }
 
 bool GroupMessaging::removeParticipant(const QString& conversationId, const QString& participantId) {
@@ -73,10 +76,13 @@ bool GroupMessaging::removeParticipant(const QString& conversationId, const QStr
         return false;  // Not a participant
     }
 
-    // In production, would update conversation to remove participant
-    emit participantRemoved(conversationId, participantId);
+    // Update conversation to remove participant using ConversationManager
+    if (m_conversationManager->removeParticipant(conversationId, participantId)) {
+        emit participantRemoved(conversationId, participantId);
+        return true;
+    }
 
-    return true;
+    return false;
 }
 
 QStringList GroupMessaging::getParticipants(const QString& conversationId) const {
@@ -103,5 +109,9 @@ bool GroupMessaging::isParticipantLimitReached(const QString& conversationId) co
     }
 
     return conv.participants.size() >= m_maxParticipants;
+}
+
+void GroupMessaging::setConversationManager(ConversationManager* conversationManager) {
+    m_conversationManager = conversationManager;
 }
 

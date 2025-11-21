@@ -191,6 +191,10 @@ bool SecureMessenger::initialize() {
     
     m_videoMessaging->setMessagingCore(m_messagingCore);
     m_videoMessaging->setE2EEncryption(m_e2eEncryption);
+    
+    // Connect group messaging and media calls
+    m_groupMessaging->setConversationManager(m_conversationManager);
+    m_mediaCalls->setMeshNetwork(m_meshNetwork);
 
     if (!m_threading->initialize()) {
         qWarning() << "Failed to initialize message threading";

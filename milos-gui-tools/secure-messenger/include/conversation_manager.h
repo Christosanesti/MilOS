@@ -96,6 +96,22 @@ public:
      */
     bool updateLastMessage(const QString& conversationId, const QString& messageId);
 
+    /**
+     * @brief Add participant to conversation
+     * @param conversationId Conversation ID
+     * @param participantId Participant ID
+     * @return true if add successful, false otherwise
+     */
+    bool addParticipant(const QString& conversationId, const QString& participantId);
+
+    /**
+     * @brief Remove participant from conversation
+     * @param conversationId Conversation ID
+     * @param participantId Participant ID
+     * @return true if remove successful, false otherwise
+     */
+    bool removeParticipant(const QString& conversationId, const QString& participantId);
+
 Q_SIGNALS:
     /**
      * @brief Emitted when conversation is created

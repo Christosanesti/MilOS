@@ -81,3 +81,7 @@ QString MediaCalls::generateCallId() const {
     return QUuid::createUuid().toString(QUuid::WithoutBraces);
 }
 
+void MediaCalls::setMeshNetwork(MeshNetwork* meshNetwork) {
+    m_meshNetwork = meshNetwork;
+}
+

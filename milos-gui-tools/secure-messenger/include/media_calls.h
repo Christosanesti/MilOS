@@ -94,6 +94,11 @@ public:
      */
     CallInfo getCallInfo(const QString& callId) const;
 
+    /**
+     * @brief Set mesh network
+     */
+    void setMeshNetwork(MeshNetwork* meshNetwork);
+
 Q_SIGNALS:
     /**
      * @brief Emitted when incoming call is received

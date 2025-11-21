@@ -72,6 +72,14 @@ public:
      */
     QByteArray decryptMedia(const QByteArray& encryptedData, const QString& senderId);
 
+    /**
+     * @brief Encrypt message for group (encrypts for all participants)
+     * @param messageData Message data
+     * @param participantIds List of participant IDs
+     * @return Encrypted data map (participant ID -> encrypted data) or empty if failed
+     */
+    QMap<QString, QByteArray> encryptForGroup(const QByteArray& messageData, const QStringList& participantIds);
+
 Q_SIGNALS:
     /**
      * @brief Emitted when encryption fails

@@ -65,6 +65,11 @@ public:
      */
     bool isParticipantLimitReached(const QString& conversationId) const;
 
+    /**
+     * @brief Set conversation manager
+     */
+    void setConversationManager(ConversationManager* conversationManager);
+
 Q_SIGNALS:
     /**
      * @brief Emitted when participant is added

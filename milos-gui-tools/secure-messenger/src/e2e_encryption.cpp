@@ -67,6 +67,20 @@ QByteArray E2EEncryption::decryptMedia(const QByteArray& encryptedData, const QS
     return decryptMessage(encryptedData, senderId);
 }
 
+QMap<QString, QByteArray> E2EEncryption::encryptForGroup(const QByteArray& messageData, const QStringList& participantIds) {
+    QMap<QString, QByteArray> encryptedMap;
+    
+    // Encrypt message for each participant
+    for (const QString& participantId : participantIds) {
+        QByteArray encrypted = encryptMessage(messageData, participantId);
+        if (!encrypted.isEmpty()) {
+            encryptedMap[participantId] = encrypted;
+        }
+    }
+    
+    return encryptedMap;
+}
+
 bool E2EEncryption::generateKeyPair() {
     // In production, would use PQC Abstraction Layer to generate key pair
     // For now, generate placeholder keys

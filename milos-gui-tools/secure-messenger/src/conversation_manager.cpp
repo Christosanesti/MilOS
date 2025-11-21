@@ -86,3 +86,35 @@ QString ConversationManager::generateConversationId() const {
     return QUuid::createUuid().toString(QUuid::WithoutBraces);
 }
 
+bool ConversationManager::addParticipant(const QString& conversationId, const QString& participantId) {
+    if (!m_conversations.contains(conversationId)) {
+        return false;
+    }
+    
+    Conversation& conv = m_conversations[conversationId];
+    if (conv.participants.contains(participantId)) {
+        return true;  // Already a participant
+    }
+    
+    conv.participants.insert(participantId);
+    emit conversationUpdated(conversationId);
+    
+    return true;
+}
+
+bool ConversationManager::removeParticipant(const QString& conversationId, const QString& participantId) {
+    if (!m_conversations.contains(conversationId)) {
+        return false;
+    }
+    
+    Conversation& conv = m_conversations[conversationId];
+    if (!conv.participants.contains(participantId)) {
+        return false;  // Not a participant
+    }
+    
+    conv.participants.remove(participantId);
+    emit conversationUpdated(conversationId);
+    
+    return true;
+}
+
