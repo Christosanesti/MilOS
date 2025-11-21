@@ -76,6 +76,12 @@ public:
      */
     QVariantMap analyzeFlow(const QString& flowId) const;
 
+Q_SIGNALS:
+    /**
+     * @brief Emitted when evidence is captured
+     */
+    void evidenceCaptured(const QString& evidenceId, const QString& type);
+
 private:
     QSqlDatabase m_database;
     bool createTables();

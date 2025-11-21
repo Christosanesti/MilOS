@@ -2,6 +2,7 @@
 #include <QUuid>
 #include <QDebug>
 #include <QRandomGenerator>
+#include <QTimer>
 
 MLThreatDetector::MLThreatDetector(QObject* parent)
     : QObject(parent)

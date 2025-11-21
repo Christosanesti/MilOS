@@ -5,6 +5,7 @@
 #include <QStandardPaths>
 #include <QDir>
 #include <QJsonDocument>
+#include <QJsonObject>
 
 NetworkForensics::NetworkForensics(QObject* parent)
     : QObject(parent)
@@ -78,6 +79,8 @@ bool NetworkForensics::captureEvidence(const ForensicEvidence& evidence) {
         qWarning() << "Failed to capture evidence:" << query.lastError().text();
         return false;
     }
+    
+    emit evidenceCaptured(evidence.id, evidence.type);
     
     return true;
 }

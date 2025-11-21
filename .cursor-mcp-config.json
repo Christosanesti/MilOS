@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "nanobanana": {
+      "command": "python3",
+      "args": [
+        "/home/haphaton/Desktop/MilOS/milos-base/services/image-generation-service/src/nanobanana_mcp_server.py"
+      ],
+      "env": {
+        "GEMINI_API_KEY": ""
+      }
+    }
+  }
+}
+
