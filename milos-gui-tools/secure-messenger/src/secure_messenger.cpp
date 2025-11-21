@@ -185,6 +185,9 @@ bool SecureMessenger::initialize() {
     // Set mesh network for messaging core (for message sending)
     m_messagingCore->setMeshNetwork(m_meshNetwork);
     
+    // Set E2E encryption for messaging core (for message decryption)
+    m_messagingCore->setE2EEncryption(m_e2eEncryption);
+    
     // Connect media components to messaging core and encryption
     m_fileSharing->setMessagingCore(m_messagingCore);
     m_fileSharing->setE2EEncryption(m_e2eEncryption);

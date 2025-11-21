@@ -125,6 +125,11 @@ public:
      */
     void setMeshNetwork(class MeshNetwork* meshNetwork);
 
+    /**
+     * @brief Set E2E encryption (for message decryption)
+     */
+    void setE2EEncryption(class E2EEncryption* e2eEncryption);
+
 Q_SIGNALS:
     /**
      * @brief Emitted when message is sent
@@ -147,6 +152,7 @@ private:
     QMap<QString, int> m_retryCounts;  // Message ID -> retry count
     class MessageStorage* m_messageStorage;
     class MeshNetwork* m_meshNetwork;
+    class E2EEncryption* m_e2eEncryption;
     static const int MAX_RETRY_ATTEMPTS = 3;
     
     QString generateMessageId() const;

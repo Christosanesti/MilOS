@@ -1,6 +1,7 @@
 #include "messaging_core.h"
 #include "message_storage.h"
 #include "mesh_network.h"
+#include "e2e_encryption.h"
 #include <QUuid>
 #include <QDebug>
 #include <QTimer>
@@ -9,6 +10,7 @@ MessagingCore::MessagingCore(QObject* parent)
     : QObject(parent)
     , m_messageStorage(nullptr)
     , m_meshNetwork(nullptr)
+    , m_e2eEncryption(nullptr)
 {
 }
 
@@ -53,10 +55,22 @@ bool MessagingCore::receiveMessage(const QString& messageId, const QByteArray& d
     // For now, create placeholder message
     Message msg;
     msg.messageId = messageId;
-    msg.data = data;
+    msg.data = data;  // Store encrypted data
     msg.status = MessageStatus::Delivered;
     msg.timestamp = QDateTime::currentDateTime();
     msg.deliveredAt = QDateTime::currentDateTime();
+    
+    // Decrypt message if E2E encryption is available
+    // Note: senderId would be extracted from message metadata in production
+    if (m_e2eEncryption && !data.isEmpty()) {
+        // In production, would extract senderId from message metadata
+        // For now, attempt decryption (will fail if senderId is needed)
+        QByteArray decryptedData = m_e2eEncryption->decryptMessage(data, "");
+        if (!decryptedData.isEmpty()) {
+            // Store decrypted content in message.content for display
+            msg.content = QString::fromUtf8(decryptedData);
+        }
+    }
     
     m_messages[messageId] = msg;
     
@@ -218,5 +232,9 @@ void MessagingCore::setMessageStorage(MessageStorage* messageStorage) {
 
 void MessagingCore::setMeshNetwork(MeshNetwork* meshNetwork) {
     m_meshNetwork = meshNetwork;
+}
+
+void MessagingCore::setE2EEncryption(E2EEncryption* e2eEncryption) {
+    m_e2eEncryption = e2eEncryption;
 }
 
