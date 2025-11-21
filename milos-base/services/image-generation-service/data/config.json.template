@@ -1,0 +1,9 @@
+{
+  "apiKey": "",
+  "nanobananaPath": "",
+  "outputDirectory": "~/Documents/milos-images",
+  "timeout": 300000,
+  "maxImageSize": 10485760,
+  "allowedFormats": ["png", "jpeg", "jpg", "webp"]
+}
+
