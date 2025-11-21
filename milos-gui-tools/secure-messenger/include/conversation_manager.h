@@ -75,6 +75,12 @@ public:
     QList<Conversation> getConversationsForUser(const QString& userId) const;
 
     /**
+     * @brief Get all conversations
+     * @return List of all conversations
+     */
+    QList<Conversation> getAllConversations() const;
+
+    /**
      * @brief Search conversations
      * @param query Search query
      * @param userId Optional user ID filter

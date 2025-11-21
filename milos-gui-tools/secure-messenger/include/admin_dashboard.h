@@ -6,6 +6,14 @@
 #include <QVariantMap>
 #include <QDateTime>
 
+class UserEnrollment;
+class ConversationManager;
+class MessagingCore;
+class MeshNetwork;
+class NetworkHealthMonitor;
+class E2EEncryption;
+class ForwardSecrecy;
+
 /**
  * @brief Admin Dashboard
  * 
@@ -23,6 +31,41 @@ public:
      * @return true if initialization successful, false otherwise
      */
     bool initialize();
+
+    /**
+     * @brief Set user enrollment (for user statistics)
+     */
+    void setUserEnrollment(UserEnrollment* enrollment);
+
+    /**
+     * @brief Set conversation manager (for conversation statistics)
+     */
+    void setConversationManager(ConversationManager* conversationManager);
+
+    /**
+     * @brief Set messaging core (for message statistics)
+     */
+    void setMessagingCore(MessagingCore* messagingCore);
+
+    /**
+     * @brief Set mesh network (for network statistics)
+     */
+    void setMeshNetwork(MeshNetwork* meshNetwork);
+
+    /**
+     * @brief Set network health monitor (for health metrics)
+     */
+    void setNetworkHealthMonitor(NetworkHealthMonitor* healthMonitor);
+
+    /**
+     * @brief Set E2E encryption (for security status)
+     */
+    void setE2EEncryption(E2EEncryption* e2eEncryption);
+
+    /**
+     * @brief Set forward secrecy (for security status)
+     */
+    void setForwardSecrecy(ForwardSecrecy* forwardSecrecy);
 
     /**
      * @brief Get network overview
@@ -76,6 +119,15 @@ private:
     void updateSystemStatus();
     QVariantMap m_networkOverview;
     QVariantMap m_systemStatus;
+    
+    UserEnrollment* m_userEnrollment;
+    ConversationManager* m_conversationManager;
+    MessagingCore* m_messagingCore;
+    MeshNetwork* m_meshNetwork;
+    NetworkHealthMonitor* m_healthMonitor;
+    E2EEncryption* m_e2eEncryption;
+    ForwardSecrecy* m_forwardSecrecy;
+    QDateTime m_startTime;
 };
 
 #endif // ADMIN_DASHBOARD_H

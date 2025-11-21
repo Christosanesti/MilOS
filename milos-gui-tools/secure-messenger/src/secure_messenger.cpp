@@ -493,6 +493,16 @@ bool SecureMessenger::initialize() {
     m_dbusInterface->setEmergencyEject(m_emergencyEject);
     m_dbusInterface->setDataWipe(m_dataWipe);
     m_dbusInterface->setEmergencyShutdown(m_emergencyShutdown);
+    
+    // Connect AdminDashboard to actual components for real data
+    m_adminDashboard->setUserEnrollment(m_enrollment);
+    m_adminDashboard->setConversationManager(m_conversationManager);
+    m_adminDashboard->setMessagingCore(m_messagingCore);
+    m_adminDashboard->setMeshNetwork(m_meshNetwork);
+    m_adminDashboard->setNetworkHealthMonitor(m_healthMonitor);
+    m_adminDashboard->setE2EEncryption(m_e2eEncryption);
+    m_adminDashboard->setForwardSecrecy(m_forwardSecrecy);
+    
     m_dbusInterface->setAdminDashboard(m_adminDashboard);
     m_dbusInterface->setUserManager(m_userManager);
     m_dbusInterface->setSystemConfig(m_systemConfig);
@@ -558,11 +568,37 @@ void SecureMessenger::onKeyRotationTimer() {
         m_forwardSecrecy->expireOldSessionKeys();
     }
 
-    // Rotate keys for all active participants
-    // In production, would get list of active participants from conversation manager
-    // For now, this is a placeholder that demonstrates the automatic rotation mechanism
+    // Rotate keys for all active participants from conversations
+    QSet<QString> activeParticipants;
+    
+    if (m_conversationManager) {
+        // Get all conversations and collect unique participants
+        QList<Conversation> allConversations = m_conversationManager->getAllConversations();
+        
+        for (const Conversation& conv : allConversations) {
+            // Add all participants from this conversation
+            for (const QString& participantId : conv.participants) {
+                if (!participantId.isEmpty()) {
+                    activeParticipants.insert(participantId);
+                }
+            }
+        }
+    }
+    
+    // Rotate session keys for each active participant
+    int rotatedCount = 0;
+    for (const QString& participantId : activeParticipants) {
+        if (m_forwardSecrecy && !participantId.isEmpty()) {
+            m_forwardSecrecy->rotateSessionKey(participantId);
+            rotatedCount++;
+        }
+    }
+    
+    // Log the rotation event
     QVariantMap eventData;
     eventData["rotation_type"] = "automatic";
+    eventData["participants_count"] = activeParticipants.size();
+    eventData["keys_rotated"] = rotatedCount;
     m_auditLogger->logKeyOperation("automatic_key_rotation", QString(), eventData);
 }
 

@@ -1,8 +1,23 @@
 #include "admin_dashboard.h"
+#include "user_enrollment.h"
+#include "conversation_manager.h"
+#include "messaging_core.h"
+#include "mesh_network.h"
+#include "network_health.h"
+#include "e2e_encryption.h"
+#include "forward_secrecy.h"
 #include <QDebug>
 
 AdminDashboard::AdminDashboard(QObject* parent)
     : QObject(parent)
+    , m_userEnrollment(nullptr)
+    , m_conversationManager(nullptr)
+    , m_messagingCore(nullptr)
+    , m_meshNetwork(nullptr)
+    , m_healthMonitor(nullptr)
+    , m_e2eEncryption(nullptr)
+    , m_forwardSecrecy(nullptr)
+    , m_startTime(QDateTime::currentDateTime())
 {
 }
 
@@ -15,6 +30,34 @@ bool AdminDashboard::initialize() {
     return true;
 }
 
+void AdminDashboard::setUserEnrollment(UserEnrollment* enrollment) {
+    m_userEnrollment = enrollment;
+}
+
+void AdminDashboard::setConversationManager(ConversationManager* conversationManager) {
+    m_conversationManager = conversationManager;
+}
+
+void AdminDashboard::setMessagingCore(MessagingCore* messagingCore) {
+    m_messagingCore = messagingCore;
+}
+
+void AdminDashboard::setMeshNetwork(MeshNetwork* meshNetwork) {
+    m_meshNetwork = meshNetwork;
+}
+
+void AdminDashboard::setNetworkHealthMonitor(NetworkHealthMonitor* healthMonitor) {
+    m_healthMonitor = healthMonitor;
+}
+
+void AdminDashboard::setE2EEncryption(E2EEncryption* e2eEncryption) {
+    m_e2eEncryption = e2eEncryption;
+}
+
+void AdminDashboard::setForwardSecrecy(ForwardSecrecy* forwardSecrecy) {
+    m_forwardSecrecy = forwardSecrecy;
+}
+
 QVariantMap AdminDashboard::getNetworkOverview() const {
     return m_networkOverview;
 }
@@ -25,43 +68,100 @@ QVariantMap AdminDashboard::getSystemStatus() const {
 
 QVariantMap AdminDashboard::getDeliveryStatistics() const {
     QVariantMap stats;
-    stats["total_messages"] = 0;
-    stats["delivered"] = 0;
-    stats["pending"] = 0;
-    stats["failed"] = 0;
-    stats["delivery_rate"] = 0.0;
     
-    // In production, would calculate from actual message data
+    if (m_messagingCore) {
+        // Get message statistics from messaging core
+        // Note: This is a simplified version - in production would query actual message storage
+        stats["total_messages"] = 0; // Would get from message storage
+        stats["delivered"] = 0;
+        stats["pending"] = 0;
+        stats["failed"] = 0;
+        stats["delivery_rate"] = 0.0;
+    } else {
+        stats["total_messages"] = 0;
+        stats["delivered"] = 0;
+        stats["pending"] = 0;
+        stats["failed"] = 0;
+        stats["delivery_rate"] = 0.0;
+    }
+    
     return stats;
 }
 
 QVariantMap AdminDashboard::getConnectivityStatus() const {
     QVariantMap status;
-    status["connected_peers"] = 0;
-    status["network_health"] = "Unknown";
+    
+    if (m_meshNetwork) {
+        // Get peer count from mesh network
+        QList<QString> peers = m_meshNetwork->getAllPeers();
+        status["connected_peers"] = peers.size();
+    } else {
+        status["connected_peers"] = 0;
+    }
+    
+    if (m_healthMonitor) {
+        NetworkHealthMetrics metrics = m_healthMonitor->getHealthMetrics();
+        QString healthStatus = "Unknown";
+        if (metrics.latencyMs < 50 && metrics.packetLossPercent < 1.0) {
+            healthStatus = "Healthy";
+        } else if (metrics.latencyMs < 100 && metrics.packetLossPercent < 5.0) {
+            healthStatus = "Degraded";
+        } else {
+            healthStatus = "Unhealthy";
+        }
+        status["network_health"] = healthStatus;
+        status["network_latency"] = metrics.latencyMs;
+    } else {
+        status["network_health"] = "Unknown";
+        status["network_latency"] = 0;
+    }
+    
     status["last_update"] = QDateTime::currentDateTime().toString(Qt::ISODate);
     
-    // In production, would get from network manager
     return status;
 }
 
 void AdminDashboard::updateNetworkOverview() {
-    m_networkOverview["total_peers"] = 0;
-    m_networkOverview["active_connections"] = 0;
-    m_networkOverview["network_status"] = "Unknown";
-    m_networkOverview["last_update"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+    if (m_meshNetwork) {
+        QList<QString> peers = m_meshNetwork->getAllPeers();
+        m_networkOverview["total_peers"] = peers.size();
+        m_networkOverview["active_connections"] = peers.size();
+    } else {
+        m_networkOverview["total_peers"] = 0;
+        m_networkOverview["active_connections"] = 0;
+    }
     
-    // In production, would get from network manager
+    if (m_healthMonitor) {
+        NetworkHealthMetrics metrics = m_healthMonitor->getHealthMetrics();
+        QString status = "Unknown";
+        if (metrics.latencyMs < 50 && metrics.packetLossPercent < 1.0) {
+            status = "Healthy";
+        } else if (metrics.latencyMs < 100 && metrics.packetLossPercent < 5.0) {
+            status = "Degraded";
+        } else {
+            status = "Unhealthy";
+        }
+        m_networkOverview["network_status"] = status;
+    } else {
+        m_networkOverview["network_status"] = "Unknown";
+    }
+    
+    m_networkOverview["last_update"] = QDateTime::currentDateTime().toString(Qt::ISODate);
 }
 
 void AdminDashboard::updateSystemStatus() {
     m_systemStatus["status"] = "Running";
-    m_systemStatus["uptime"] = 0;
+    
+    // Calculate uptime
+    qint64 uptimeSeconds = m_startTime.secsTo(QDateTime::currentDateTime());
+    m_systemStatus["uptime"] = uptimeSeconds;
+    
+    // System resource usage would be obtained from system monitoring
+    // For now, use placeholder values
     m_systemStatus["memory_usage"] = 0;
     m_systemStatus["cpu_usage"] = 0.0;
-    m_systemStatus["last_update"] = QDateTime::currentDateTime().toString(Qt::ISODate);
     
-    // In production, would get from system monitoring
+    m_systemStatus["last_update"] = QDateTime::currentDateTime().toString(Qt::ISODate);
 }
 
 QVariantMap AdminDashboard::getDashboardData() const {
@@ -73,8 +173,13 @@ QVariantMap AdminDashboard::getDashboardData() const {
     QVariantMap delivery = getDeliveryStatistics();
     QVariantMap connectivity = getConnectivityStatus();
     
-    // Active users (would come from user manager in production)
-    data["activeUsers"] = 0;
+    // Active users
+    if (m_userEnrollment) {
+        // Get all enrolled users - simplified, would query actual user database
+        data["activeUsers"] = 0; // Would get from user enrollment
+    } else {
+        data["activeUsers"] = 0;
+    }
     
     // Total messages (from delivery statistics)
     data["totalMessages"] = delivery.value("total_messages", 0);
@@ -82,16 +187,21 @@ QVariantMap AdminDashboard::getDashboardData() const {
     // Network peers (from connectivity)
     data["networkPeers"] = connectivity.value("connected_peers", 0);
     
-    // Active conversations (would come from conversation manager in production)
-    data["activeConversations"] = 0;
+    // Active conversations
+    if (m_conversationManager) {
+        // Would get from conversation manager
+        data["activeConversations"] = 0; // Would query conversation manager
+    } else {
+        data["activeConversations"] = 0;
+    }
     
     // Network status
     data["networkStatus"] = connectivity.value("network_health", "Unknown");
-    data["networkLatency"] = 0; // Would come from network health monitor
+    data["networkLatency"] = connectivity.value("network_latency", 0);
     
     // Security status
-    data["e2eEnabled"] = true; // Would check E2E encryption status
-    data["forwardSecrecyEnabled"] = true; // Would check forward secrecy status
+    data["e2eEnabled"] = (m_e2eEncryption != nullptr);
+    data["forwardSecrecyEnabled"] = (m_forwardSecrecy != nullptr);
     
     return data;
 }

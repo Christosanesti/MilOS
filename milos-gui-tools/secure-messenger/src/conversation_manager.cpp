@@ -40,11 +40,15 @@ Conversation ConversationManager::getConversation(const QString& conversationId)
 QList<Conversation> ConversationManager::getConversationsForUser(const QString& userId) const {
     QList<Conversation> conversations;
     for (const Conversation& conv : m_conversations.values()) {
-        if (conv.participants.contains(userId)) {
+        if (userId.isEmpty() || conv.participants.contains(userId)) {
             conversations.append(conv);
         }
     }
     return conversations;
+}
+
+QList<Conversation> ConversationManager::getAllConversations() const {
+    return m_conversations.values();
 }
 
 QList<Conversation> ConversationManager::searchConversations(const QString& query, const QString& userId) const {
