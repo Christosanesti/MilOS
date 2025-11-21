@@ -100,6 +100,7 @@ set(QML_FILES
     ui/main.qml
     ui/key_management.qml
     ui/messaging_interface.qml
+    ui/admin_dashboard.qml
 )
 
 # Create executable

@@ -27,6 +27,10 @@ ApplicationWindow {
             TabButton {
                 text: "Messaging"
             }
+
+            TabButton {
+                text: "Admin Dashboard"
+            }
         }
 
         StackLayout {
@@ -41,6 +45,10 @@ ApplicationWindow {
             }
 
             MessagingInterface {
+                anchors.fill: parent
+            }
+
+            AdminDashboard {
                 anchors.fill: parent
             }
         }

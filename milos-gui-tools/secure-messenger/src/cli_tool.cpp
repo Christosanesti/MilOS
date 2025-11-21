@@ -333,6 +333,51 @@ public:
         return reply.value();
     }
 
+    bool executeEmergencyEject(const QString& confirmationCode) {
+        QDBusReply<bool> reply = m_interface->call("ExecuteEmergencyEject", confirmationCode);
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return false;
+        }
+        return reply.value();
+    }
+
+    bool executeDataWipe(int wipeType) {
+        QDBusReply<bool> reply = m_interface->call("ExecuteDataWipe", wipeType);
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return false;
+        }
+        return reply.value();
+    }
+
+    bool executeEmergencyShutdown(const QString& reason) {
+        QDBusReply<bool> reply = m_interface->call("ExecuteEmergencyShutdown", reason);
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return false;
+        }
+        return reply.value();
+    }
+
+    QString getAdminDashboardData() {
+        QDBusReply<QString> reply = m_interface->call("GetAdminDashboardData");
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return QString();
+        }
+        return reply.value();
+    }
+
+    QString getSystemStatistics() {
+        QDBusReply<QString> reply = m_interface->call("GetSystemStatistics");
+        if (!reply.isValid()) {
+            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return QString();
+        }
+        return reply.value();
+    }
+
 private:
     QDBusConnection m_connection;
     QDBusInterface* m_interface;
@@ -811,6 +856,68 @@ int main(int argc, char* argv[]) {
             std::cout << jsonThreads.toStdString() << std::endl;
         } else {
             std::cout << "No threads found" << std::endl;
+        }
+    });
+
+    CLI11_PARSE(cliApp, argc, argv);
+    // Emergency eject command
+    auto* ejectCmd = cliApp.add_subcommand("emergency-eject", "Execute emergency eject (WARNING: Deletes all data)");
+    std::string ejectCode;
+    ejectCmd->add_option("--code", ejectCode, "Confirmation code (must be 'EMERGENCY_EJECT')")->required();
+    ejectCmd->callback([&]() {
+        bool success = client.executeEmergencyEject(QString::fromStdString(ejectCode));
+        if (success) {
+            std::cout << "Emergency eject completed successfully" << std::endl;
+        } else {
+            std::cerr << "Emergency eject failed" << std::endl;
+        }
+    });
+
+    // Data wipe command
+    auto* wipeCmd = cliApp.add_subcommand("data-wipe", "Execute secure data wipe");
+    int wipeType = 0;
+    wipeCmd->add_option("--type", wipeType, "Wipe type (0=Cryptographic, 1=Overwrite, 2=SecureDelete)")->required();
+    wipeCmd->callback([&]() {
+        bool success = client.executeDataWipe(wipeType);
+        if (success) {
+            std::cout << "Data wipe completed successfully" << std::endl;
+        } else {
+            std::cerr << "Data wipe failed" << std::endl;
+        }
+    });
+
+    // Emergency shutdown command
+    auto* shutdownCmd = cliApp.add_subcommand("emergency-shutdown", "Execute emergency shutdown");
+    std::string shutdownReason;
+    shutdownCmd->add_option("--reason", shutdownReason, "Shutdown reason")->required();
+    shutdownCmd->callback([&]() {
+        bool success = client.executeEmergencyShutdown(QString::fromStdString(shutdownReason));
+        if (success) {
+            std::cout << "Emergency shutdown completed successfully" << std::endl;
+        } else {
+            std::cerr << "Emergency shutdown failed" << std::endl;
+        }
+    });
+
+    // Admin dashboard command
+    auto* dashboardCmd = cliApp.add_subcommand("admin-dashboard", "Get admin dashboard data");
+    dashboardCmd->callback([&]() {
+        QString jsonData = client.getAdminDashboardData();
+        if (!jsonData.isEmpty()) {
+            std::cout << jsonData.toStdString() << std::endl;
+        } else {
+            std::cerr << "Failed to get admin dashboard data" << std::endl;
+        }
+    });
+
+    // System statistics command
+    auto* statsCmd = cliApp.add_subcommand("system-stats", "Get system statistics");
+    statsCmd->callback([&]() {
+        QString jsonStats = client.getSystemStatistics();
+        if (!jsonStats.isEmpty()) {
+            std::cout << jsonStats.toStdString() << std::endl;
+        } else {
+            std::cerr << "Failed to get system statistics" << std::endl;
         }
     });
 

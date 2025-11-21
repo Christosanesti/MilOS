@@ -1,4 +1,8 @@
 #include "secure_messenger.h"
+#include "e2e_encryption.h"
+#include "forward_secrecy.h"
+#include "emergency_eject.h"
+#include "admin_dashboard.h"
 #include <QApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
@@ -46,6 +50,10 @@ int main(int argc, char* argv[]) {
     MessagingCore* messagingCore = messenger.getMessagingCore();
     TextMessaging* textMessaging = messenger.getTextMessaging();
     ConversationManager* conversationManager = messenger.getConversationManager();
+    E2EEncryption* e2eEncryption = messenger.getE2EEncryption();
+    ForwardSecrecy* forwardSecrecy = messenger.getForwardSecrecy();
+    EmergencyEject* emergencyEject = messenger.getEmergencyEject();
+    AdminDashboard* adminDashboard = messenger.getAdminDashboard();
 
     if (!usbAuth) {
         std::cerr << "Failed to get USB Authorization" << std::endl;
@@ -67,6 +75,10 @@ int main(int argc, char* argv[]) {
     engine.rootContext()->setContextProperty("messagingCore", messagingCore);
     engine.rootContext()->setContextProperty("textMessaging", textMessaging);
     engine.rootContext()->setContextProperty("conversationManager", conversationManager);
+    engine.rootContext()->setContextProperty("e2eEncryption", e2eEncryption);
+    engine.rootContext()->setContextProperty("forwardSecrecy", forwardSecrecy);
+    engine.rootContext()->setContextProperty("emergencyEject", emergencyEject);
+    engine.rootContext()->setContextProperty("adminDashboard", adminDashboard);
 
     // Load main QML file
     engine.load("qrc:/ui/main.qml");
