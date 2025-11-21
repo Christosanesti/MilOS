@@ -33,6 +33,12 @@ class KeyExchange;
 class TrafficObfuscation;
 class EncryptionStorage;
 class MessageExpiration;
+class EmergencyEject;
+class DataWipe;
+class EmergencyShutdown;
+class AdminDashboard;
+class UserManager;
+class SystemConfig;
 
 /**
  * @brief D-Bus Interface for Secure Messenger
@@ -569,6 +575,69 @@ public:
      */
     bool SetEncryptionStorageEnabled(bool enabled);
 
+    /**
+     * @brief Set emergency eject
+     */
+    void setEmergencyEject(EmergencyEject* emergencyEject);
+
+    /**
+     * @brief Set data wipe
+     */
+    void setDataWipe(DataWipe* dataWipe);
+
+    /**
+     * @brief Set emergency shutdown
+     */
+    void setEmergencyShutdown(EmergencyShutdown* emergencyShutdown);
+
+    /**
+     * @brief Set admin dashboard
+     */
+    void setAdminDashboard(AdminDashboard* adminDashboard);
+
+    /**
+     * @brief Set user manager
+     */
+    void setUserManager(UserManager* userManager);
+
+    /**
+     * @brief Set system config
+     */
+    void setSystemConfig(SystemConfig* systemConfig);
+
+    /**
+     * @brief Execute emergency eject
+     * @param confirmationCode Confirmation code
+     * @return true if eject successful, false otherwise
+     */
+    bool ExecuteEmergencyEject(const QString& confirmationCode);
+
+    /**
+     * @brief Execute secure data wipe
+     * @param wipeType Wipe type (0=Quick, 1=Secure, 2=Cryptographic)
+     * @return true if wipe successful, false otherwise
+     */
+    bool ExecuteDataWipe(int wipeType);
+
+    /**
+     * @brief Execute emergency shutdown
+     * @param reason Shutdown reason
+     * @return true if shutdown successful, false otherwise
+     */
+    bool ExecuteEmergencyShutdown(const QString& reason);
+
+    /**
+     * @brief Get admin dashboard data
+     * @return JSON string with dashboard data
+     */
+    QString GetAdminDashboardData();
+
+    /**
+     * @brief Get system statistics
+     * @return JSON string with system statistics
+     */
+    QString GetSystemStatistics();
+
 Q_SIGNALS:
     /**
      * @brief Emitted when USB device is detected
@@ -612,6 +681,12 @@ private:
     TrafficObfuscation* m_trafficObfuscation;
     EncryptionStorage* m_encryptionStorage;
     MessageExpiration* m_messageExpiration;
+    EmergencyEject* m_emergencyEject;
+    DataWipe* m_dataWipe;
+    EmergencyShutdown* m_emergencyShutdown;
+    AdminDashboard* m_adminDashboard;
+    UserManager* m_userManager;
+    SystemConfig* m_systemConfig;
     bool m_initialized;
 };
 

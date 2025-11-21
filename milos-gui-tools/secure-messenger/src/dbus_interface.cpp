@@ -25,6 +25,12 @@
 #include "traffic_obfuscation.h"
 #include "encryption_storage.h"
 #include "message_expiration.h"
+#include "emergency_eject.h"
+#include "data_wipe.h"
+#include "emergency_shutdown.h"
+#include "admin_dashboard.h"
+#include "user_manager.h"
+#include "system_config.h"
 #include <QDBusConnection>
 #include <QDBusMetaType>
 #include <QDebug>
@@ -32,6 +38,8 @@
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QByteArray>
+#include <QStandardPaths>
+#include <QFileInfo>
 
 SecureMessengerDBusInterface::SecureMessengerDBusInterface(QObject* parent)
     : QObject(parent)
@@ -61,6 +69,12 @@ SecureMessengerDBusInterface::SecureMessengerDBusInterface(QObject* parent)
     , m_trafficObfuscation(nullptr)
     , m_encryptionStorage(nullptr)
     , m_messageExpiration(nullptr)
+    , m_emergencyEject(nullptr)
+    , m_dataWipe(nullptr)
+    , m_emergencyShutdown(nullptr)
+    , m_adminDashboard(nullptr)
+    , m_userManager(nullptr)
+    , m_systemConfig(nullptr)
     , m_initialized(false)
 {
 }
@@ -955,5 +969,83 @@ bool SecureMessengerDBusInterface::SetEncryptionStorageEnabled(bool enabled) {
 
     m_encryptionStorage->setEnabled(enabled);
     return true;
+}
+
+void SecureMessengerDBusInterface::setEmergencyEject(EmergencyEject* emergencyEject) {
+    m_emergencyEject = emergencyEject;
+}
+
+void SecureMessengerDBusInterface::setDataWipe(DataWipe* dataWipe) {
+    m_dataWipe = dataWipe;
+}
+
+void SecureMessengerDBusInterface::setEmergencyShutdown(EmergencyShutdown* emergencyShutdown) {
+    m_emergencyShutdown = emergencyShutdown;
+}
+
+void SecureMessengerDBusInterface::setAdminDashboard(AdminDashboard* adminDashboard) {
+    m_adminDashboard = adminDashboard;
+}
+
+void SecureMessengerDBusInterface::setUserManager(UserManager* userManager) {
+    m_userManager = userManager;
+}
+
+void SecureMessengerDBusInterface::setSystemConfig(SystemConfig* systemConfig) {
+    m_systemConfig = systemConfig;
+}
+
+bool SecureMessengerDBusInterface::ExecuteEmergencyEject(const QString& confirmationCode) {
+    if (!m_emergencyEject) {
+        return false;
+    }
+
+    return m_emergencyEject->executeEject(confirmationCode);
+}
+
+bool SecureMessengerDBusInterface::ExecuteDataWipe(int wipeType) {
+    if (!m_dataWipe) {
+        return false;
+    }
+
+    // Get application data path and wipe it
+    QString appDataPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    WipeMethod method = static_cast<WipeMethod>(wipeType);
+    
+    if (QFileInfo(appDataPath).isDir()) {
+        return m_dataWipe->wipeDirectory(appDataPath, method);
+    } else if (QFileInfo(appDataPath).isFile()) {
+        return m_dataWipe->wipeFile(appDataPath, method);
+    }
+    
+    return false;
+}
+
+bool SecureMessengerDBusInterface::ExecuteEmergencyShutdown(const QString& reason) {
+    if (!m_emergencyShutdown) {
+        return false;
+    }
+
+    return m_emergencyShutdown->executeShutdown(reason);
+}
+
+QString SecureMessengerDBusInterface::GetAdminDashboardData() {
+    if (!m_adminDashboard) {
+        return QString();
+    }
+
+    QVariantMap data = m_adminDashboard->getDashboardData();
+    QJsonDocument doc = QJsonDocument::fromVariant(data);
+    return QString::fromUtf8(doc.toJson());
+}
+
+QString SecureMessengerDBusInterface::GetSystemStatistics() {
+    if (!m_adminDashboard) {
+        return QString();
+    }
+
+    QVariantMap stats = m_adminDashboard->getSystemStatistics();
+    QJsonDocument doc = QJsonDocument::fromVariant(stats);
+    return QString::fromUtf8(doc.toJson());
 }
 

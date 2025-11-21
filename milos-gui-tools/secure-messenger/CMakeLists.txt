@@ -46,6 +46,12 @@ set(APPLICATION_SOURCES
     src/traffic_obfuscation.cpp
     src/encryption_storage.cpp
     src/message_expiration.cpp
+    src/emergency_eject.cpp
+    src/data_wipe.cpp
+    src/emergency_shutdown.cpp
+    src/admin_dashboard.cpp
+    src/user_manager.cpp
+    src/system_config.cpp
     src/dbus_interface.cpp
     src/audit_logger.cpp
 )
@@ -79,6 +85,12 @@ set(APPLICATION_HEADERS
     include/traffic_obfuscation.h
     include/encryption_storage.h
     include/message_expiration.h
+    include/emergency_eject.h
+    include/data_wipe.h
+    include/emergency_shutdown.h
+    include/admin_dashboard.h
+    include/user_manager.h
+    include/system_config.h
     include/dbus_interface.h
     include/audit_logger.h
 )

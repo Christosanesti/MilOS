@@ -9,12 +9,30 @@
 #include "message_threading.h"
 #include "conversation_manager.h"
 #include "message_storage.h"
+#include "file_sharing.h"
+#include "voice_messaging.h"
+#include "video_messaging.h"
+#include "media_calls.h"
+#include "group_messaging.h"
+#include "e2e_encryption.h"
+#include "forward_secrecy.h"
+#include "key_exchange.h"
+#include "traffic_obfuscation.h"
+#include "encryption_storage.h"
+#include "message_expiration.h"
+#include "emergency_eject.h"
+#include "data_wipe.h"
+#include "emergency_shutdown.h"
+#include "admin_dashboard.h"
+#include "user_manager.h"
+#include "system_config.h"
 #include <QDebug>
 #include <QNetworkInterface>
 #include <QHostAddress>
 #include <QAbstractSocket>
 #include <QStandardPaths>
 #include <QDir>
+#include <QCryptographicHash>
 
 SecureMessenger::SecureMessenger(QObject* parent)
     : QObject(parent)
@@ -33,8 +51,26 @@ SecureMessenger::SecureMessenger(QObject* parent)
     , m_threading(new MessageThreading(this))
     , m_conversationManager(new ConversationManager(this))
     , m_messageStorage(new MessageStorage(this))
+    , m_fileSharing(new FileSharing(this))
+    , m_voiceMessaging(new VoiceMessaging(this))
+    , m_videoMessaging(new VideoMessaging(this))
+    , m_mediaCalls(new MediaCalls(this))
+    , m_groupMessaging(new GroupMessaging(this))
+    , m_e2eEncryption(new E2EEncryption(this))
+    , m_forwardSecrecy(new ForwardSecrecy(this))
+    , m_keyExchange(new KeyExchange(this))
+    , m_trafficObfuscation(new TrafficObfuscation(this))
+    , m_encryptionStorage(new EncryptionStorage(this))
+    , m_messageExpiration(new MessageExpiration(this))
+    , m_emergencyEject(new EmergencyEject(this))
+    , m_dataWipe(new DataWipe(this))
+    , m_emergencyShutdown(new EmergencyShutdown(this))
+    , m_adminDashboard(new AdminDashboard(this))
+    , m_userManager(new UserManager(this))
+    , m_systemConfig(new SystemConfig(this))
     , m_dbusInterface(new SecureMessengerDBusInterface(this))
     , m_auditLogger(new AuditLogger(this))
+    , m_keyRotationTimer(new QTimer(this))
     , m_initialized(false)
     , m_running(false)
 {
@@ -162,6 +198,99 @@ bool SecureMessenger::initialize() {
         return false;
     }
 
+    // Initialize media messaging components
+    if (!m_fileSharing->initialize()) {
+        qWarning() << "Failed to initialize file sharing";
+        return false;
+    }
+
+    if (!m_voiceMessaging->initialize()) {
+        qWarning() << "Failed to initialize voice messaging";
+        return false;
+    }
+
+    if (!m_videoMessaging->initialize()) {
+        qWarning() << "Failed to initialize video messaging";
+        return false;
+    }
+
+    if (!m_mediaCalls->initialize()) {
+        qWarning() << "Failed to initialize media calls";
+        return false;
+    }
+
+    if (!m_groupMessaging->initialize()) {
+        qWarning() << "Failed to initialize group messaging";
+        return false;
+    }
+
+    // Initialize security components
+    if (!m_e2eEncryption->initialize()) {
+        qWarning() << "Failed to initialize E2E encryption";
+        return false;
+    }
+
+    if (!m_forwardSecrecy->initialize()) {
+        qWarning() << "Failed to initialize forward secrecy";
+        return false;
+    }
+
+    if (!m_keyExchange->initialize()) {
+        qWarning() << "Failed to initialize key exchange";
+        return false;
+    }
+
+    if (!m_trafficObfuscation->initialize()) {
+        qWarning() << "Failed to initialize traffic obfuscation";
+        return false;
+    }
+
+    // Initialize encryption storage
+    QString encryptedDbPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    QDir().mkpath(encryptedDbPath);
+    encryptedDbPath += "/encrypted_messages.db";
+    QByteArray encryptionKey = QCryptographicHash::hash("default_key", QCryptographicHash::Sha256);
+    if (!m_encryptionStorage->initialize(encryptedDbPath, encryptionKey)) {
+        qWarning() << "Failed to initialize encryption storage";
+        return false;
+    }
+
+    if (!m_messageExpiration->initialize()) {
+        qWarning() << "Failed to initialize message expiration";
+        return false;
+    }
+
+    // Initialize emergency and admin components
+    if (!m_emergencyEject->initialize()) {
+        qWarning() << "Failed to initialize emergency eject";
+        return false;
+    }
+
+    if (!m_dataWipe->initialize()) {
+        qWarning() << "Failed to initialize data wipe";
+        return false;
+    }
+
+    if (!m_emergencyShutdown->initialize()) {
+        qWarning() << "Failed to initialize emergency shutdown";
+        return false;
+    }
+
+    if (!m_adminDashboard->initialize()) {
+        qWarning() << "Failed to initialize admin dashboard";
+        return false;
+    }
+
+    if (!m_userManager->initialize()) {
+        qWarning() << "Failed to initialize user manager";
+        return false;
+    }
+
+    if (!m_systemConfig->initialize()) {
+        qWarning() << "Failed to initialize system config";
+        return false;
+    }
+
     // Connect signals for audit logging
     connect(m_keyGen, &KeyGenerator::keyGenerated, this, [this](const QString& keyId) {
         QVariantMap eventData;
@@ -252,6 +381,88 @@ bool SecureMessenger::initialize() {
         m_auditLogger->logKeyOperation("message_status_updated", QString(), eventData);
     });
 
+    // Connect encryption operation signals for audit logging
+    connect(m_e2eEncryption, &E2EEncryption::encryptionFailed, this, [this](const QString& error) {
+        QVariantMap eventData;
+        eventData["error"] = error;
+        m_auditLogger->logKeyOperation("encryption_failed", QString(), eventData);
+    });
+
+    connect(m_e2eEncryption, &E2EEncryption::decryptionFailed, this, [this](const QString& error) {
+        QVariantMap eventData;
+        eventData["error"] = error;
+        m_auditLogger->logKeyOperation("decryption_failed", QString(), eventData);
+    });
+
+    connect(m_forwardSecrecy, &ForwardSecrecy::sessionKeyGenerated, this, [this](const QString& sessionId) {
+        QVariantMap eventData;
+        eventData["session_id"] = sessionId;
+        m_auditLogger->logKeyOperation("session_key_generated", QString(), eventData);
+    });
+
+    connect(m_forwardSecrecy, &ForwardSecrecy::sessionKeyRotated, this, [this](const QString& oldSessionId, const QString& newSessionId) {
+        QVariantMap eventData;
+        eventData["old_session_id"] = oldSessionId;
+        eventData["new_session_id"] = newSessionId;
+        m_auditLogger->logKeyOperation("session_key_rotated", QString(), eventData);
+    });
+
+    connect(m_keyExchange, &KeyExchange::keyExchangeInitiated, this, [this](const QString& exchangeId) {
+        QVariantMap eventData;
+        eventData["exchange_id"] = exchangeId;
+        m_auditLogger->logKeyOperation("key_exchange_initiated", QString(), eventData);
+    });
+
+    connect(m_keyExchange, &KeyExchange::keyExchangeCompleted, this, [this](const QString& exchangeId) {
+        QVariantMap eventData;
+        eventData["exchange_id"] = exchangeId;
+        m_auditLogger->logKeyOperation("key_exchange_completed", QString(), eventData);
+    });
+
+    connect(m_keyExchange, &KeyExchange::keyExchangeFailed, this, [this](const QString& exchangeId, const QString& error) {
+        QVariantMap eventData;
+        eventData["exchange_id"] = exchangeId;
+        eventData["error"] = error;
+        m_auditLogger->logKeyOperation("key_exchange_failed", QString(), eventData);
+    });
+
+    connect(m_messageExpiration, &MessageExpiration::messageExpired, this, [this](const QString& messageId) {
+        QVariantMap eventData;
+        eventData["message_id"] = messageId;
+        m_auditLogger->logKeyOperation("message_expired", QString(), eventData);
+    });
+
+    // Connect emergency operation signals for audit logging
+    connect(m_emergencyEject, &EmergencyEject::ejectInitiated, this, [this]() {
+        QVariantMap eventData;
+        m_auditLogger->logKeyOperation("emergency_eject_initiated", QString(), eventData);
+    });
+
+    connect(m_emergencyEject, &EmergencyEject::ejectCompleted, this, [this]() {
+        QVariantMap eventData;
+        m_auditLogger->logKeyOperation("emergency_eject_completed", QString(), eventData);
+    });
+
+    connect(m_emergencyEject, &EmergencyEject::ejectFailed, this, [this](const QString& error) {
+        QVariantMap eventData;
+        eventData["error"] = error;
+        m_auditLogger->logKeyOperation("emergency_eject_failed", QString(), eventData);
+    });
+
+    connect(m_dataWipe, &DataWipe::wipeCompleted, this, [this]() {
+        QVariantMap eventData;
+        m_auditLogger->logKeyOperation("data_wipe_completed", QString(), eventData);
+    });
+
+    connect(m_emergencyShutdown, &EmergencyShutdown::shutdownInitiated, this, [this]() {
+        QVariantMap eventData;
+        m_auditLogger->logKeyOperation("emergency_shutdown_initiated", QString(), eventData);
+    });
+
+    // Set up automatic key rotation timer (every hour)
+    m_keyRotationTimer->setInterval(3600000); // 1 hour in milliseconds
+    connect(m_keyRotationTimer, &QTimer::timeout, this, &SecureMessenger::onKeyRotationTimer);
+
     // Initialize D-Bus interface
     m_dbusInterface->setUSBAuthorization(m_usbAuth);
     m_dbusInterface->setKeyGenerator(m_keyGen);
@@ -268,6 +479,23 @@ bool SecureMessenger::initialize() {
     m_dbusInterface->setMessageThreading(m_threading);
     m_dbusInterface->setConversationManager(m_conversationManager);
     m_dbusInterface->setMessageStorage(m_messageStorage);
+    m_dbusInterface->setFileSharing(m_fileSharing);
+    m_dbusInterface->setVoiceMessaging(m_voiceMessaging);
+    m_dbusInterface->setVideoMessaging(m_videoMessaging);
+    m_dbusInterface->setMediaCalls(m_mediaCalls);
+    m_dbusInterface->setGroupMessaging(m_groupMessaging);
+    m_dbusInterface->setE2EEncryption(m_e2eEncryption);
+    m_dbusInterface->setForwardSecrecy(m_forwardSecrecy);
+    m_dbusInterface->setKeyExchange(m_keyExchange);
+    m_dbusInterface->setTrafficObfuscation(m_trafficObfuscation);
+    m_dbusInterface->setEncryptionStorage(m_encryptionStorage);
+    m_dbusInterface->setMessageExpiration(m_messageExpiration);
+    m_dbusInterface->setEmergencyEject(m_emergencyEject);
+    m_dbusInterface->setDataWipe(m_dataWipe);
+    m_dbusInterface->setEmergencyShutdown(m_emergencyShutdown);
+    m_dbusInterface->setAdminDashboard(m_adminDashboard);
+    m_dbusInterface->setUserManager(m_userManager);
+    m_dbusInterface->setSystemConfig(m_systemConfig);
 
     if (!m_dbusInterface->initialize()) {
         qWarning() << "Failed to initialize D-Bus interface";
@@ -304,6 +532,9 @@ bool SecureMessenger::start() {
     m_enforcement->blockUnauthorizedInterfaces();
     m_enforcement->blockInternetConnectivity();
 
+    // Start automatic key rotation timer
+    m_keyRotationTimer->start();
+
     m_running = true;
     return true;
 }
@@ -313,6 +544,25 @@ void SecureMessenger::stop() {
         return;
     }
 
+    // Stop key rotation timer
+    if (m_keyRotationTimer) {
+        m_keyRotationTimer->stop();
+    }
+
     m_running = false;
+}
+
+void SecureMessenger::onKeyRotationTimer() {
+    // Expire old session keys
+    if (m_forwardSecrecy) {
+        m_forwardSecrecy->expireOldSessionKeys();
+    }
+
+    // Rotate keys for all active participants
+    // In production, would get list of active participants from conversation manager
+    // For now, this is a placeholder that demonstrates the automatic rotation mechanism
+    QVariantMap eventData;
+    eventData["rotation_type"] = "automatic";
+    m_auditLogger->logKeyOperation("automatic_key_rotation", QString(), eventData);
 }
 

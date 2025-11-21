@@ -16,10 +16,28 @@
 #include "message_threading.h"
 #include "conversation_manager.h"
 #include "message_storage.h"
+#include "file_sharing.h"
+#include "voice_messaging.h"
+#include "video_messaging.h"
+#include "media_calls.h"
+#include "group_messaging.h"
+#include "e2e_encryption.h"
+#include "forward_secrecy.h"
+#include "key_exchange.h"
+#include "traffic_obfuscation.h"
+#include "encryption_storage.h"
+#include "message_expiration.h"
+#include "emergency_eject.h"
+#include "data_wipe.h"
+#include "emergency_shutdown.h"
+#include "admin_dashboard.h"
+#include "user_manager.h"
+#include "system_config.h"
 #include "dbus_interface.h"
 #include "audit_logger.h"
 #include <QObject>
 #include <QString>
+#include <QTimer>
 
 class SecureMessenger : public QObject {
     Q_OBJECT
@@ -100,6 +118,32 @@ public:
      */
     ConversationManager* getConversationManager() const { return m_conversationManager; }
 
+    /**
+     * @brief Get E2E encryption
+     */
+    E2EEncryption* getE2EEncryption() const { return m_e2eEncryption; }
+
+    /**
+     * @brief Get forward secrecy
+     */
+    ForwardSecrecy* getForwardSecrecy() const { return m_forwardSecrecy; }
+
+    /**
+     * @brief Get emergency eject
+     */
+    EmergencyEject* getEmergencyEject() const { return m_emergencyEject; }
+
+    /**
+     * @brief Get admin dashboard
+     */
+    AdminDashboard* getAdminDashboard() const { return m_adminDashboard; }
+
+private slots:
+    /**
+     * @brief Handle automatic key rotation
+     */
+    void onKeyRotationTimer();
+
 private:
     USBAuthorization* m_usbAuth;
     KeyGenerator* m_keyGen;
@@ -116,8 +160,26 @@ private:
     MessageThreading* m_threading;
     ConversationManager* m_conversationManager;
     MessageStorage* m_messageStorage;
+    FileSharing* m_fileSharing;
+    VoiceMessaging* m_voiceMessaging;
+    VideoMessaging* m_videoMessaging;
+    MediaCalls* m_mediaCalls;
+    GroupMessaging* m_groupMessaging;
+    E2EEncryption* m_e2eEncryption;
+    ForwardSecrecy* m_forwardSecrecy;
+    KeyExchange* m_keyExchange;
+    TrafficObfuscation* m_trafficObfuscation;
+    EncryptionStorage* m_encryptionStorage;
+    MessageExpiration* m_messageExpiration;
+    EmergencyEject* m_emergencyEject;
+    DataWipe* m_dataWipe;
+    EmergencyShutdown* m_emergencyShutdown;
+    AdminDashboard* m_adminDashboard;
+    UserManager* m_userManager;
+    SystemConfig* m_systemConfig;
     SecureMessengerDBusInterface* m_dbusInterface;
     AuditLogger* m_auditLogger;
+    QTimer* m_keyRotationTimer;
     bool m_initialized;
     bool m_running;
 };
