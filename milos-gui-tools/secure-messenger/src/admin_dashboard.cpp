@@ -2,6 +2,7 @@
 #include "user_enrollment.h"
 #include "conversation_manager.h"
 #include "messaging_core.h"
+#include "message_storage.h"
 #include "mesh_network.h"
 #include "network_health.h"
 #include "e2e_encryption.h"
@@ -13,6 +14,7 @@ AdminDashboard::AdminDashboard(QObject* parent)
     , m_userEnrollment(nullptr)
     , m_conversationManager(nullptr)
     , m_messagingCore(nullptr)
+    , m_messageStorage(nullptr)
     , m_meshNetwork(nullptr)
     , m_healthMonitor(nullptr)
     , m_e2eEncryption(nullptr)
@@ -42,6 +44,10 @@ void AdminDashboard::setMessagingCore(MessagingCore* messagingCore) {
     m_messagingCore = messagingCore;
 }
 
+void AdminDashboard::setMessageStorage(MessageStorage* messageStorage) {
+    m_messageStorage = messageStorage;
+}
+
 void AdminDashboard::setMeshNetwork(MeshNetwork* meshNetwork) {
     m_meshNetwork = meshNetwork;
 }
@@ -67,24 +73,18 @@ QVariantMap AdminDashboard::getSystemStatus() const {
 }
 
 QVariantMap AdminDashboard::getDeliveryStatistics() const {
-    QVariantMap stats;
-    
-    if (m_messagingCore) {
-        // Get message statistics from messaging core
-        // Note: This is a simplified version - in production would query actual message storage
-        stats["total_messages"] = 0; // Would get from message storage
-        stats["delivered"] = 0;
-        stats["pending"] = 0;
-        stats["failed"] = 0;
-        stats["delivery_rate"] = 0.0;
-    } else {
-        stats["total_messages"] = 0;
-        stats["delivered"] = 0;
-        stats["pending"] = 0;
-        stats["failed"] = 0;
-        stats["delivery_rate"] = 0.0;
+    if (m_messageStorage) {
+        // Get real message statistics from message storage
+        return m_messageStorage->getMessageStatistics();
     }
     
+    // Fallback to empty stats if message storage not available
+    QVariantMap stats;
+    stats["total_messages"] = 0;
+    stats["delivered"] = 0;
+    stats["pending"] = 0;
+    stats["failed"] = 0;
+    stats["delivery_rate"] = 0.0;
     return stats;
 }
 
@@ -175,8 +175,15 @@ QVariantMap AdminDashboard::getDashboardData() const {
     
     // Active users
     if (m_userEnrollment) {
-        // Get all enrolled users - simplified, would query actual user database
-        data["activeUsers"] = 0; // Would get from user enrollment
+        // Get all enrolled and approved users
+        QList<UserInfo> allUsers = m_userEnrollment->getAllUsers();
+        int activeCount = 0;
+        for (const UserInfo& user : allUsers) {
+            if (user.status == EnrollmentStatus::Approved || user.status == EnrollmentStatus::Active) {
+                activeCount++;
+            }
+        }
+        data["activeUsers"] = activeCount;
     } else {
         data["activeUsers"] = 0;
     }
@@ -189,8 +196,9 @@ QVariantMap AdminDashboard::getDashboardData() const {
     
     // Active conversations
     if (m_conversationManager) {
-        // Would get from conversation manager
-        data["activeConversations"] = 0; // Would query conversation manager
+        // Get all conversations count
+        QList<Conversation> allConversations = m_conversationManager->getAllConversations();
+        data["activeConversations"] = allConversations.size();
     } else {
         data["activeConversations"] = 0;
     }

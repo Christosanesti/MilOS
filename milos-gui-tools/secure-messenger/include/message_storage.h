@@ -70,6 +70,18 @@ public:
      */
     bool deleteMessage(const QString& messageId);
 
+    /**
+     * @brief Get message statistics
+     * @return Map with total, delivered, pending, failed counts
+     */
+    QVariantMap getMessageStatistics() const;
+
+    /**
+     * @brief Get total message count
+     * @return Total number of messages
+     */
+    int getTotalMessageCount() const;
+
 private:
     QSqlDatabase m_database;
     bool createTables();

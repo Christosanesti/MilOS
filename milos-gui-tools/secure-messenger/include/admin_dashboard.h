@@ -9,6 +9,7 @@
 class UserEnrollment;
 class ConversationManager;
 class MessagingCore;
+class MessageStorage;
 class MeshNetwork;
 class NetworkHealthMonitor;
 class E2EEncryption;
@@ -46,6 +47,11 @@ public:
      * @brief Set messaging core (for message statistics)
      */
     void setMessagingCore(MessagingCore* messagingCore);
+
+    /**
+     * @brief Set message storage (for message statistics)
+     */
+    void setMessageStorage(MessageStorage* messageStorage);
 
     /**
      * @brief Set mesh network (for network statistics)
@@ -123,6 +129,7 @@ private:
     UserEnrollment* m_userEnrollment;
     ConversationManager* m_conversationManager;
     MessagingCore* m_messagingCore;
+    MessageStorage* m_messageStorage;
     MeshNetwork* m_meshNetwork;
     NetworkHealthMonitor* m_healthMonitor;
     E2EEncryption* m_e2eEncryption;

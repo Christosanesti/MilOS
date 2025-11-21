@@ -208,3 +208,55 @@ Message MessageStorage::messageFromQuery(const QSqlQuery& query) const {
     return message;
 }
 
+QVariantMap MessageStorage::getMessageStatistics() const {
+    QVariantMap stats;
+    
+    QSqlQuery query(m_database);
+    
+    // Get total count
+    if (query.exec("SELECT COUNT(*) FROM messages")) {
+        if (query.next()) {
+            stats["total_messages"] = query.value(0).toInt();
+        }
+    }
+    
+    // Get delivered count
+    query.prepare("SELECT COUNT(*) FROM messages WHERE status = :status");
+    query.bindValue(":status", static_cast<int>(MessageStatus::Delivered));
+    if (query.exec() && query.next()) {
+        stats["delivered"] = query.value(0).toInt();
+    }
+    
+    // Get pending count
+    query.prepare("SELECT COUNT(*) FROM messages WHERE status = :status");
+    query.bindValue(":status", static_cast<int>(MessageStatus::Pending));
+    if (query.exec() && query.next()) {
+        stats["pending"] = query.value(0).toInt();
+    }
+    
+    // Get failed count
+    query.prepare("SELECT COUNT(*) FROM messages WHERE status = :status");
+    query.bindValue(":status", static_cast<int>(MessageStatus::Failed));
+    if (query.exec() && query.next()) {
+        stats["failed"] = query.value(0).toInt();
+    }
+    
+    // Calculate delivery rate
+    int total = stats.value("total_messages", 0).toInt();
+    int delivered = stats.value("delivered", 0).toInt();
+    double deliveryRate = total > 0 ? (static_cast<double>(delivered) / total) * 100.0 : 0.0;
+    stats["delivery_rate"] = deliveryRate;
+    
+    return stats;
+}
+
+int MessageStorage::getTotalMessageCount() const {
+    QSqlQuery query(m_database);
+    if (query.exec("SELECT COUNT(*) FROM messages")) {
+        if (query.next()) {
+            return query.value(0).toInt();
+        }
+    }
+    return 0;
+}
+

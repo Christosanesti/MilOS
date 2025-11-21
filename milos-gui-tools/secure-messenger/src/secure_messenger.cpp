@@ -498,6 +498,7 @@ bool SecureMessenger::initialize() {
     m_adminDashboard->setUserEnrollment(m_enrollment);
     m_adminDashboard->setConversationManager(m_conversationManager);
     m_adminDashboard->setMessagingCore(m_messagingCore);
+    m_adminDashboard->setMessageStorage(m_messageStorage);
     m_adminDashboard->setMeshNetwork(m_meshNetwork);
     m_adminDashboard->setNetworkHealthMonitor(m_healthMonitor);
     m_adminDashboard->setE2EEncryption(m_e2eEncryption);
