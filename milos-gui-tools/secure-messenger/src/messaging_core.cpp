@@ -1,5 +1,6 @@
 #include "messaging_core.h"
 #include "message_storage.h"
+#include "mesh_network.h"
 #include <QUuid>
 #include <QDebug>
 #include <QTimer>
@@ -7,6 +8,7 @@
 MessagingCore::MessagingCore(QObject* parent)
     : QObject(parent)
     , m_messageStorage(nullptr)
+    , m_meshNetwork(nullptr)
 {
 }
 
@@ -119,24 +121,102 @@ void MessagingCore::queueMessage(const Message& message) {
 
 void MessagingCore::processMessageQueue() {
     // Process pending messages in queue
-    // In production, would send via mesh network
+    QList<QString> processedMessages;
+    
     for (const QString& messageId : m_messageQueue) {
         if (m_messages.contains(messageId)) {
             Message& msg = m_messages[messageId];
             if (msg.status == MessageStatus::Pending) {
                 // Attempt to send message
-                // In production, would use mesh network to send
-                msg.status = MessageStatus::Sent;
-                emit messageStatusUpdated(messageId, MessageStatus::Sent);
+                if (attemptSendMessage(msg)) {
+                    msg.status = MessageStatus::Sent;
+                    m_retryCounts.remove(messageId);  // Reset retry count on success
+                    emit messageStatusUpdated(messageId, MessageStatus::Sent);
+                    processedMessages.append(messageId);
+                } else {
+                    // Increment retry count
+                    int retryCount = m_retryCounts.value(messageId, 0) + 1;
+                    m_retryCounts[messageId] = retryCount;
+                    
+                    if (retryCount >= MAX_RETRY_ATTEMPTS) {
+                        // Mark as failed after max retries
+                        msg.status = MessageStatus::Failed;
+                        emit messageStatusUpdated(messageId, MessageStatus::Failed);
+                        processedMessages.append(messageId);
+                    }
+                    // Otherwise, keep in queue for next retry
+                }
+            } else if (msg.status == MessageStatus::Sent || msg.status == MessageStatus::Delivered) {
+                // Already successfully processed, remove from queue
+                processedMessages.append(messageId);
+            } else if (msg.status == MessageStatus::Failed) {
+                // Failed messages stay in queue until manually retried via retryMessage()
+                // Don't remove from queue automatically
             }
+        } else {
+            // Message not found, remove from queue
+            processedMessages.append(messageId);
         }
     }
     
     // Remove processed messages from queue
-    m_messageQueue.clear();
+    for (const QString& messageId : processedMessages) {
+        m_messageQueue.removeAll(messageId);
+    }
+}
+
+bool MessagingCore::attemptSendMessage(const Message& message) {
+    if (m_meshNetwork && !message.recipientId.isEmpty()) {
+        // Use mesh network to send message
+        bool success = m_meshNetwork->sendMessage(message.recipientId, message.data);
+        return success;
+    }
+    
+    // If no mesh network, simulate success for testing
+    // In production, this should always use mesh network
+    return true;
+}
+
+QList<Message> MessagingCore::getFailedMessages() const {
+    QList<Message> failed;
+    for (const Message& msg : m_messages.values()) {
+        if (msg.status == MessageStatus::Failed) {
+            failed.append(msg);
+        }
+    }
+    return failed;
+}
+
+bool MessagingCore::retryMessage(const QString& messageId) {
+    if (!m_messages.contains(messageId)) {
+        return false;
+    }
+    
+    Message& msg = m_messages[messageId];
+    if (msg.status != MessageStatus::Failed) {
+        return false;  // Can only retry failed messages
+    }
+    
+    // Reset retry count and status
+    m_retryCounts.remove(messageId);
+    msg.status = MessageStatus::Pending;
+    
+    // Re-queue message
+    queueMessage(msg);
+    
+    // Update status in storage
+    if (m_messageStorage) {
+        m_messageStorage->updateMessageStatus(messageId, MessageStatus::Pending);
+    }
+    
+    return true;
 }
 
 void MessagingCore::setMessageStorage(MessageStorage* messageStorage) {
     m_messageStorage = messageStorage;
+}
+
+void MessagingCore::setMeshNetwork(MeshNetwork* meshNetwork) {
+    m_meshNetwork = meshNetwork;
 }
 

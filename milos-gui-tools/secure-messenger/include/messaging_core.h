@@ -103,9 +103,27 @@ public:
     QList<Message> getPendingMessages() const;
 
     /**
+     * @brief Get failed messages
+     * @return List of failed messages
+     */
+    QList<Message> getFailedMessages() const;
+
+    /**
+     * @brief Retry failed message
+     * @param messageId Message ID
+     * @return true if retry successful, false otherwise
+     */
+    bool retryMessage(const QString& messageId);
+
+    /**
      * @brief Set message storage (for automatic persistence)
      */
     void setMessageStorage(class MessageStorage* messageStorage);
+
+    /**
+     * @brief Set mesh network (for message sending)
+     */
+    void setMeshNetwork(class MeshNetwork* meshNetwork);
 
 Q_SIGNALS:
     /**
@@ -126,11 +144,15 @@ Q_SIGNALS:
 private:
     QMap<QString, Message> m_messages;
     QList<QString> m_messageQueue;
+    QMap<QString, int> m_retryCounts;  // Message ID -> retry count
     class MessageStorage* m_messageStorage;
+    class MeshNetwork* m_meshNetwork;
+    static const int MAX_RETRY_ATTEMPTS = 3;
     
     QString generateMessageId() const;
     void queueMessage(const Message& message);
     void processMessageQueue();
+    bool attemptSendMessage(const Message& message);
 };
 
 #endif // MESSAGING_CORE_H

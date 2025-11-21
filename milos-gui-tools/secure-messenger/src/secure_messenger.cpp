@@ -182,6 +182,9 @@ bool SecureMessenger::initialize() {
     // Set message storage for messaging core (automatic persistence)
     m_messagingCore->setMessageStorage(m_messageStorage);
     
+    // Set mesh network for messaging core (for message sending)
+    m_messagingCore->setMeshNetwork(m_meshNetwork);
+    
     // Connect media components to messaging core and encryption
     m_fileSharing->setMessagingCore(m_messagingCore);
     m_fileSharing->setE2EEncryption(m_e2eEncryption);
