@@ -195,6 +195,9 @@ bool SecureMessenger::initialize() {
     // Connect group messaging and media calls
     m_groupMessaging->setConversationManager(m_conversationManager);
     m_mediaCalls->setMeshNetwork(m_meshNetwork);
+    
+    // Connect message expiration to storage for automatic deletion
+    m_messageExpiration->setMessageStorage(m_messageStorage);
 
     if (!m_threading->initialize()) {
         qWarning() << "Failed to initialize message threading";
@@ -448,6 +451,15 @@ bool SecureMessenger::initialize() {
         QVariantMap eventData;
         eventData["message_id"] = messageId;
         m_auditLogger->logKeyOperation("message_expired", QString(), eventData);
+    });
+
+    // Connect message status updates to expiration policies
+    connect(m_messagingCore, &MessagingCore::messageStatusUpdated, this, [this](const QString& messageId, MessageStatus status) {
+        if (status == MessageStatus::Read) {
+            m_messageExpiration->markMessageAsRead(messageId);
+        } else if (status == MessageStatus::Delivered) {
+            m_messageExpiration->markMessageAsDelivered(messageId);
+        }
     });
 
     // Connect emergency operation signals for audit logging

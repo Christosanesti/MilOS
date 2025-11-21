@@ -79,6 +79,11 @@ public:
      */
     int deleteExpiredMessages();
 
+    /**
+     * @brief Set message storage (for deleting expired messages)
+     */
+    void setMessageStorage(class MessageStorage* messageStorage);
+
 Q_SIGNALS:
     /**
      * @brief Emitted when message is about to expire
@@ -91,6 +96,7 @@ Q_SIGNALS:
     void messageExpired(const QString& messageId);
 
 private:
+    class MessageStorage* m_messageStorage;
     QMap<QString, MessageExpirationInfo> m_expirationInfo;
     QTimer* m_expirationTimer;
     

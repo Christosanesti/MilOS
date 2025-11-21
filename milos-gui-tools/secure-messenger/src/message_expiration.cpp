@@ -1,8 +1,10 @@
 #include "message_expiration.h"
+#include "message_storage.h"
 #include <QDebug>
 
 MessageExpiration::MessageExpiration(QObject* parent)
     : QObject(parent)
+    , m_messageStorage(nullptr)
     , m_expirationTimer(new QTimer(this))
 {
     connect(m_expirationTimer, &QTimer::timeout, this, &MessageExpiration::checkExpirations);
@@ -74,6 +76,11 @@ int MessageExpiration::deleteExpiredMessages() {
     }
 
     for (const QString& messageId : expiredMessages) {
+        // Delete from storage if available
+        if (m_messageStorage) {
+            m_messageStorage->deleteMessage(messageId);
+        }
+        
         m_expirationInfo.remove(messageId);
         deleted++;
     }
@@ -109,5 +116,14 @@ void MessageExpiration::expireMessage(const QString& messageId) {
     info.expired = true;
     
     emit messageExpired(messageId);
+    
+    // Automatically delete expired messages from storage
+    if (m_messageStorage) {
+        m_messageStorage->deleteMessage(messageId);
+    }
+}
+
+void MessageExpiration::setMessageStorage(MessageStorage* messageStorage) {
+    m_messageStorage = messageStorage;
 }
 
