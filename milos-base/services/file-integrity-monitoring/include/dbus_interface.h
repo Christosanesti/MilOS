@@ -10,6 +10,7 @@ class BaselineManager;
 class ChangeDetector;
 class IntegrityVerifier;
 class RemediationManager;
+class VerificationScheduler;
 
 /**
  * @brief D-Bus Interface for File Integrity Monitoring Service
@@ -54,6 +55,11 @@ public:
      * @brief Set remediation manager instance
      */
     void setRemediationManager(RemediationManager* manager);
+
+    /**
+     * @brief Set verification scheduler instance
+     */
+    void setVerificationScheduler(VerificationScheduler* scheduler);
 
 public Q_SLOTS:
     // D-Bus methods
@@ -120,6 +126,60 @@ public Q_SLOTS:
      */
     QString GetPendingRemediations();
 
+    /**
+     * @brief Create a verification schedule
+     * @param scheduleJson Schedule configuration (JSON string)
+     * @return Schedule ID if successful, empty string otherwise
+     */
+    QString CreateVerificationSchedule(const QString& scheduleJson);
+
+    /**
+     * @brief Get verification schedule
+     * @param scheduleId Schedule ID
+     * @return Schedule information (JSON string)
+     */
+    QString GetVerificationSchedule(const QString& scheduleId);
+
+    /**
+     * @brief Get all verification schedules
+     * @return List of schedules (JSON string)
+     */
+    QString GetVerificationSchedules();
+
+    /**
+     * @brief Delete verification schedule
+     * @param scheduleId Schedule ID
+     * @return true if deletion successful, false otherwise
+     */
+    bool DeleteVerificationSchedule(const QString& scheduleId);
+
+    /**
+     * @brief Enable/disable verification schedule
+     * @param scheduleId Schedule ID
+     * @param enabled Enable flag
+     * @return true if update successful, false otherwise
+     */
+    bool SetVerificationScheduleEnabled(const QString& scheduleId, bool enabled);
+
+    /**
+     * @brief Get verification history
+     * @param scheduleId Schedule ID (empty for all)
+     * @param filePath File path filter (empty for all)
+     * @param limit Maximum number of entries
+     * @return Verification history (JSON string)
+     */
+    QString GetVerificationHistory(const QString& scheduleId = "",
+                                    const QString& filePath = "",
+                                    int limit = 100);
+
+    /**
+     * @brief Clear verification history
+     * @param scheduleId Schedule ID (empty for all)
+     * @param olderThanDays Delete entries older than N days (0 for all)
+     * @return Number of entries deleted
+     */
+    int ClearVerificationHistory(const QString& scheduleId = "", int olderThanDays = 0);
+
 Q_SIGNALS:
     /**
      * @brief Emitted when file changes detected
@@ -142,6 +202,7 @@ private:
     ChangeDetector* m_changeDetector;
     IntegrityVerifier* m_integrityVerifier;
     RemediationManager* m_remediationManager;
+    VerificationScheduler* m_verificationScheduler;
 };
 
 #endif // DBUS_INTERFACE_H

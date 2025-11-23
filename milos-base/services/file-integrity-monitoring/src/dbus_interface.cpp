@@ -4,6 +4,7 @@
 #include "change_detector.h"
 #include "integrity_verifier.h"
 #include "remediation_manager.h"
+#include "verification_scheduler.h"
 #include <QDBusConnection>
 #include <QDBusMetaType>
 #include <QJsonDocument>
@@ -19,6 +20,7 @@ DBusInterface::DBusInterface(QObject* parent)
     , m_changeDetector(nullptr)
     , m_integrityVerifier(nullptr)
     , m_remediationManager(nullptr)
+    , m_verificationScheduler(nullptr)
 {
 }
 
@@ -65,6 +67,10 @@ void DBusInterface::setIntegrityVerifier(IntegrityVerifier* verifier) {
 
 void DBusInterface::setRemediationManager(RemediationManager* manager) {
     m_remediationManager = manager;
+}
+
+void DBusInterface::setVerificationScheduler(VerificationScheduler* scheduler) {
+    m_verificationScheduler = scheduler;
 }
 
 QStringList DBusInterface::CreateBaseline(const QStringList& filePaths) {
@@ -300,5 +306,176 @@ QString DBusInterface::GetPendingRemediations() {
     result["success"] = true;
     result["requests"] = requestsArray;
     return QJsonDocument(result).toJson();
+}
+
+QString DBusInterface::CreateVerificationSchedule(const QString& scheduleJson) {
+    QJsonObject result;
+
+    if (!m_verificationScheduler) {
+        result["success"] = false;
+        result["error"] = "Verification scheduler not initialized";
+        return QJsonDocument(result).toJson();
+    }
+
+    QJsonDocument doc = QJsonDocument::fromJson(scheduleJson.toUtf8());
+    if (!doc.isObject()) {
+        result["success"] = false;
+        result["error"] = "Invalid schedule JSON";
+        return QJsonDocument(result).toJson();
+    }
+
+    QJsonObject scheduleObj = doc.object();
+    VerificationSchedule schedule;
+    schedule.name = scheduleObj["name"].toString().toStdString();
+    schedule.description = scheduleObj["description"].toString().toStdString();
+    schedule.cron_expression = scheduleObj["cron_expression"].toString().toStdString();
+    schedule.enabled = scheduleObj["enabled"].toBool(true);
+
+    QJsonArray filePathsArray = scheduleObj["file_paths"].toArray();
+    for (const QJsonValue& value : filePathsArray) {
+        schedule.file_paths.push_back(value.toString().toStdString());
+    }
+
+    std::string scheduleId = m_verificationScheduler->createSchedule(schedule);
+    if (scheduleId.empty()) {
+        result["success"] = false;
+        result["error"] = "Failed to create schedule";
+        return QJsonDocument(result).toJson();
+    }
+
+    result["success"] = true;
+    result["schedule_id"] = QString::fromStdString(scheduleId);
+    return QJsonDocument(result).toJson();
+}
+
+QString DBusInterface::GetVerificationSchedule(const QString& scheduleId) {
+    QJsonObject result;
+
+    if (!m_verificationScheduler) {
+        result["success"] = false;
+        result["error"] = "Verification scheduler not initialized";
+        return QJsonDocument(result).toJson();
+    }
+
+    auto schedule = m_verificationScheduler->getSchedule(scheduleId.toStdString());
+    if (schedule.schedule_id.empty()) {
+        result["success"] = false;
+        result["error"] = "Schedule not found";
+        return QJsonDocument(result).toJson();
+    }
+
+    result["success"] = true;
+    result["schedule_id"] = QString::fromStdString(schedule.schedule_id);
+    result["name"] = QString::fromStdString(schedule.name);
+    result["description"] = QString::fromStdString(schedule.description);
+    result["cron_expression"] = QString::fromStdString(schedule.cron_expression);
+    result["enabled"] = schedule.enabled;
+    result["created_at"] = QString::fromStdString(schedule.created_at);
+    result["last_run_at"] = QString::fromStdString(schedule.last_run_at);
+    result["next_run_at"] = QString::fromStdString(schedule.next_run_at);
+
+    QJsonArray filePathsArray;
+    for (const auto& path : schedule.file_paths) {
+        filePathsArray.append(QString::fromStdString(path));
+    }
+    result["file_paths"] = filePathsArray;
+
+    return QJsonDocument(result).toJson();
+}
+
+QString DBusInterface::GetVerificationSchedules() {
+    QJsonObject result;
+
+    if (!m_verificationScheduler) {
+        result["success"] = false;
+        result["error"] = "Verification scheduler not initialized";
+        return QJsonDocument(result).toJson();
+    }
+
+    auto schedules = m_verificationScheduler->getAllSchedules();
+    QJsonArray schedulesArray;
+
+    for (const auto& schedule : schedules) {
+        QJsonObject scheduleObj;
+        scheduleObj["schedule_id"] = QString::fromStdString(schedule.schedule_id);
+        scheduleObj["name"] = QString::fromStdString(schedule.name);
+        scheduleObj["description"] = QString::fromStdString(schedule.description);
+        scheduleObj["cron_expression"] = QString::fromStdString(schedule.cron_expression);
+        scheduleObj["enabled"] = schedule.enabled;
+        scheduleObj["created_at"] = QString::fromStdString(schedule.created_at);
+        scheduleObj["last_run_at"] = QString::fromStdString(schedule.last_run_at);
+        scheduleObj["next_run_at"] = QString::fromStdString(schedule.next_run_at);
+
+        QJsonArray filePathsArray;
+        for (const auto& path : schedule.file_paths) {
+            filePathsArray.append(QString::fromStdString(path));
+        }
+        scheduleObj["file_paths"] = filePathsArray;
+        schedulesArray.append(scheduleObj);
+    }
+
+    result["success"] = true;
+    result["schedules"] = schedulesArray;
+    return QJsonDocument(result).toJson();
+}
+
+bool DBusInterface::DeleteVerificationSchedule(const QString& scheduleId) {
+    if (!m_verificationScheduler) {
+        return false;
+    }
+
+    return m_verificationScheduler->deleteSchedule(scheduleId.toStdString());
+}
+
+bool DBusInterface::SetVerificationScheduleEnabled(const QString& scheduleId, bool enabled) {
+    if (!m_verificationScheduler) {
+        return false;
+    }
+
+    return m_verificationScheduler->setScheduleEnabled(scheduleId.toStdString(), enabled);
+}
+
+QString DBusInterface::GetVerificationHistory(const QString& scheduleId,
+                                               const QString& filePath,
+                                               int limit) {
+    QJsonObject result;
+
+    if (!m_verificationScheduler) {
+        result["success"] = false;
+        result["error"] = "Verification scheduler not initialized";
+        return QJsonDocument(result).toJson();
+    }
+
+    auto history = m_verificationScheduler->getHistory(
+        scheduleId.toStdString(),
+        filePath.toStdString(),
+        limit
+    );
+
+    QJsonArray historyArray;
+    for (const auto& entry : history) {
+        QJsonObject entryObj;
+        entryObj["entry_id"] = QString::fromStdString(entry.entry_id);
+        entryObj["schedule_id"] = QString::fromStdString(entry.schedule_id);
+        entryObj["file_path"] = QString::fromStdString(entry.file_path);
+        entryObj["is_valid"] = entry.is_valid;
+        entryObj["baseline_id"] = QString::fromStdString(entry.baseline_id);
+        entryObj["error_message"] = QString::fromStdString(entry.error_message);
+        entryObj["verified_at"] = QString::fromStdString(entry.verified_at);
+        entryObj["duration_ms"] = QString::fromStdString(entry.duration_ms);
+        historyArray.append(entryObj);
+    }
+
+    result["success"] = true;
+    result["history"] = historyArray;
+    return QJsonDocument(result).toJson();
+}
+
+int DBusInterface::ClearVerificationHistory(const QString& scheduleId, int olderThanDays) {
+    if (!m_verificationScheduler) {
+        return 0;
+    }
+
+    return m_verificationScheduler->clearHistory(scheduleId.toStdString(), olderThanDays);
 }
 

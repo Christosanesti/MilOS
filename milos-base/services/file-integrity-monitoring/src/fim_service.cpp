@@ -5,6 +5,7 @@
 #include "file_monitor.h"
 #include "remediation_manager.h"
 #include "security_tools_integration.h"
+#include "verification_scheduler.h"
 #include "dbus_interface.h"
 #include "config_parser.h"
 #include "audit_logger.h"
@@ -99,6 +100,13 @@ bool FIMService::initialize() {
         });
     }
 
+    // Initialize verification scheduler
+    m_verificationScheduler = std::make_unique<VerificationScheduler>();
+    if (!m_verificationScheduler->initialize(m_integrityVerifier.get(), m_baselineManager.get(), m_auditLogger.get())) {
+        std::cerr << "Warning: Failed to initialize verification scheduler" << std::endl;
+        // Don't fail initialization if scheduler is not available
+    }
+
     // Initialize D-Bus interface
     m_dbusInterface = std::make_unique<DBusInterface>();
     m_dbusInterface->setFIMService(this);
@@ -106,6 +114,7 @@ bool FIMService::initialize() {
     m_dbusInterface->setChangeDetector(m_changeDetector.get());
     m_dbusInterface->setIntegrityVerifier(m_integrityVerifier.get());
     m_dbusInterface->setRemediationManager(m_remediationManager.get());
+    m_dbusInterface->setVerificationScheduler(m_verificationScheduler.get());
     if (!m_dbusInterface->initialize()) {
         std::cerr << "Warning: Failed to initialize D-Bus interface" << std::endl;
     }
@@ -131,6 +140,11 @@ bool FIMService::start() {
         return false;
     }
 
+    // Start verification scheduler
+    if (m_verificationScheduler) {
+        m_verificationScheduler->start();
+    }
+
     m_running = true;
     
     if (m_auditLogger) {
@@ -147,6 +161,10 @@ void FIMService::stop() {
 
     if (m_fileMonitor) {
         m_fileMonitor->stop();
+    }
+
+    if (m_verificationScheduler) {
+        m_verificationScheduler->stop();
     }
 
     if (m_auditLogger) {

@@ -52,6 +52,7 @@ set(SERVICE_SOURCES
     src/file_monitor.cpp
     src/remediation_manager.cpp
     src/security_tools_integration.cpp
+    src/verification_scheduler.cpp
     src/dbus_interface.cpp
     src/cli_tool.cpp
     src/config_parser.cpp
@@ -66,6 +67,7 @@ set(SERVICE_HEADERS
     include/file_monitor.h
     include/remediation_manager.h
     include/security_tools_integration.h
+    include/verification_scheduler.h
     include/dbus_interface.h
     include/config_parser.h
     include/audit_logger.h
