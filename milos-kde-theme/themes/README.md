@@ -134,6 +134,22 @@ To customize these themes:
 
 ---
 
+## Testing
+
+A validation script is provided to verify theme files before installation:
+
+```bash
+cd milos-kde-theme/themes
+./test-themes.sh
+```
+
+The script validates:
+- KDE Plasma environment detection
+- Required color scheme sections
+- General section fields (Name, ColorScheme)
+- File format and syntax
+- Installation path accessibility
+
 ## Development
 
 These color schemes are part of the MilOS KDE theme package and are installed automatically when building MilOS.
