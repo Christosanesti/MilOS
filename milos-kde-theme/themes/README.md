@@ -138,12 +138,32 @@ To customize these themes:
 
 These color schemes are part of the MilOS KDE theme package and are installed automatically when building MilOS.
 
-For development:
+### Build System Integration
+
+The themes are integrated into the MilOS build system via CMake:
+
 ```bash
-# Build and install themes
-cd milos-kde-theme/themes
-make install  # (if Makefile exists)
-# Or manually copy to color-schemes directory
+# Build and install themes (from MilOS root)
+cd milos-kde-theme
+mkdir build && cd build
+cmake ..
+make
+sudo make install  # Installs to /usr/share/color-schemes/
+```
+
+Or build as part of the full MilOS build system.
+
+### Manual Installation (Development)
+
+For manual installation during development:
+```bash
+# Copy to user color schemes directory (no root required)
+cp MilOS-PitchBlack.colors ~/.local/share/color-schemes/
+cp MilOS-PlasmaYellow.colors ~/.local/share/color-schemes/
+
+# Or install system-wide (requires root)
+sudo cp MilOS-PitchBlack.colors /usr/share/color-schemes/
+sudo cp MilOS-PlasmaYellow.colors /usr/share/color-schemes/
 ```
 
 ---
