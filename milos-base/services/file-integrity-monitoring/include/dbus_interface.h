@@ -9,6 +9,7 @@ class FIMService;
 class BaselineManager;
 class ChangeDetector;
 class IntegrityVerifier;
+class RemediationManager;
 
 /**
  * @brief D-Bus Interface for File Integrity Monitoring Service
@@ -49,6 +50,11 @@ public:
      */
     void setIntegrityVerifier(IntegrityVerifier* verifier);
 
+    /**
+     * @brief Set remediation manager instance
+     */
+    void setRemediationManager(RemediationManager* manager);
+
 public Q_SLOTS:
     // D-Bus methods
     /**
@@ -86,6 +92,34 @@ public Q_SLOTS:
      */
     bool UpdateBaseline(const QString& baselineId);
 
+    /**
+     * @brief Remediate a detected change
+     * @param changeId Change ID to remediate
+     * @return Remediation result (JSON string)
+     */
+    QString RemediateChange(const QString& changeId);
+
+    /**
+     * @brief Approve a pending remediation request
+     * @param requestId Request ID
+     * @param approver Approver identifier
+     * @return true if approval successful, false otherwise
+     */
+    bool ApproveRemediation(const QString& requestId, const QString& approver);
+
+    /**
+     * @brief Get remediation request status
+     * @param requestId Request ID
+     * @return Remediation request status (JSON string)
+     */
+    QString GetRemediationStatus(const QString& requestId);
+
+    /**
+     * @brief Get all pending remediation requests
+     * @return List of pending requests (JSON string)
+     */
+    QString GetPendingRemediations();
+
 Q_SIGNALS:
     /**
      * @brief Emitted when file changes detected
@@ -107,6 +141,7 @@ private:
     BaselineManager* m_baselineManager;
     ChangeDetector* m_changeDetector;
     IntegrityVerifier* m_integrityVerifier;
+    RemediationManager* m_remediationManager;
 };
 
 #endif // DBUS_INTERFACE_H

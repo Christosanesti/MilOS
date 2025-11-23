@@ -51,6 +51,17 @@ int main(int argc, char* argv[]) {
     // Status command
     auto* statusCmd = cliApp.add_subcommand("status", "Show FIM status");
 
+    // Remediate command
+    auto* remediateCmd = cliApp.add_subcommand("remediate", "Apply remediation for a detected change");
+    std::string changeId;
+    std::string requestId;
+    std::string approver;
+    std::string action;
+    remediateCmd->add_option("change-id", changeId, "Change ID to remediate");
+    remediateCmd->add_option("--request-id", requestId, "Remediation request ID");
+    remediateCmd->add_option("--approve", approver, "Approve remediation request (provide approver name)");
+    remediateCmd->add_option("--action", action, "Action: remediate, approve, status, pending");
+
     try {
         cliApp.parse(argc, argv);
     } catch (const CLI::ParseError& e) {
@@ -156,6 +167,125 @@ int main(int argc, char* argv[]) {
     if (statusCmd->parsed()) {
         std::cout << "File Integrity Monitoring Service Status" << std::endl;
         std::cout << "Service: Running" << std::endl;
+    }
+
+    // Handle remediate command
+    if (remediateCmd->parsed()) {
+        if (action.empty() && changeId.empty() && requestId.empty()) {
+            std::cerr << "Error: Must specify either change-id, request-id with action, or use --action pending" << std::endl;
+            return 1;
+        }
+
+        if (action == "pending") {
+            // Get all pending remediations
+            QDBusReply<QString> reply = interface.call("GetPendingRemediations");
+            if (reply.isValid()) {
+                QJsonDocument doc = QJsonDocument::fromJson(reply.value().toUtf8());
+                if (doc.isObject()) {
+                    QJsonObject obj = doc.object();
+                    if (obj["success"].toBool()) {
+                        QJsonArray requests = obj["requests"].toArray();
+                        std::cout << "Pending remediation requests: " << requests.size() << std::endl;
+                        for (const QJsonValue& value : requests) {
+                            QJsonObject req = value.toObject();
+                            std::cout << "  Request ID: " << req["request_id"].toString().toStdString() << std::endl;
+                            std::cout << "    Change ID: " << req["change_id"].toString().toStdString() << std::endl;
+                            std::cout << "    File: " << req["file_path"].toString().toStdString() << std::endl;
+                            std::cout << "    Status: " << req["status"].toString().toStdString() << std::endl;
+                            std::cout << "    Requested: " << req["requested_at"].toString().toStdString() << std::endl;
+                            std::cout << std::endl;
+                        }
+                    } else {
+                        std::cerr << "Error: " << obj["error"].toString().toStdString() << std::endl;
+                        return 1;
+                    }
+                }
+            } else {
+                std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+                return 1;
+            }
+        } else if (action == "approve") {
+            // Approve remediation request
+            if (requestId.empty() || approver.empty()) {
+                std::cerr << "Error: --request-id and --approve required for approve action" << std::endl;
+                return 1;
+            }
+
+            QDBusReply<bool> reply = interface.call("ApproveRemediation",
+                                                     QString::fromStdString(requestId),
+                                                     QString::fromStdString(approver));
+            if (reply.isValid() && reply.value()) {
+                std::cout << "Remediation request approved successfully" << std::endl;
+            } else {
+                std::cerr << "Error: Failed to approve remediation request" << std::endl;
+                return 1;
+            }
+        } else if (action == "status") {
+            // Get remediation request status
+            if (requestId.empty()) {
+                std::cerr << "Error: --request-id required for status action" << std::endl;
+                return 1;
+            }
+
+            QDBusReply<QString> reply = interface.call("GetRemediationStatus", QString::fromStdString(requestId));
+            if (reply.isValid()) {
+                QJsonDocument doc = QJsonDocument::fromJson(reply.value().toUtf8());
+                if (doc.isObject()) {
+                    QJsonObject obj = doc.object();
+                    if (obj["success"].toBool()) {
+                        std::cout << "Remediation Request Status:" << std::endl;
+                        std::cout << "  Request ID: " << obj["request_id"].toString().toStdString() << std::endl;
+                        std::cout << "  Change ID: " << obj["change_id"].toString().toStdString() << std::endl;
+                        std::cout << "  File: " << obj["file_path"].toString().toStdString() << std::endl;
+                        std::cout << "  Status: " << obj["status"].toString().toStdString() << std::endl;
+                        std::cout << "  Requested: " << obj["requested_at"].toString().toStdString() << std::endl;
+                        if (!obj["approved_at"].toString().isEmpty()) {
+                            std::cout << "  Approved: " << obj["approved_at"].toString().toStdString() << std::endl;
+                            std::cout << "  Approver: " << obj["approver"].toString().toStdString() << std::endl;
+                        }
+                        if (!obj["completed_at"].toString().isEmpty()) {
+                            std::cout << "  Completed: " << obj["completed_at"].toString().toStdString() << std::endl;
+                        }
+                        if (!obj["error_message"].toString().isEmpty()) {
+                            std::cout << "  Error: " << obj["error_message"].toString().toStdString() << std::endl;
+                        }
+                    } else {
+                        std::cerr << "Error: " << obj["error"].toString().toStdString() << std::endl;
+                        return 1;
+                    }
+                }
+            } else {
+                std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+                return 1;
+            }
+        } else if (!changeId.empty()) {
+            // Remediate a change
+            QDBusReply<QString> reply = interface.call("RemediateChange", QString::fromStdString(changeId));
+            if (reply.isValid()) {
+                QJsonDocument doc = QJsonDocument::fromJson(reply.value().toUtf8());
+                if (doc.isObject()) {
+                    QJsonObject obj = doc.object();
+                    if (obj["success"].toBool()) {
+                        std::cout << "Remediation initiated successfully" << std::endl;
+                        std::cout << "  Request ID: " << obj["request_id"].toString().toStdString() << std::endl;
+                        std::cout << "  Status: " << (obj.contains("status") ? obj["status"].toString().toStdString() : "executed") << std::endl;
+                        std::cout << "  Message: " << obj["message"].toString().toStdString() << std::endl;
+                        if (obj.contains("executed_at")) {
+                            std::cout << "  Executed: " << obj["executed_at"].toString().toStdString() << std::endl;
+                        }
+                    } else {
+                        std::cerr << "Error: " << obj["error"].toString().toStdString() << std::endl;
+                        return 1;
+                    }
+                }
+            } else {
+                std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+                return 1;
+            }
+        } else {
+            std::cerr << "Error: Invalid action or missing parameters" << std::endl;
+            return 1;
+        }
     }
 
     if (!cliApp.get_subcommands().empty() && !cliApp.get_subcommands()[0]->parsed()) {
