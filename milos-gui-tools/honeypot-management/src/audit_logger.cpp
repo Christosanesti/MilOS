@@ -43,3 +43,7 @@ QString AuditLogger::generateEventId() const {
     return QUuid::createUuid().toString(QUuid::WithoutBraces);
 }
 
+
+
+
+

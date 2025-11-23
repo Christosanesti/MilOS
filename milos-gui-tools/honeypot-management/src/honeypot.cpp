@@ -91,3 +91,7 @@ void Honeypot::simulateInteraction() {
     emit interactionDetected(interactionData);
 }
 
+
+
+
+

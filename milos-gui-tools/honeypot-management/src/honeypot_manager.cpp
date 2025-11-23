@@ -83,3 +83,7 @@ QString HoneypotManager::generateHoneypotId() const {
     return QUuid::createUuid().toString(QUuid::WithoutBraces);
 }
 
+
+
+
+

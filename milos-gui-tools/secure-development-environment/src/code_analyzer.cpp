@@ -117,3 +117,7 @@ QString CodeAnalyzer::generateIssueId() const {
     return QUuid::createUuid().toString(QUuid::WithoutBraces);
 }
 
+
+
+
+

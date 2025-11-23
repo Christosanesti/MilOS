@@ -154,3 +154,7 @@ QList<Dependency> SupplyChainManager::parseCargoToml(const QString& filePath) co
     return deps;
 }
 
+
+
+
+

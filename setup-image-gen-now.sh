@@ -74,3 +74,7 @@ echo "4. Test by asking: 'Generate an image of a test pattern'"
 echo ""
 echo "Config file location: $MCP_CONFIG"
 
+
+
+
+

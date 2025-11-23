@@ -75,3 +75,7 @@ Q_DECLARE_METATYPE(SecurityIssue)
 
 #endif // CODE_ANALYZER_H
 
+
+
+
+

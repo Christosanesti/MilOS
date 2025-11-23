@@ -125,3 +125,7 @@ QVariantMap SecureDevDBusInterface::GetSecurityStatistics() {
     return m_system->getCodeAnalyzer()->getSecurityStatistics();
 }
 
+
+
+
+

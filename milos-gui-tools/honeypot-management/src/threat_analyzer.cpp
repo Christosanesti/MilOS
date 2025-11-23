@@ -98,3 +98,7 @@ QString ThreatAnalyzer::generateThreatId() const {
     return QUuid::createUuid().toString(QUuid::WithoutBraces);
 }
 
+
+
+
+

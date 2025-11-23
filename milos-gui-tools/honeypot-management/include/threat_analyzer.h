@@ -67,3 +67,7 @@ Q_DECLARE_METATYPE(ThreatAnalysisResult)
 
 #endif // THREAT_ANALYZER_H
 
+
+
+
+

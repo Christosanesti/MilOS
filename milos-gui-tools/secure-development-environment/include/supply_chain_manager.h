@@ -74,3 +74,7 @@ Q_DECLARE_METATYPE(Dependency)
 
 #endif // SUPPLY_CHAIN_MANAGER_H
 
+
+
+
+
