@@ -10,6 +10,7 @@ class ChangeDetector;
 class IntegrityVerifier;
 class FileMonitor;
 class RemediationManager;
+class SecurityToolsIntegration;
 class DBusInterface;
 class ConfigParser;
 class AuditLogger;
@@ -75,6 +76,7 @@ private:
     std::unique_ptr<IntegrityVerifier> m_integrityVerifier;
     std::unique_ptr<FileMonitor> m_fileMonitor;
     std::unique_ptr<RemediationManager> m_remediationManager;
+    std::unique_ptr<SecurityToolsIntegration> m_securityToolsIntegration;
     std::unique_ptr<DBusInterface> m_dbusInterface;
     std::unique_ptr<AuditLogger> m_auditLogger;
 };

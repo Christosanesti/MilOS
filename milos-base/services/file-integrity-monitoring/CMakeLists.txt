@@ -22,6 +22,15 @@ find_package(CLI11 REQUIRED)
 # Find OpenSSL for cryptographic hashing
 find_package(OpenSSL REQUIRED)
 
+# Find libcurl for HTTP security tool adapters (optional)
+find_package(CURL)
+if(CURL_FOUND)
+    add_definitions(-DHAVE_LIBCURL)
+    message(STATUS "libcurl found: HTTP security tool adapters enabled")
+else()
+    message(STATUS "libcurl not found: HTTP adapters will use fallback")
+endif()
+
 # Check for inotify support (Linux)
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     add_definitions(-DHAVE_INOTIFY)
@@ -42,6 +51,7 @@ set(SERVICE_SOURCES
     src/integrity_verifier.cpp
     src/file_monitor.cpp
     src/remediation_manager.cpp
+    src/security_tools_integration.cpp
     src/dbus_interface.cpp
     src/cli_tool.cpp
     src/config_parser.cpp
@@ -55,6 +65,7 @@ set(SERVICE_HEADERS
     include/integrity_verifier.h
     include/file_monitor.h
     include/remediation_manager.h
+    include/security_tools_integration.h
     include/dbus_interface.h
     include/config_parser.h
     include/audit_logger.h
@@ -75,6 +86,11 @@ target_link_libraries(milos-file-integrity-monitoring
     OpenSSL::SSL
     OpenSSL::Crypto
 )
+
+# Link libcurl if available
+if(CURL_FOUND)
+    target_link_libraries(milos-file-integrity-monitoring CURL::libcurl)
+endif()
 
 # Set executable properties
 set_target_properties(milos-file-integrity-monitoring

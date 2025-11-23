@@ -4,6 +4,7 @@
 #include "integrity_verifier.h"
 #include "file_monitor.h"
 #include "remediation_manager.h"
+#include "security_tools_integration.h"
 #include "dbus_interface.h"
 #include "config_parser.h"
 #include "audit_logger.h"
@@ -69,6 +70,33 @@ bool FIMService::initialize() {
     if (!m_remediationManager->initialize(m_baselineManager.get(), m_changeDetector.get(), m_auditLogger.get())) {
         std::cerr << "Warning: Failed to initialize remediation manager" << std::endl;
         // Don't fail initialization if remediation is not available
+    }
+
+    // Initialize security tools integration
+    m_securityToolsIntegration = std::make_unique<SecurityToolsIntegration>();
+    if (!m_securityToolsIntegration->initialize(m_changeDetector.get(), m_integrityVerifier.get(), m_auditLogger.get())) {
+        std::cerr << "Warning: Failed to initialize security tools integration" << std::endl;
+        // Don't fail initialization if security tools integration is not available
+    } else {
+        // Register callback to forward violations to security tools
+        m_changeDetector->registerChangeCallback([this](const FileChange& change) {
+            if (m_securityToolsIntegration) {
+                std::string changeTypeStr;
+                switch (change.change_type) {
+                    case ChangeType::MODIFIED: changeTypeStr = "modified"; break;
+                    case ChangeType::DELETED: changeTypeStr = "deleted"; break;
+                    case ChangeType::CREATED: changeTypeStr = "created"; break;
+                    case ChangeType::PERMISSIONS_CHANGED: changeTypeStr = "permissions_changed"; break;
+                    case ChangeType::OWNERSHIP_CHANGED: changeTypeStr = "ownership_changed"; break;
+                }
+                m_securityToolsIntegration->forwardViolation(
+                    change.change_id,
+                    change.file_path,
+                    changeTypeStr,
+                    change.severity
+                );
+            }
+        });
     }
 
     // Initialize D-Bus interface
