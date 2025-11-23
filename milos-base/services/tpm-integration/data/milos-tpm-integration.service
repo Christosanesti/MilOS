@@ -1,0 +1,45 @@
+[Unit]
+Description=MilOS TPM 2.0 Integration Service
+Documentation=https://milos.security/docs/services/tpm-integration
+After=network.target
+Wants=network.target
+Requires=network.target
+
+[Service]
+Type=notify
+ExecStart=/usr/bin/milos-tpm-integration
+Restart=on-failure
+RestartSec=5s
+TimeoutStartSec=30s
+TimeoutStopSec=10s
+WatchdogSec=60s
+
+# Security hardening
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+NoNewPrivileges=true
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+
+# Resource limits
+LimitNOFILE=65536
+LimitNPROC=4096
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=milos-tpm-integration
+
+# Notify systemd when ready
+NotifyAccess=all
+
+[Install]
+WantedBy=multi-user.target
+

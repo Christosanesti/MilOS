@@ -75,5 +75,29 @@ if(LIBOQS_FOUND)
     target_include_directories(test_kyber_algorithm PRIVATE ${LIBOQS_INCLUDE_DIRS})
     target_compile_definitions(test_kyber_algorithm PRIVATE HAVE_LIBOQS)
     add_test(NAME KyberAlgorithmTest COMMAND test_kyber_algorithm)
+
+    # Dilithium Algorithm Tests
+    add_executable(test_dilithium_algorithm test_dilithium_algorithm.cpp)
+    target_link_libraries(test_dilithium_algorithm
+        milos-pqc
+        Qt6::Core
+        Qt6::Test
+        ${LIBOQS_LIBRARIES}
+    )
+    target_include_directories(test_dilithium_algorithm PRIVATE ${LIBOQS_INCLUDE_DIRS})
+    target_compile_definitions(test_dilithium_algorithm PRIVATE HAVE_LIBOQS)
+    add_test(NAME DilithiumAlgorithmTest COMMAND test_dilithium_algorithm)
+
+    # SPHINCS+ Algorithm Tests
+    add_executable(test_sphincs_algorithm test_sphincs_algorithm.cpp)
+    target_link_libraries(test_sphincs_algorithm
+        milos-pqc
+        Qt6::Core
+        Qt6::Test
+        ${LIBOQS_LIBRARIES}
+    )
+    target_include_directories(test_sphincs_algorithm PRIVATE ${LIBOQS_INCLUDE_DIRS})
+    target_compile_definitions(test_sphincs_algorithm PRIVATE HAVE_LIBOQS)
+    add_test(NAME SPHINCSAlgorithmTest COMMAND test_sphincs_algorithm)
 endif()
 

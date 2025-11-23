@@ -1,0 +1,119 @@
+# MilOS File Integrity Monitoring Configuration
+
+# Service configuration
+service:
+  name: milos-file-integrity-monitoring
+  version: "1.0.0"
+  
+# Monitoring configuration
+monitoring:
+  # Enable real-time file monitoring
+  realtime_enabled: true
+  
+  # Monitoring interval (seconds) for periodic checks
+  check_interval: 3600
+  
+  # Directories to monitor
+  monitored_directories:
+    - /etc
+    - /usr/bin
+    - /usr/sbin
+    - /boot
+  
+  # Directories to exclude
+  excluded_directories:
+    - /tmp
+    - /var/tmp
+    - /proc
+    - /sys
+    - /dev
+  
+  # File patterns to monitor
+  file_patterns:
+    - "*.conf"
+    - "*.config"
+    - "*.cfg"
+    - "*.sh"
+    - "*.py"
+  
+  # File patterns to exclude
+  excluded_patterns:
+    - "*.log"
+    - "*.tmp"
+    - "*.cache"
+
+# Baseline configuration
+baseline:
+  # Baseline storage directory
+  storage_path: /var/lib/milos/fim/baselines
+  
+  # Baseline hash algorithm (sha256, sha512, blake2b)
+  hash_algorithm: sha256
+  
+  # Baseline versioning enabled
+  versioning_enabled: true
+  
+  # Maximum baseline versions to keep
+  max_versions: 10
+
+# Change detection configuration
+change_detection:
+  # Alert on file modifications
+  alert_on_modification: true
+  
+  # Alert on file deletions
+  alert_on_deletion: true
+  
+  # Alert on file creation
+  alert_on_creation: false
+  
+  # Alert on permission changes
+  alert_on_permissions: true
+  
+  # Alert on ownership changes
+  alert_on_ownership: true
+  
+  # Change severity thresholds
+  severity:
+    critical: 100
+    high: 75
+    medium: 50
+    low: 25
+
+# Integrity verification configuration
+verification:
+  # Automatic verification enabled
+  auto_verify: true
+  
+  # Verification schedule (cron format)
+  schedule: "0 */6 * * *"
+  
+  # Verification report location
+  report_path: /var/lib/milos/fim/reports
+
+# Integration configuration
+integration:
+  # Audit service integration
+  audit_service:
+    enabled: true
+    service_name: org.milos.AuditService
+  
+  # Security tools integration
+  security_tools:
+    enabled: true
+    notify_on_violation: true
+
+# Remediation configuration
+remediation:
+  # Automated remediation enabled
+  auto_remediate: false
+  
+  # Remediation actions
+  actions:
+    - restore_from_backup
+    - quarantine_file
+    - alert_administrator
+  
+  # Require approval for remediation
+  require_approval: true
+

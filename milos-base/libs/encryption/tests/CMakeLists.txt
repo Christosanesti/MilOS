@@ -42,3 +42,19 @@ target_link_libraries(test_operation_manager
 )
 add_test(NAME OperationManagerTest COMMAND test_operation_manager)
 
+# Disk Encryption Tests
+add_executable(test_disk_encryption test_disk_encryption.cpp)
+target_link_libraries(test_disk_encryption
+    milos-disk-encryption
+    Qt6::Core
+    Qt6::Test
+    OpenSSL::SSL
+    OpenSSL::Crypto
+)
+if(CRYPTSETUP_FOUND)
+    target_link_libraries(test_disk_encryption ${CRYPTSETUP_LIBRARIES})
+    target_include_directories(test_disk_encryption PRIVATE ${CRYPTSETUP_INCLUDE_DIRS})
+    target_compile_definitions(test_disk_encryption PRIVATE HAVE_CRYPTSETUP)
+endif()
+add_test(NAME DiskEncryptionTest COMMAND test_disk_encryption)
+

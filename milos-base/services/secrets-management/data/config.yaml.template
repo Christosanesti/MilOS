@@ -1,0 +1,86 @@
+# MilOS Secrets Management Configuration
+
+# Service configuration
+service:
+  name: milos-secrets-management
+  version: "1.0.0"
+
+# Storage configuration
+storage:
+  # Storage backend (sqlite, file, vault)
+  backend: sqlite
+  
+  # SQLite database path
+  database_path: /var/lib/milos/secrets/secrets.db
+  
+  # Encryption configuration
+  encryption:
+    algorithm: aes-256-gcm
+    key_derivation: pbkdf2
+    iterations: 100000
+
+# Rotation configuration
+rotation:
+  # Default rotation interval (days)
+  default_interval: 90
+  
+  # Rotation policies
+  policies:
+    - secret_type: password
+      interval: 30
+    - secret_type: api_key
+      interval: 60
+    - secret_type: certificate
+      interval: 365
+  
+  # Rotation notification (days before expiration)
+  notification_days: 7
+
+# Access control configuration
+access_control:
+  # Enable RBAC
+  rbac_enabled: true
+  
+  # Default access policy
+  default_policy: deny
+  
+  # Access policies
+  policies:
+    - secret_id: "*"
+      roles: ["admin"]
+      permissions: ["read", "write", "delete"]
+    - secret_id: "app_*"
+      roles: ["application"]
+      permissions: ["read"]
+
+# Versioning configuration
+versioning:
+  # Enable versioning
+  enabled: true
+  
+  # Maximum versions to keep
+  max_versions: 10
+  
+  # Version retention period (days)
+  retention_days: 365
+
+# Integration configuration
+integration:
+  # Audit service integration
+  audit_service:
+    enabled: true
+    service_name: org.milos.AuditService
+  
+  # Encryption service integration
+  encryption_service:
+    enabled: true
+    use_pqc: true
+
+# Air-gap configuration
+air_gap:
+  # Air-gap mode enabled
+  enabled: false
+  
+  # Offline operation support
+  offline_support: true
+
