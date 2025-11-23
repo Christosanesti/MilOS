@@ -163,6 +163,83 @@ bool DBusInterface::UpdateBaseline(const QString& baselineId) {
     return m_baselineManager->updateBaseline(baselineId.toStdString());
 }
 
+QString DBusInterface::GetBaselineVersions(const QString& baselineId) {
+    QJsonObject result;
+
+    if (!m_baselineManager) {
+        result["success"] = false;
+        result["error"] = "Baseline manager not initialized";
+        return QJsonDocument(result).toJson();
+    }
+
+    auto versions = m_baselineManager->getBaselineVersions(baselineId.toStdString());
+    if (versions.empty()) {
+        result["success"] = false;
+        result["error"] = "Baseline not found or no versions available";
+        return QJsonDocument(result).toJson();
+    }
+
+    QJsonArray versionsArray;
+    for (const auto& baseline : versions) {
+        QJsonObject baselineObj;
+        baselineObj["baseline_id"] = QString::fromStdString(baseline.baseline_id);
+        baselineObj["file_path"] = QString::fromStdString(baseline.file_path);
+        baselineObj["version"] = QString::fromStdString(baseline.version);
+        baselineObj["file_hash"] = QString::fromStdString(baseline.file_hash);
+        baselineObj["file_size"] = static_cast<qint64>(baseline.file_size);
+        baselineObj["permissions"] = QString::fromStdString(baseline.permissions);
+        baselineObj["owner"] = QString::fromStdString(baseline.owner);
+        baselineObj["group"] = QString::fromStdString(baseline.group);
+        baselineObj["created_at"] = QString::fromStdString(baseline.created_at);
+        baselineObj["is_valid"] = baseline.is_valid;
+        versionsArray.append(baselineObj);
+    }
+
+    result["success"] = true;
+    result["baseline_id"] = baselineId;
+    result["versions"] = versionsArray;
+    return QJsonDocument(result).toJson();
+}
+
+QString DBusInterface::GetBaselineVersion(const QString& baselineId, const QString& version) {
+    QJsonObject result;
+
+    if (!m_baselineManager) {
+        result["success"] = false;
+        result["error"] = "Baseline manager not initialized";
+        return QJsonDocument(result).toJson();
+    }
+
+    auto baseline = m_baselineManager->getBaselineVersion(baselineId.toStdString(), version.toStdString());
+    if (baseline.baseline_id.empty()) {
+        result["success"] = false;
+        result["error"] = "Baseline version not found";
+        return QJsonDocument(result).toJson();
+    }
+
+    result["success"] = true;
+    result["baseline_id"] = QString::fromStdString(baseline.baseline_id);
+    result["file_path"] = QString::fromStdString(baseline.file_path);
+    result["version"] = QString::fromStdString(baseline.version);
+    result["file_hash"] = QString::fromStdString(baseline.file_hash);
+    result["file_size"] = static_cast<qint64>(baseline.file_size);
+    result["permissions"] = QString::fromStdString(baseline.permissions);
+    result["owner"] = QString::fromStdString(baseline.owner);
+    result["group"] = QString::fromStdString(baseline.group);
+    result["created_at"] = QString::fromStdString(baseline.created_at);
+    result["is_valid"] = baseline.is_valid;
+
+    return QJsonDocument(result).toJson();
+}
+
+bool DBusInterface::RollbackBaseline(const QString& baselineId, const QString& version) {
+    if (!m_baselineManager) {
+        return false;
+    }
+
+    return m_baselineManager->rollbackBaseline(baselineId.toStdString(), version.toStdString());
+}
+
 QString DBusInterface::RemediateChange(const QString& changeId) {
     QJsonObject result;
 

@@ -33,10 +33,12 @@ int main(int argc, char* argv[]) {
     std::vector<std::string> baselineFiles;
     std::string baselineId;
 
-    baselineCmd->add_option("action", baselineAction, "Action: create, update, status")
+    baselineCmd->add_option("action", baselineAction, "Action: create, update, status, versions, version, rollback")
         ->required();
     baselineCmd->add_option("files", baselineFiles, "File paths");
     baselineCmd->add_option("--id", baselineId, "Baseline ID");
+    std::string baselineVersion;
+    baselineCmd->add_option("--version", baselineVersion, "Version string (for version/rollback)");
 
     // Verify command
     auto* verifyCmd = cliApp.add_subcommand("verify", "Verify file integrity");
@@ -134,6 +136,85 @@ int main(int argc, char* argv[]) {
                 std::cout << "Baseline status: " << reply.value().toStdString() << std::endl;
             } else {
                 std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+                return 1;
+            }
+        } else if (baselineAction == "versions") {
+            if (baselineId.empty()) {
+                std::cerr << "Error: Baseline ID required" << std::endl;
+                return 1;
+            }
+
+            QDBusReply<QString> reply = interface.call("GetBaselineVersions", QString::fromStdString(baselineId));
+            if (reply.isValid()) {
+                QJsonDocument doc = QJsonDocument::fromJson(reply.value().toUtf8());
+                if (doc.isObject()) {
+                    QJsonObject obj = doc.object();
+                    if (obj["success"].toBool()) {
+                        QJsonArray versions = obj["versions"].toArray();
+                        std::cout << "Baseline Versions: " << versions.size() << std::endl;
+                        for (const QJsonValue& value : versions) {
+                            QJsonObject version = value.toObject();
+                            std::cout << "  Version: " << version["version"].toString().toStdString() << std::endl;
+                            std::cout << "    Created: " << version["created_at"].toString().toStdString() << std::endl;
+                            std::cout << "    Hash: " << version["file_hash"].toString().toStdString().substr(0, 16) << "..." << std::endl;
+                            std::cout << "    Size: " << version["file_size"].toInt() << " bytes" << std::endl;
+                            std::cout << std::endl;
+                        }
+                    } else {
+                        std::cerr << "Error: " << obj["error"].toString().toStdString() << std::endl;
+                        return 1;
+                    }
+                }
+            } else {
+                std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+                return 1;
+            }
+        } else if (baselineAction == "version") {
+            if (baselineId.empty() || baselineVersion.empty()) {
+                std::cerr << "Error: Baseline ID and --version required" << std::endl;
+                return 1;
+            }
+
+            QDBusReply<QString> reply = interface.call("GetBaselineVersion",
+                                                        QString::fromStdString(baselineId),
+                                                        QString::fromStdString(baselineVersion));
+            if (reply.isValid()) {
+                QJsonDocument doc = QJsonDocument::fromJson(reply.value().toUtf8());
+                if (doc.isObject()) {
+                    QJsonObject obj = doc.object();
+                    if (obj["success"].toBool()) {
+                        std::cout << "Baseline Version Details:" << std::endl;
+                        std::cout << "  Baseline ID: " << obj["baseline_id"].toString().toStdString() << std::endl;
+                        std::cout << "  Version: " << obj["version"].toString().toStdString() << std::endl;
+                        std::cout << "  File: " << obj["file_path"].toString().toStdString() << std::endl;
+                        std::cout << "  Hash: " << obj["file_hash"].toString().toStdString() << std::endl;
+                        std::cout << "  Size: " << obj["file_size"].toInt() << " bytes" << std::endl;
+                        std::cout << "  Permissions: " << obj["permissions"].toString().toStdString() << std::endl;
+                        std::cout << "  Owner: " << obj["owner"].toString().toStdString() << std::endl;
+                        std::cout << "  Group: " << obj["group"].toString().toStdString() << std::endl;
+                        std::cout << "  Created: " << obj["created_at"].toString().toStdString() << std::endl;
+                    } else {
+                        std::cerr << "Error: " << obj["error"].toString().toStdString() << std::endl;
+                        return 1;
+                    }
+                }
+            } else {
+                std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+                return 1;
+            }
+        } else if (baselineAction == "rollback") {
+            if (baselineId.empty() || baselineVersion.empty()) {
+                std::cerr << "Error: Baseline ID and --version required" << std::endl;
+                return 1;
+            }
+
+            QDBusReply<bool> reply = interface.call("RollbackBaseline",
+                                                     QString::fromStdString(baselineId),
+                                                     QString::fromStdString(baselineVersion));
+            if (reply.isValid() && reply.value()) {
+                std::cout << "Baseline rolled back to version " << baselineVersion << " successfully" << std::endl;
+            } else {
+                std::cerr << "Error: Failed to rollback baseline" << std::endl;
                 return 1;
             }
         }

@@ -61,7 +61,7 @@ public:
     std::string getBaselineStatus(const std::string& baselineId) const;
 
     /**
-     * @brief Update baseline
+     * @brief Update baseline (creates new version)
      * @param baselineId Baseline ID
      * @return true if update successful, false otherwise
      */
@@ -81,14 +81,38 @@ public:
      */
     BaselineInfo getBaselineForFile(const std::string& filePath) const;
 
+    /**
+     * @brief Get baseline versions
+     * @param baselineId Baseline ID
+     * @return List of baseline versions (oldest first)
+     */
+    std::vector<BaselineInfo> getBaselineVersions(const std::string& baselineId) const;
+
+    /**
+     * @brief Get specific baseline version
+     * @param baselineId Baseline ID
+     * @param version Version string (e.g., "1.0.0", "2.0.0")
+     * @return Baseline information for the specified version, or empty if not found
+     */
+    BaselineInfo getBaselineVersion(const std::string& baselineId, const std::string& version) const;
+
+    /**
+     * @brief Rollback baseline to a specific version
+     * @param baselineId Baseline ID
+     * @param version Version to rollback to
+     * @return true if rollback successful, false otherwise
+     */
+    bool rollbackBaseline(const std::string& baselineId, const std::string& version);
+
 private:
     bool m_initialized;
     std::string m_storagePath;
     std::string m_hashAlgorithm;
     
     // In-memory baseline cache
-    std::map<std::string, BaselineInfo> m_baselines;
+    std::map<std::string, BaselineInfo> m_baselines;  // baseline_id -> current baseline
     std::map<std::string, std::string> m_fileToBaseline;  // file path -> baseline ID
+    std::map<std::string, std::vector<BaselineInfo>> m_baselineVersions;  // baseline_id -> list of versions
 
     /**
      * @brief Calculate file hash

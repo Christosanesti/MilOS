@@ -99,6 +99,29 @@ public Q_SLOTS:
     bool UpdateBaseline(const QString& baselineId);
 
     /**
+     * @brief Get baseline versions
+     * @param baselineId Baseline ID
+     * @return List of baseline versions (JSON string)
+     */
+    QString GetBaselineVersions(const QString& baselineId);
+
+    /**
+     * @brief Get specific baseline version
+     * @param baselineId Baseline ID
+     * @param version Version string
+     * @return Baseline information for the specified version (JSON string)
+     */
+    QString GetBaselineVersion(const QString& baselineId, const QString& version);
+
+    /**
+     * @brief Rollback baseline to a specific version
+     * @param baselineId Baseline ID
+     * @param version Version to rollback to
+     * @return true if rollback successful, false otherwise
+     */
+    bool RollbackBaseline(const QString& baselineId, const QString& version);
+
+    /**
      * @brief Remediate a detected change
      * @param changeId Change ID to remediate
      * @return Remediation result (JSON string)
