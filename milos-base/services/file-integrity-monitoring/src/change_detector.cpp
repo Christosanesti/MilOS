@@ -5,6 +5,8 @@
 #include <iomanip>
 #include <sys/stat.h>
 #include <filesystem>
+#include <algorithm>
+#include <random>
 
 ChangeDetector::ChangeDetector()
     : m_initialized(false)
@@ -96,6 +98,12 @@ FileChange ChangeDetector::detectChange(const std::string& filePath) {
         // Classify severity
         change.severity = classifySeverity(change);
 
+        // Check if change is whitelisted
+        if (isWhitelisted(change)) {
+            // Return empty change (whitelisted changes are not reported)
+            return FileChange();
+        }
+
         // Store change
         m_detectedChanges.push_back(change);
 
@@ -133,5 +141,129 @@ std::string ChangeDetector::classifySeverity(const FileChange& change) const {
         default:
             return "low";
     }
+}
+
+std::string ChangeDetector::addWhitelistEntry(const std::string& filePath,
+                                              const std::string& changeType,
+                                              const std::string& description) {
+    WhitelistEntry entry;
+    entry.entry_id = generateWhitelistId();
+    entry.file_pattern = filePath;
+    entry.change_type = changeType;
+    entry.description = description;
+
+    char timeStr[64];
+    std::time_t now = std::time(nullptr);
+    std::strftime(timeStr, sizeof(timeStr), "%Y-%m-%d %H:%M:%S", std::localtime(&now));
+    entry.created_at = timeStr;
+
+    m_whitelistEntries[entry.entry_id] = entry;
+    return entry.entry_id;
+}
+
+bool ChangeDetector::removeWhitelistEntry(const std::string& whitelistId) {
+    auto it = m_whitelistEntries.find(whitelistId);
+    if (it != m_whitelistEntries.end()) {
+        m_whitelistEntries.erase(it);
+        return true;
+    }
+    return false;
+}
+
+std::vector<std::map<std::string, std::string>> ChangeDetector::getWhitelistEntries() const {
+    std::vector<std::map<std::string, std::string>> entries;
+    for (const auto& [id, entry] : m_whitelistEntries) {
+        std::map<std::string, std::string> entryMap;
+        entryMap["entry_id"] = entry.entry_id;
+        entryMap["file_pattern"] = entry.file_pattern;
+        entryMap["change_type"] = entry.change_type;
+        entryMap["description"] = entry.description;
+        entryMap["created_at"] = entry.created_at;
+        entries.push_back(entryMap);
+    }
+    return entries;
+}
+
+bool ChangeDetector::isWhitelisted(const FileChange& change) const {
+    // Convert change type to string
+    std::string changeTypeStr;
+    switch (change.change_type) {
+        case ChangeType::MODIFIED: changeTypeStr = "modified"; break;
+        case ChangeType::DELETED: changeTypeStr = "deleted"; break;
+        case ChangeType::CREATED: changeTypeStr = "created"; break;
+        case ChangeType::PERMISSIONS_CHANGED: changeTypeStr = "permissions_changed"; break;
+        case ChangeType::OWNERSHIP_CHANGED: changeTypeStr = "ownership_changed"; break;
+    }
+
+    // Check each whitelist entry
+    for (const auto& [id, entry] : m_whitelistEntries) {
+        // Check file pattern match
+        if (!matchPattern(entry.file_pattern, change.file_path)) {
+            continue;
+        }
+
+        // Check change type match (empty change_type means all types)
+        if (!entry.change_type.empty() && entry.change_type != changeTypeStr) {
+            continue;
+        }
+
+        // Match found - change is whitelisted
+        return true;
+    }
+
+    return false;
+}
+
+bool ChangeDetector::matchPattern(const std::string& pattern, const std::string& filePath) const {
+    // Simple wildcard matching: * matches any sequence, ? matches any single character
+    size_t patternPos = 0;
+    size_t filePos = 0;
+    size_t patternLen = pattern.length();
+    size_t fileLen = filePath.length();
+
+    while (patternPos < patternLen && filePos < fileLen) {
+        if (pattern[patternPos] == '*') {
+            // Skip consecutive *s
+            while (patternPos < patternLen && pattern[patternPos] == '*') {
+                patternPos++;
+            }
+            // If * is at the end, match everything
+            if (patternPos == patternLen) {
+                return true;
+            }
+            // Try to match the rest of the pattern
+            while (filePos < fileLen) {
+                if (matchPattern(pattern.substr(patternPos), filePath.substr(filePos))) {
+                    return true;
+                }
+                filePos++;
+            }
+            return false;
+        } else if (pattern[patternPos] == '?' || pattern[patternPos] == filePath[filePos]) {
+            patternPos++;
+            filePos++;
+        } else {
+            return false;
+        }
+    }
+
+    // Handle trailing *s
+    while (patternPos < patternLen && pattern[patternPos] == '*') {
+        patternPos++;
+    }
+
+    return patternPos == patternLen && filePos == fileLen;
+}
+
+std::string ChangeDetector::generateWhitelistId() const {
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> dis(0, 15);
+    std::stringstream ss;
+    ss << "whitelist-";
+    for (int i = 0; i < 16; i++) {
+        ss << std::hex << dis(gen);
+    }
+    return ss.str();
 }
 

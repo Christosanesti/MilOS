@@ -146,6 +146,57 @@ QString DBusInterface::GetChanges(const QString& filters) {
     return QJsonDocument(changesArray).toJson();
 }
 
+QString DBusInterface::AddWhitelistEntry(const QString& filePattern,
+                                         const QString& changeType,
+                                         const QString& description) {
+    if (!m_changeDetector) {
+        return "";
+    }
+
+    std::string entryId = m_changeDetector->addWhitelistEntry(
+        filePattern.toStdString(),
+        changeType.toStdString(),
+        description.toStdString()
+    );
+
+    return QString::fromStdString(entryId);
+}
+
+bool DBusInterface::RemoveWhitelistEntry(const QString& whitelistId) {
+    if (!m_changeDetector) {
+        return false;
+    }
+
+    return m_changeDetector->removeWhitelistEntry(whitelistId.toStdString());
+}
+
+QString DBusInterface::GetWhitelistEntries() {
+    QJsonObject result;
+
+    if (!m_changeDetector) {
+        result["success"] = false;
+        result["error"] = "Change detector not initialized";
+        return QJsonDocument(result).toJson();
+    }
+
+    auto entries = m_changeDetector->getWhitelistEntries();
+    QJsonArray entriesArray;
+
+    for (const auto& entryMap : entries) {
+        QJsonObject entryObj;
+        entryObj["entry_id"] = QString::fromStdString(entryMap.at("entry_id"));
+        entryObj["file_pattern"] = QString::fromStdString(entryMap.at("file_pattern"));
+        entryObj["change_type"] = QString::fromStdString(entryMap.at("change_type"));
+        entryObj["description"] = QString::fromStdString(entryMap.at("description"));
+        entryObj["created_at"] = QString::fromStdString(entryMap.at("created_at"));
+        entriesArray.append(entryObj);
+    }
+
+    result["success"] = true;
+    result["entries"] = entriesArray;
+    return QJsonDocument(result).toJson();
+}
+
 QString DBusInterface::GetBaselineStatus(const QString& baselineId) {
     if (!m_baselineManager) {
         return "error";

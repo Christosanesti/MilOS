@@ -50,6 +50,20 @@ int main(int argc, char* argv[]) {
     std::string changesFilters;
     changesCmd->add_option("--filters", changesFilters, "Filter options (JSON)");
 
+    // Whitelist command
+    auto* whitelistCmd = cliApp.add_subcommand("whitelist", "Manage change whitelist");
+    std::string whitelistAction;
+    std::string whitelistId;
+    std::string whitelistPattern;
+    std::string whitelistChangeType;
+    std::string whitelistDescription;
+    whitelistCmd->add_option("action", whitelistAction, "Action: add, remove, list")
+        ->required();
+    whitelistCmd->add_option("--id", whitelistId, "Whitelist entry ID");
+    whitelistCmd->add_option("--pattern", whitelistPattern, "File path pattern (supports wildcards)");
+    whitelistCmd->add_option("--type", whitelistChangeType, "Change type (modified, deleted, created, etc.)");
+    whitelistCmd->add_option("--description", whitelistDescription, "Description");
+
     // Status command
     auto* statusCmd = cliApp.add_subcommand("status", "Show FIM status");
 
@@ -258,6 +272,71 @@ int main(int argc, char* argv[]) {
             }
         } else {
             std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            return 1;
+        }
+    }
+
+    // Handle whitelist command
+    if (whitelistCmd->parsed()) {
+        if (whitelistAction == "add") {
+            if (whitelistPattern.empty()) {
+                std::cerr << "Error: --pattern required for add" << std::endl;
+                return 1;
+            }
+
+            QDBusReply<QString> reply = interface.call("AddWhitelistEntry",
+                                                        QString::fromStdString(whitelistPattern),
+                                                        QString::fromStdString(whitelistChangeType),
+                                                        QString::fromStdString(whitelistDescription));
+            if (reply.isValid() && !reply.value().isEmpty()) {
+                std::cout << "Whitelist entry added successfully" << std::endl;
+                std::cout << "  Entry ID: " << reply.value().toStdString() << std::endl;
+            } else {
+                std::cerr << "Error: Failed to add whitelist entry" << std::endl;
+                return 1;
+            }
+        } else if (whitelistAction == "remove") {
+            if (whitelistId.empty()) {
+                std::cerr << "Error: --id required for remove" << std::endl;
+                return 1;
+            }
+
+            QDBusReply<bool> reply = interface.call("RemoveWhitelistEntry", QString::fromStdString(whitelistId));
+            if (reply.isValid() && reply.value()) {
+                std::cout << "Whitelist entry removed successfully" << std::endl;
+            } else {
+                std::cerr << "Error: Failed to remove whitelist entry" << std::endl;
+                return 1;
+            }
+        } else if (whitelistAction == "list") {
+            QDBusReply<QString> reply = interface.call("GetWhitelistEntries");
+            if (reply.isValid()) {
+                QJsonDocument doc = QJsonDocument::fromJson(reply.value().toUtf8());
+                if (doc.isObject()) {
+                    QJsonObject obj = doc.object();
+                    if (obj["success"].toBool()) {
+                        QJsonArray entries = obj["entries"].toArray();
+                        std::cout << "Whitelist Entries: " << entries.size() << std::endl;
+                        for (const QJsonValue& value : entries) {
+                            QJsonObject entry = value.toObject();
+                            std::cout << "  Entry ID: " << entry["entry_id"].toString().toStdString() << std::endl;
+                            std::cout << "    Pattern: " << entry["file_pattern"].toString().toStdString() << std::endl;
+                            std::cout << "    Change Type: " << (entry["change_type"].toString().isEmpty() ? "all" : entry["change_type"].toString().toStdString()) << std::endl;
+                            std::cout << "    Description: " << entry["description"].toString().toStdString() << std::endl;
+                            std::cout << "    Created: " << entry["created_at"].toString().toStdString() << std::endl;
+                            std::cout << std::endl;
+                        }
+                    } else {
+                        std::cerr << "Error: " << obj["error"].toString().toStdString() << std::endl;
+                        return 1;
+                    }
+                }
+            } else {
+                std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+                return 1;
+            }
+        } else {
+            std::cerr << "Error: Unknown action: " << whitelistAction << std::endl;
             return 1;
         }
     }

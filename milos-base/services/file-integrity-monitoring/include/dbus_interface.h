@@ -85,6 +85,30 @@ public Q_SLOTS:
     QString GetChanges(const QString& filters = "");
 
     /**
+     * @brief Add change whitelist entry
+     * @param filePattern File path pattern (supports wildcards)
+     * @param changeType Change type (empty for all types)
+     * @param description Optional description
+     * @return Whitelist entry ID
+     */
+    QString AddWhitelistEntry(const QString& filePattern,
+                              const QString& changeType = "",
+                              const QString& description = "");
+
+    /**
+     * @brief Remove whitelist entry
+     * @param whitelistId Whitelist entry ID
+     * @return true if removal successful, false otherwise
+     */
+    bool RemoveWhitelistEntry(const QString& whitelistId);
+
+    /**
+     * @brief Get all whitelist entries
+     * @return List of whitelist entries (JSON string)
+     */
+    QString GetWhitelistEntries();
+
+    /**
      * @brief Get baseline status
      * @param baselineId Baseline ID
      * @return Status string
