@@ -31,3 +31,4 @@ private slots:
 QTEST_MAIN(UpdateGuiTests)
 #include "test_main.moc"
 
+

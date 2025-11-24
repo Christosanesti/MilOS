@@ -376,3 +376,4 @@ void DBusInterfaceWrapper::parseUpdateList(const QString& jsonResult) {
     }
 }
 
+

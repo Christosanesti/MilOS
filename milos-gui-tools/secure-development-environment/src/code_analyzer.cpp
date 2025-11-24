@@ -121,3 +121,4 @@ QString CodeAnalyzer::generateIssueId() const {
 
 
 
+

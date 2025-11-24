@@ -1,14 +1,11 @@
 cmake_minimum_required(VERSION 3.27)
-project(MilosUpdateGui VERSION 1.0.0 LANGUAGES CXX)
+project(MilosDataGuardGui VERSION 1.0.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Find required packages
 find_package(Qt6 REQUIRED COMPONENTS Core Widgets Quick QuickControls2 DBus)
-
-# Find SQLite3 for update history storage (if needed)
-find_package(SQLite3 REQUIRED)
 
 # Include directories
 include_directories(
@@ -19,60 +16,56 @@ include_directories(
 # Source files
 set(APPLICATION_SOURCES
     src/main.cpp
-    src/update_manager.cpp
+    src/data_guard_manager.cpp
     src/dbus_interface_wrapper.cpp
 )
 
 set(APPLICATION_HEADERS
-    include/update_manager.h
+    include/data_guard_manager.h
     include/dbus_interface_wrapper.h
 )
 
 # QML files
 set(QML_FILES
     ui/main.qml
-    ui/UpdateCheckInterface.qml
-    ui/UpdateInstallationInterface.qml
-    ui/UpdateHistoryViewer.qml
-    ui/RollbackInterface.qml
-    ui/ServiceStatusDashboard.qml
+    ui/PolicyConfigurationInterface.qml
+    ui/TransmissionStatusDashboard.qml
+    ui/BlockedTransmissionsViewer.qml
 )
 
 # Create executable
-add_executable(milos-update-gui
+add_executable(milos-data-guard-gui
     ${APPLICATION_SOURCES}
     ${APPLICATION_HEADERS}
     ${QML_FILES}
 )
 
 # Link libraries
-target_link_libraries(milos-update-gui
+target_link_libraries(milos-data-guard-gui
     Qt6::Core
     Qt6::Widgets
     Qt6::Quick
     Qt6::QuickControls2
     Qt6::DBus
-    SQLite3::SQLite3
 )
 
 # Enable Qt MOC and QRC
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
-set_property(TARGET milos-update-gui PROPERTY AUTOMOC ON)
+set_property(TARGET milos-data-guard-gui PROPERTY AUTOMOC ON)
 
 # Create QML resource file
-qt6_add_resources(milos-update-gui "qml"
+qt6_add_resources(milos-data-guard-gui "qml"
     PREFIX "/"
     FILES ${QML_FILES}
 )
 
 # Install executable
-install(TARGETS milos-update-gui
+install(TARGETS milos-data-guard-gui
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
 # Testing
 enable_testing()
 add_subdirectory(tests)
-
 

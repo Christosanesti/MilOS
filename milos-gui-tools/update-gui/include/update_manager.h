@@ -110,3 +110,4 @@ private:
 
 #endif // UPDATE_MANAGER_H
 
+

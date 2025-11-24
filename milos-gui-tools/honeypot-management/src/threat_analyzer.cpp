@@ -102,3 +102,4 @@ QString ThreatAnalyzer::generateThreatId() const {
 
 
 
+

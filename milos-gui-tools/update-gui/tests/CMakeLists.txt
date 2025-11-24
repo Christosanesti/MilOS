@@ -21,3 +21,4 @@ set_property(TARGET milos-update-gui-tests PROPERTY AUTOMOC ON)
 # Add test
 add_test(NAME UpdateGuiTests COMMAND milos-update-gui-tests)
 
+
