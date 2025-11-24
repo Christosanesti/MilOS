@@ -1,22 +1,26 @@
 #include "securemode.h"
+#include "auditlogger.h"
 #include <QDBusConnection>
 #include <QDBusInterface>
 #include <QDBusReply>
 #include <QDebug>
+#include <QFile>
+#include <QStandardPaths>
+#include <QDir>
+#include <QTextStream>
+#include <QDateTime>
 
 SecureMode::SecureMode(QObject *parent)
     : QObject(parent)
     , m_active(false)
 {
-    // Define non-essential services that can be stopped in secure mode
-    // TODO: Make this configurable
+    // Check current secure mode status
+    checkSecureModeStatus();
 }
 
 void SecureMode::activateSecureMode()
 {
-    // TODO: Implement actual secure mode activation via systemd D-Bus
-    // This is a structure for systemd service management integration
-    
+    // Implement actual secure mode activation via systemd D-Bus
     QStringList servicesToStop = getNonEssentialServiceList();
     QStringList successfullyStopped;
     
@@ -29,8 +33,28 @@ void SecureMode::activateSecureMode()
     if (!successfullyStopped.isEmpty()) {
         m_stoppedServices = successfullyStopped;
         m_active = true;
+        
+        // Save state to file
+        QString stateFile = QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation) + "/milos-secure-mode.state";
+        QDir().mkpath(QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation));
+        QFile file(stateFile);
+        if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+            QTextStream out(&file);
+            for (const QString &service : successfullyStopped) {
+                out << service << "\n";
+            }
+        }
+        
         emit activeChanged();
         emit secureModeActivated();
+        
+        // Log to audit service
+        AuditLogger logger;
+        QVariantMap eventData;
+        eventData["action"] = "activate";
+        eventData["services_disabled"] = successfullyStopped.join(",");
+        eventData["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+        logger.logEmergencyAction("secure_mode_activation", eventData);
     } else {
         emit error("Failed to activate secure mode. Please check system permissions.");
     }
@@ -38,14 +62,18 @@ void SecureMode::activateSecureMode()
 
 void SecureMode::deactivateSecureMode()
 {
-    // TODO: Implement actual secure mode deactivation via systemd D-Bus
-    
+    // Implement actual secure mode deactivation via systemd D-Bus
     for (const QString &service : m_stoppedServices) {
         startService(service);
     }
     
     m_stoppedServices.clear();
     m_active = false;
+    
+    // Remove state file
+    QString stateFile = QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation) + "/milos-secure-mode.state";
+    QFile::remove(stateFile);
+    
     emit activeChanged();
     emit secureModeDeactivated();
 }
@@ -57,18 +85,73 @@ QStringList SecureMode::getNonEssentialServices()
 
 bool SecureMode::stopService(const QString &serviceName)
 {
-    // TODO: Implement systemd D-Bus integration
-    // Interface: org.freedesktop.systemd1
-    // Method: StopUnit(serviceName, "replace")
-    return false;
+    // Implement systemd D-Bus integration
+    QDBusConnection systemBus = QDBusConnection::systemBus();
+    QDBusInterface systemdInterface("org.freedesktop.systemd1",
+                                    "/org/freedesktop/systemd1",
+                                    "org.freedesktop.systemd1.Manager",
+                                    systemBus);
+    
+    if (!systemdInterface.isValid()) {
+        qWarning() << "Cannot connect to systemd D-Bus interface";
+        return false;
+    }
+    
+    QDBusReply<QDBusObjectPath> reply = systemdInterface.call("StopUnit", serviceName, "replace");
+    
+    if (reply.isValid()) {
+        qDebug() << "Stopped service:" << serviceName;
+        return true;
+    } else {
+        qWarning() << "Failed to stop service" << serviceName << ":" << reply.error().message();
+        return false;
+    }
 }
 
 bool SecureMode::startService(const QString &serviceName)
 {
-    // TODO: Implement systemd D-Bus integration
-    // Interface: org.freedesktop.systemd1
-    // Method: StartUnit(serviceName, "replace")
-    return false;
+    // Implement systemd D-Bus integration
+    QDBusConnection systemBus = QDBusConnection::systemBus();
+    QDBusInterface systemdInterface("org.freedesktop.systemd1",
+                                    "/org/freedesktop/systemd1",
+                                    "org.freedesktop.systemd1.Manager",
+                                    systemBus);
+    
+    if (!systemdInterface.isValid()) {
+        qWarning() << "Cannot connect to systemd D-Bus interface";
+        return false;
+    }
+    
+    QDBusReply<QDBusObjectPath> reply = systemdInterface.call("StartUnit", serviceName, "replace");
+    
+    if (reply.isValid()) {
+        qDebug() << "Started service:" << serviceName;
+        return true;
+    } else {
+        qWarning() << "Failed to start service" << serviceName << ":" << reply.error().message();
+        return false;
+    }
+}
+
+void SecureMode::checkSecureModeStatus()
+{
+    // Check if secure mode is active by checking if services are stopped
+    // This is a simple check - in production, use a state file or D-Bus property
+    QString stateFile = QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation) + "/milos-secure-mode.state";
+    if (QFile::exists(stateFile)) {
+        m_active = true;
+        // Load stopped services from state file
+        QFile file(stateFile);
+        if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            QTextStream in(&file);
+            while (!in.atEnd()) {
+                QString line = in.readLine().trimmed();
+                if (!line.isEmpty()) {
+                    m_stoppedServices.append(line);
+                }
+            }
+        }
+    }
 }
 
 QStringList SecureMode::getNonEssentialServiceList()
