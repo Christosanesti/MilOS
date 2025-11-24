@@ -8,6 +8,8 @@ add_executable(milos-installer-tests
     test_main.cpp
     test_welcomescreen.cpp
     test_partitioningscreen.cpp
+    test_encryptionsetupscreen.cpp
+    test_useraccountscreen.cpp
     test_wizardnavigation.cpp
     test_installerstate.cpp
     test_accessibility.cpp
