@@ -12,6 +12,8 @@ add_executable(milos-installer-tests
     test_useraccountscreen.cpp
     test_networkconfigurationscreen.cpp
     test_hardwaredetectionscreen.cpp
+    test_packageinstallationscreen.cpp
+    test_installationcompletionscreen.cpp
     test_wizardnavigation.cpp
     test_installerstate.cpp
     test_accessibility.cpp
