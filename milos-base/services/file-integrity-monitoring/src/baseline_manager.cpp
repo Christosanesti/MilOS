@@ -346,13 +346,162 @@ std::string BaselineManager::calculateFileHash(const std::string& filePath) cons
 }
 
 void BaselineManager::loadBaselines() {
-    // TODO: Load baselines from SQLite database
-    // For now, baselines are created fresh on each run
+    std::string dbPath = m_storagePath + "/baselines.db";
+    
+    // Check if database exists
+    if (!std::filesystem::exists(dbPath)) {
+        // Create database and table
+        sqlite3* db;
+        if (sqlite3_open(dbPath.c_str(), &db) != SQLITE_OK) {
+            std::cerr << "Failed to create database: " << sqlite3_errmsg(db) << std::endl;
+            sqlite3_close(db);
+            return;
+        }
+        
+        std::string sql = R"(
+            CREATE TABLE IF NOT EXISTS baselines (
+                baseline_id TEXT PRIMARY KEY,
+                file_path TEXT NOT NULL,
+                hash_algorithm TEXT NOT NULL,
+                file_hash TEXT NOT NULL,
+                file_size INTEGER NOT NULL,
+                permissions TEXT NOT NULL,
+                owner TEXT NOT NULL,
+                group_name TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                version TEXT NOT NULL,
+                is_valid INTEGER NOT NULL DEFAULT 1
+            )
+        )";
+        
+        char* errMsg = nullptr;
+        if (sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &errMsg) != SQLITE_OK) {
+            std::cerr << "Failed to create baselines table: " << errMsg << std::endl;
+            sqlite3_free(errMsg);
+            sqlite3_close(db);
+            return;
+        }
+        
+        sqlite3_close(db);
+        return; // Database created, no baselines to load yet
+    }
+    
+    // Load baselines from database
+    sqlite3* db;
+    if (sqlite3_open(dbPath.c_str(), &db) != SQLITE_OK) {
+        std::cerr << "Failed to open database: " << sqlite3_errmsg(db) << std::endl;
+        sqlite3_close(db);
+        return;
+    }
+    
+    // Load latest version of each baseline
+    std::string sql = R"(
+        SELECT baseline_id, file_path, hash_algorithm, file_hash, file_size,
+               permissions, owner, group_name, created_at, version, is_valid
+        FROM baselines
+        WHERE (baseline_id, version) IN (
+            SELECT baseline_id, MAX(version) 
+            FROM baselines 
+            GROUP BY baseline_id
+        )
+    )";
+    
+    sqlite3_stmt* stmt;
+    if (sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr) == SQLITE_OK) {
+        while (sqlite3_step(stmt) == SQLITE_ROW) {
+            BaselineInfo baseline;
+            baseline.baseline_id = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0));
+            baseline.file_path = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
+            baseline.hash_algorithm = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
+            baseline.file_hash = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3));
+            baseline.file_size = static_cast<size_t>(sqlite3_column_int64(stmt, 4));
+            baseline.permissions = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 5));
+            baseline.owner = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 6));
+            baseline.group = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 7));
+            baseline.created_at = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 8));
+            baseline.version = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 9));
+            baseline.is_valid = (sqlite3_column_int(stmt, 10) != 0);
+            
+            m_baselines[baseline.baseline_id] = baseline;
+            m_fileToBaseline[baseline.file_path] = baseline.baseline_id;
+        }
+        sqlite3_finalize(stmt);
+    }
+    
+    // Load all versions for versioning support
+    sql = "SELECT baseline_id, file_path, hash_algorithm, file_hash, file_size, "
+          "permissions, owner, group_name, created_at, version, is_valid "
+          "FROM baselines ORDER BY baseline_id, version";
+    
+    if (sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr) == SQLITE_OK) {
+        while (sqlite3_step(stmt) == SQLITE_ROW) {
+            BaselineInfo baseline;
+            baseline.baseline_id = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0));
+            baseline.file_path = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
+            baseline.hash_algorithm = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
+            baseline.file_hash = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3));
+            baseline.file_size = static_cast<size_t>(sqlite3_column_int64(stmt, 4));
+            baseline.permissions = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 5));
+            baseline.owner = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 6));
+            baseline.group = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 7));
+            baseline.created_at = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 8));
+            baseline.version = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 9));
+            baseline.is_valid = (sqlite3_column_int(stmt, 10) != 0);
+            
+            m_baselineVersions[baseline.baseline_id].push_back(baseline);
+        }
+        sqlite3_finalize(stmt);
+    }
+    
+    sqlite3_close(db);
+    std::cout << "Loaded " << m_baselines.size() << " baselines from database" << std::endl;
 }
 
 void BaselineManager::saveBaseline(const BaselineInfo& baseline) {
-    // TODO: Save baseline to SQLite database
-    // For now, baselines are kept in memory
-    std::cout << "Baseline saved: " << baseline.baseline_id << " for " << baseline.file_path << std::endl;
+    std::string dbPath = m_storagePath + "/baselines.db";
+    
+    sqlite3* db;
+    if (sqlite3_open(dbPath.c_str(), &db) != SQLITE_OK) {
+        std::cerr << "Failed to open database: " << sqlite3_errmsg(db) << std::endl;
+        sqlite3_close(db);
+        return;
+    }
+    
+    std::string sql = R"(
+        INSERT OR REPLACE INTO baselines 
+        (baseline_id, file_path, hash_algorithm, file_hash, file_size, 
+         permissions, owner, group_name, created_at, version, is_valid)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    )";
+    
+    sqlite3_stmt* stmt;
+    if (sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr) == SQLITE_OK) {
+        sqlite3_bind_text(stmt, 1, baseline.baseline_id.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 2, baseline.file_path.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 3, baseline.hash_algorithm.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 4, baseline.file_hash.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_int64(stmt, 5, static_cast<sqlite3_int64>(baseline.file_size));
+        sqlite3_bind_text(stmt, 6, baseline.permissions.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 7, baseline.owner.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 8, baseline.group.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 9, baseline.created_at.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 10, baseline.version.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_int(stmt, 11, baseline.is_valid ? 1 : 0);
+        
+        if (sqlite3_step(stmt) != SQLITE_DONE) {
+            std::cerr << "Failed to save baseline: " << sqlite3_errmsg(db) << std::endl;
+        } else {
+            std::cout << "Baseline saved: " << baseline.baseline_id << " for " << baseline.file_path << std::endl;
+        }
+        
+        sqlite3_finalize(stmt);
+    }
+    
+    sqlite3_close(db);
+    
+    // Update in-memory cache
+    m_baselines[baseline.baseline_id] = baseline;
+    m_fileToBaseline[baseline.file_path] = baseline.baseline_id;
+    m_baselineVersions[baseline.baseline_id].push_back(baseline);
 }
 

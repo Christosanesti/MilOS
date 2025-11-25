@@ -4,6 +4,8 @@
 #include <QObject>
 #include <QString>
 #include <QVariantList>
+#include <QProcess>
+#include <QStringList>
 
 class PackageManager : public QObject
 {
@@ -44,8 +46,14 @@ private:
     int m_packagesInstalled;
     int m_totalPackages;
     QString m_currentPackage;
+    QProcess* m_process;
+    bool m_paused;
+    QStringList m_packageList;
+    QString m_packageManager; // "pacman" or "apt"
     
-    // TODO: Integrate with pacman/APT package management
+    void detectPackageManager();
+    void parsePackageList();
+    void updateProgress();
 };
 
 #endif // PACKAGEMANAGER_H

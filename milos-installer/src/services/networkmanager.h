@@ -32,7 +32,7 @@ private:
     bool m_scanning;
     QVariantList m_networkInterfaces;
     
-    // TODO: Integrate with systemd-networkd or NetworkManager
+    int subnetToCidr(const QString &subnet);
 };
 
 #endif // NETWORKMANAGER_H

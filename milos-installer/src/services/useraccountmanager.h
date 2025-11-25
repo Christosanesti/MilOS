@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QString>
+#include <QDateTime>
 
 class UserAccountManager : public QObject
 {
@@ -20,7 +21,8 @@ signals:
     void userAccountError(const QString &error);
 
 private:
-    // TODO: Integrate with system user creation (useradd, etc.)
+    QString hashPassword(const QString &password);
+    QString generateSalt();
 };
 
 #endif // USERACCOUNTMANAGER_H
