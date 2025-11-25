@@ -45,7 +45,11 @@ private:
     bool m_installingDrivers;
     double m_driverProgress;
     
-    // TODO: Integrate with udev, lshw, or custom hardware detection
+    QVariantMap detectCPU();
+    QVariantList detectGPUs();
+    QVariantList detectNetworkCards();
+    QVariantList detectStorage();
+    QVariantList detectAudio();
 };
 
 #endif // HARDWAREMANAGER_H

@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QString>
+#include <QProcess>
 
 class EncryptionManager : public QObject
 {
@@ -19,6 +20,7 @@ public:
     Q_INVOKABLE void setupEncryption(const QString &password, const QString &algorithm);
     Q_INVOKABLE void cancelEncryption();
     Q_INVOKABLE bool validateDiskSpace();
+    Q_INVOKABLE void setDevicePath(const QString &devicePath) { m_devicePath = devicePath; }
 
 signals:
     void encryptionInProgressChanged();
@@ -29,8 +31,8 @@ signals:
 private:
     bool m_encryptionInProgress;
     double m_encryptionProgress;
-    
-    // TODO: Integrate with libcryptsetup or systemd-cryptsetup for LUKS2
+    QProcess* m_process;
+    QString m_devicePath;
 };
 
 #endif // ENCRYPTIONMANAGER_H
