@@ -1,15 +1,20 @@
 #include "fallbackstyling.h"
+#include "notificationmanager.h"
 #include <QDebug>
 #include <QGuiApplication>
 #include <QScreen>
 #include <QOpenGLContext>
 #include <QOpenGLFunctions>
+#include <QCoreApplication>
 
 FallbackStyling::FallbackStyling(QObject* parent)
     : QObject(parent)
     , m_active(false)
     , m_reason("")
+    , m_notificationManager(new NotificationManager(this))
 {
+    connect(this, &FallbackStyling::fallbackActivated, 
+            m_notificationManager, &NotificationManager::showFallbackNotification);
     checkXenonEffects();
 }
 

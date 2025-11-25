@@ -5,6 +5,8 @@
 #include <QString>
 #include <QColor>
 
+class NotificationManager;
+
 /**
  * @brief Fallback Navigation Styling
  * 
@@ -36,6 +38,7 @@ signals:
 private:
     bool m_active;
     QString m_reason;
+    NotificationManager* m_notificationManager;
     
     bool canRenderXenonEffects();
     void activateFallback(const QString& reason);
