@@ -1,0 +1,52 @@
+# bash completion for milos-network-monitor
+# Completion script for MilOS network monitoring CLI tool
+
+_milos_network_monitor() {
+    local cur prev words cword
+    _init_completion -s || return
+
+    case $prev in
+        -i|--interface)
+            # Dynamic completion: list network interfaces
+            if command -v ip &> /dev/null; then
+                COMPREPLY=($(compgen -W "$(ip -o link show | awk -F': ' '{print $2}')" -- "$cur"))
+            elif command -v ifconfig &> /dev/null; then
+                COMPREPLY=($(compgen -W "$(ifconfig -s | awk '{print $1}' | tail -n +2)" -- "$cur"))
+            fi
+            return
+            ;;
+        -f|--file|--config)
+            _filedir
+            return
+            ;;
+    esac
+
+    if [[ $cword -eq 1 ]]; then
+        # First level: commands
+        COMPREPLY=($(compgen -W "capture analyze threats ids-config topology" -- "$cur"))
+    elif [[ $cword -eq 2 ]]; then
+        # Second level: command-specific options
+        case ${words[1]} in
+            capture)
+                COMPREPLY=($(compgen -W "-i --interface -f --filter --start --stop --stats" -- "$cur"))
+                ;;
+            analyze)
+                COMPREPLY=($(compgen -W "-f --file --format --json" -- "$cur"))
+                ;;
+            threats)
+                COMPREPLY=($(compgen -W "--severity --format --json" -- "$cur"))
+                ;;
+            ids-config)
+                COMPREPLY=($(compgen -W "-f --file --show --reload" -- "$cur"))
+                ;;
+            topology)
+                COMPREPLY=($(compgen -W "--format --json" -- "$cur"))
+                ;;
+        esac
+    else
+        _filedir
+    fi
+}
+
+complete -F _milos_network_monitor milos-network-monitor
+

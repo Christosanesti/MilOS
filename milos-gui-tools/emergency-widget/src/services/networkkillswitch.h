@@ -35,7 +35,7 @@ private:
     bool m_requiresConfirmation;
     QStringList m_disabledInterfaces;
     
-    // TODO: Integrate with NetworkManager or systemd-networkd D-Bus interface
+    // NetworkManager and systemd-networkd D-Bus integration
     bool disableNetworkManager();
     bool disableSystemdNetworkd();
     bool enableNetworkManager();

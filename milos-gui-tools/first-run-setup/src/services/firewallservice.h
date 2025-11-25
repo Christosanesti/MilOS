@@ -23,8 +23,6 @@ signals:
 
 private:
     QString m_status; // not_configured, inactive, active
-    
-    // TODO: Integrate with iptables/nftables or firewall service
 };
 
 #endif // FIREWALLSERVICE_H

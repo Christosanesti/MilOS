@@ -112,3 +112,4 @@ QColor LowLight::adjustColorForLowLight(const QColor& color)
     return QColor(r, g, b, color.alpha());
 }
 
+

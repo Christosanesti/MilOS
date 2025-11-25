@@ -95,6 +95,13 @@ private:
      * @param snapshotId Snapshot ID to delete
      */
     void deleteSnapshot(const std::string& snapshotId);
+
+    /**
+     * @brief Initialize SQLite database for snapshot storage
+     * @param dbPath Database file path
+     * @return true if initialization successful, false otherwise
+     */
+    bool initializeDatabase(const std::string& dbPath);
 };
 
 #endif // ROLLBACK_MANAGER_H

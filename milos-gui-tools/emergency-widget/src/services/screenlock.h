@@ -17,7 +17,7 @@ signals:
     void error(const QString &errorMessage);
 
 private:
-    // TODO: Integrate with KDE Plasma/KWin D-Bus interface or systemd-logind
+    // KDE Plasma/KWin D-Bus interface and systemd-logind integration
     bool lockViaKWin();
     bool lockViaSystemdLogind();
 };

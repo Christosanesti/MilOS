@@ -2,6 +2,9 @@
 #include <QDBusConnection>
 #include <QDBusInterface>
 #include <QDBusReply>
+#include <QDBusMessage>
+#include <QDBusObjectPath>
+#include <QVariant>
 #include <QDebug>
 
 NetworkKillSwitch::NetworkKillSwitch(QObject *parent)
@@ -22,8 +25,8 @@ void NetworkKillSwitch::setRequiresConfirmation(bool requires)
 
 void NetworkKillSwitch::disableNetwork()
 {
-    // TODO: Implement actual network disable via D-Bus
-    // This is a structure for NetworkManager or systemd-networkd integration
+    // Implement network disable via D-Bus
+    // Try NetworkManager first, then fallback to systemd-networkd
     
     bool success = false;
     
@@ -46,7 +49,8 @@ void NetworkKillSwitch::disableNetwork()
 
 void NetworkKillSwitch::enableNetwork()
 {
-    // TODO: Implement actual network enable via D-Bus
+    // Implement network enable via D-Bus
+    // Try NetworkManager first, then fallback to systemd-networkd
     
     bool success = false;
     
@@ -69,42 +73,185 @@ void NetworkKillSwitch::enableNetwork()
 
 void NetworkKillSwitch::checkNetworkStatus()
 {
-    // TODO: Implement actual network status check via D-Bus
-    // For now, assume network is enabled
+    // Check NetworkManager first
+    QDBusConnection bus = QDBusConnection::systemBus();
+    QDBusInterface propertiesInterface("org.freedesktop.NetworkManager",
+                                        "/org/freedesktop/NetworkManager",
+                                        "org.freedesktop.DBus.Properties",
+                                        bus);
+    
+    if (propertiesInterface.isValid()) {
+        QDBusReply<QVariant> reply = propertiesInterface.call("Get",
+                                                              "org.freedesktop.NetworkManager",
+                                                              "NetworkingEnabled");
+        if (reply.isValid()) {
+            m_networkEnabled = reply.value().toBool();
+            emit networkEnabledChanged();
+            return;
+        }
+    }
+    
+    // Fallback: check systemd-networkd
+    QDBusInterface systemdInterface("org.freedesktop.systemd1",
+                                    "/org/freedesktop/systemd1",
+                                    "org.freedesktop.systemd1.Manager",
+                                    bus);
+    
+    if (systemdInterface.isValid()) {
+        // Check if systemd-networkd.service is active
+        QDBusReply<QString> reply = systemdInterface.call("GetUnitFileState", "systemd-networkd.service");
+        if (reply.isValid() && reply.value() != "disabled") {
+            // Network is likely enabled if service is active
+            m_networkEnabled = true;
+            emit networkEnabledChanged();
+            return;
+        }
+    }
+    
+    // Default: assume enabled if we can't determine
     m_networkEnabled = true;
     emit networkEnabledChanged();
 }
 
 QStringList NetworkKillSwitch::getNetworkInterfaces()
 {
-    // TODO: Implement actual network interface enumeration via D-Bus
-    return QStringList();
+    QStringList interfaces;
+    
+    QDBusConnection bus = QDBusConnection::systemBus();
+    QDBusInterface nmInterface("org.freedesktop.NetworkManager",
+                               "/org/freedesktop/NetworkManager",
+                               "org.freedesktop.NetworkManager",
+                               bus);
+    
+    if (nmInterface.isValid()) {
+        QDBusReply<QList<QDBusObjectPath>> reply = nmInterface.call("GetDevices");
+        if (reply.isValid()) {
+            QList<QDBusObjectPath> devices = reply.value();
+            for (const QDBusObjectPath &devicePath : devices) {
+                QDBusInterface propertiesInterface("org.freedesktop.NetworkManager",
+                                                    devicePath.path(),
+                                                    "org.freedesktop.DBus.Properties",
+                                                    bus);
+                if (propertiesInterface.isValid()) {
+                    QDBusReply<QVariant> ifaceReply = propertiesInterface.call("Get",
+                                                                                "org.freedesktop.NetworkManager.Device",
+                                                                                "Interface");
+                    if (ifaceReply.isValid()) {
+                        interfaces.append(ifaceReply.value().toString());
+                    }
+                }
+            }
+        }
+    }
+    
+    return interfaces;
 }
 
 bool NetworkKillSwitch::disableNetworkManager()
 {
-    // TODO: Implement NetworkManager D-Bus integration
-    // Interface: org.freedesktop.NetworkManager
-    // Method: SetConnectionsEnabled(false) or disable individual connections
-    return false;
+    QDBusConnection bus = QDBusConnection::systemBus();
+    QDBusInterface propertiesInterface("org.freedesktop.NetworkManager",
+                                        "/org/freedesktop/NetworkManager",
+                                        "org.freedesktop.DBus.Properties",
+                                        bus);
+    
+    if (!propertiesInterface.isValid()) {
+        qWarning() << "NetworkManager D-Bus interface not available";
+        return false;
+    }
+    
+    // Disable all networking using Properties.Set
+    QDBusMessage msg = QDBusMessage::createMethodCall("org.freedesktop.NetworkManager",
+                                                        "/org/freedesktop/NetworkManager",
+                                                        "org.freedesktop.DBus.Properties",
+                                                        "Set");
+    msg << "org.freedesktop.NetworkManager" << "NetworkingEnabled" << QVariant(false);
+    
+    QDBusReply<void> reply = bus.call(msg);
+    if (reply.isValid()) {
+        qDebug() << "NetworkManager networking disabled";
+        return true;
+    } else {
+        qWarning() << "Failed to disable NetworkManager:" << reply.error().message();
+        return false;
+    }
 }
 
 bool NetworkKillSwitch::disableSystemdNetworkd()
 {
-    // TODO: Implement systemd-networkd D-Bus integration
-    return false;
+    QDBusConnection bus = QDBusConnection::systemBus();
+    QDBusInterface systemdInterface("org.freedesktop.systemd1",
+                                    "/org/freedesktop/systemd1",
+                                    "org.freedesktop.systemd1.Manager",
+                                    bus);
+    
+    if (!systemdInterface.isValid()) {
+        qWarning() << "systemd D-Bus interface not available";
+        return false;
+    }
+    
+    // Stop systemd-networkd service
+    QDBusReply<QDBusObjectPath> reply = systemdInterface.call("StopUnit", "systemd-networkd.service", "replace");
+    if (reply.isValid()) {
+        qDebug() << "systemd-networkd service stopped";
+        return true;
+    } else {
+        qWarning() << "Failed to stop systemd-networkd:" << reply.error().message();
+        return false;
+    }
 }
 
 bool NetworkKillSwitch::enableNetworkManager()
 {
-    // TODO: Implement NetworkManager D-Bus integration
-    // Method: SetConnectionsEnabled(true) or enable individual connections
-    return false;
+    QDBusConnection bus = QDBusConnection::systemBus();
+    QDBusInterface propertiesInterface("org.freedesktop.NetworkManager",
+                                        "/org/freedesktop/NetworkManager",
+                                        "org.freedesktop.DBus.Properties",
+                                        bus);
+    
+    if (!propertiesInterface.isValid()) {
+        qWarning() << "NetworkManager D-Bus interface not available";
+        return false;
+    }
+    
+    // Enable all networking using Properties.Set
+    QDBusMessage msg = QDBusMessage::createMethodCall("org.freedesktop.NetworkManager",
+                                                        "/org/freedesktop/NetworkManager",
+                                                        "org.freedesktop.DBus.Properties",
+                                                        "Set");
+    msg << "org.freedesktop.NetworkManager" << "NetworkingEnabled" << QVariant(true);
+    
+    QDBusReply<void> reply = bus.call(msg);
+    if (reply.isValid()) {
+        qDebug() << "NetworkManager networking enabled";
+        return true;
+    } else {
+        qWarning() << "Failed to enable NetworkManager:" << reply.error().message();
+        return false;
+    }
 }
 
 bool NetworkKillSwitch::enableSystemdNetworkd()
 {
-    // TODO: Implement systemd-networkd D-Bus integration
-    return false;
+    QDBusConnection bus = QDBusConnection::systemBus();
+    QDBusInterface systemdInterface("org.freedesktop.systemd1",
+                                    "/org/freedesktop/systemd1",
+                                    "org.freedesktop.systemd1.Manager",
+                                    bus);
+    
+    if (!systemdInterface.isValid()) {
+        qWarning() << "systemd D-Bus interface not available";
+        return false;
+    }
+    
+    // Start systemd-networkd service
+    QDBusReply<QDBusObjectPath> reply = systemdInterface.call("StartUnit", "systemd-networkd.service", "replace");
+    if (reply.isValid()) {
+        qDebug() << "systemd-networkd service started";
+        return true;
+    } else {
+        qWarning() << "Failed to start systemd-networkd:" << reply.error().message();
+        return false;
+    }
 }
 

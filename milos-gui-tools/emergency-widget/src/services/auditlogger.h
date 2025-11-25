@@ -20,7 +20,7 @@ signals:
     void error(const QString &errorMessage);
 
 private:
-    // TODO: Integrate with milos-audit-service D-Bus interface
+    // milos-audit-service D-Bus interface integration
     bool logViaAuditService(const QString &eventType, const QVariantMap &eventData);
 };
 

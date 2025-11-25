@@ -24,10 +24,8 @@ signals:
     void checkingChanged();
 
 private:
-    QString m_status; // checking, up_to_date, updates_available
+    QString m_status; // checking, up_to_date, updates_available, error
     bool m_checking;
-    
-    // TODO: Integrate with pacman update check
 };
 
 #endif // UPDATESERVICE_H

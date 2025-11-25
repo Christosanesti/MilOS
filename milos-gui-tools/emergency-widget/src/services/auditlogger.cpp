@@ -2,7 +2,10 @@
 #include <QDBusConnection>
 #include <QDBusInterface>
 #include <QDBusReply>
+#include <QDBusMessage>
 #include <QDateTime>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QDebug>
 
 AuditLogger::AuditLogger(QObject *parent)
@@ -16,6 +19,7 @@ void AuditLogger::logEvent(const QString &eventType, const QVariantMap &eventDat
     QVariantMap fullEventData = eventData;
     fullEventData["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
     fullEventData["user"] = qgetenv("USER");
+    fullEventData["event_type"] = eventType;
     
     bool success = logViaAuditService(eventType, fullEventData);
     
@@ -34,13 +38,43 @@ void AuditLogger::logEmergencyAction(const QString &actionType, const QVariantMa
 
 bool AuditLogger::logViaAuditService(const QString &eventType, const QVariantMap &eventData)
 {
-    // TODO: Implement milos-audit-service D-Bus integration
+    // Implement milos-audit-service D-Bus integration
     // Interface: org.milos.AuditService
-    // Method: LogEvent(event_type, event_data)
-    // Service: milos-audit-service
+    // Method: LogEvent(event_data as JSON string)
+    // Service: org.milos.AuditService
     
-    // For now, just log to console
-    qDebug() << "Audit Log:" << eventType << eventData;
-    return true;
+    QDBusConnection bus = QDBusConnection::systemBus();
+    QDBusInterface auditInterface("org.milos.AuditService",
+                                  "/org/milos/AuditService",
+                                  "org.milos.AuditService",
+                                  bus);
+    
+    if (!auditInterface.isValid()) {
+        // Service not available, log to console as fallback
+        qWarning() << "Audit service not available, logging to console:" << eventType << eventData;
+        return false;
+    }
+    
+    // Convert event data to JSON string
+    QJsonObject jsonObj;
+    for (auto it = eventData.constBegin(); it != eventData.constEnd(); ++it) {
+        jsonObj[it.key()] = QJsonValue::fromVariant(it.value());
+    }
+    
+    QJsonDocument doc(jsonObj);
+    QString eventDataJson = QString::fromUtf8(doc.toJson());
+    
+    // Call LogEvent method
+    QDBusReply<QString> reply = auditInterface.call("LogEvent", eventDataJson);
+    if (reply.isValid()) {
+        QString eventId = reply.value();
+        qDebug() << "Event logged to audit service:" << eventType << "Event ID:" << eventId;
+        return true;
+    } else {
+        qWarning() << "Failed to log event to audit service:" << reply.error().message();
+        // Fallback: log to console
+        qDebug() << "Audit Log (fallback):" << eventType << eventData;
+        return false;
+    }
 }
 

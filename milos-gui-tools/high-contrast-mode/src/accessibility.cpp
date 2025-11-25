@@ -110,3 +110,4 @@ bool Accessibility::meetsWCAGAA(const QColor& foreground, const QColor& backgrou
     return ratio >= 4.5;
 }
 
+

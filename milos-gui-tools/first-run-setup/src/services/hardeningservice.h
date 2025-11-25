@@ -26,8 +26,6 @@ signals:
 private:
     QString m_level; // basic, standard, high, maximum
     double m_progress; // 0.0 - 100.0
-    
-    // TODO: Integrate with hardening configuration check
 };
 
 #endif // HARDENINGSERVICE_H

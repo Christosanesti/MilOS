@@ -1,0 +1,43 @@
+# bash completion for milos-backup
+# Completion script for MilOS backup CLI tool
+
+_milos_backup() {
+    local cur prev words cword
+    _init_completion -s || return
+
+    case $prev in
+        -s|--source|-d|--destination|--config|-c)
+            _filedir
+            return
+            ;;
+    esac
+
+    if [[ $cword -eq 1 ]]; then
+        # First level: commands
+        COMPREPLY=($(compgen -W "create restore list verify schedule" -- "$cur"))
+    elif [[ $cword -eq 2 ]]; then
+        # Second level: command-specific options
+        case ${words[1]} in
+            create)
+                COMPREPLY=($(compgen -W "-s --source -d --destination --encrypt --compress" -- "$cur"))
+                ;;
+            restore)
+                COMPREPLY=($(compgen -W "-b --backup-id -d --destination --verify" -- "$cur"))
+                ;;
+            list)
+                COMPREPLY=($(compgen -W "--format --json --filter" -- "$cur"))
+                ;;
+            verify)
+                COMPREPLY=($(compgen -W "-b --backup-id" -- "$cur"))
+                ;;
+            schedule)
+                COMPREPLY=($(compgen -W "--add --remove --list --enable --disable" -- "$cur"))
+                ;;
+        esac
+    else
+        _filedir
+    fi
+}
+
+complete -F _milos_backup milos-backup
+

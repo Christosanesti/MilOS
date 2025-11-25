@@ -1,0 +1,45 @@
+# bash completion for milos-encrypt
+# Completion script for MilOS encryption CLI tool
+
+_milos_encrypt() {
+    local cur prev words cword
+    _init_completion -s || return
+
+    case $prev in
+        -o|--output|--input|-i)
+            _filedir
+            return
+            ;;
+        -a|--algorithm|--key-id|-k)
+            # Dynamic completion: list available algorithms/keys
+            if command -v milos-encrypt &> /dev/null; then
+                COMPREPLY=($(compgen -W "$(milos-encrypt --list-keys 2>/dev/null | awk '{print $1}')" -- "$cur"))
+            fi
+            return
+            ;;
+    esac
+
+    if [[ $cword -eq 1 ]]; then
+        # First level: commands
+        COMPREPLY=($(compgen -W "encrypt decrypt list-keys generate-key" -- "$cur"))
+    elif [[ $cword -eq 2 ]]; then
+        # Second level: command-specific options
+        case ${words[1]} in
+            encrypt|decrypt)
+                COMPREPLY=($(compgen -W "-i --input -o --output -a --algorithm -k --key-id --config" -- "$cur"))
+                ;;
+            list-keys)
+                COMPREPLY=($(compgen -W "--format --json" -- "$cur"))
+                ;;
+            generate-key)
+                COMPREPLY=($(compgen -W "-a --algorithm -o --output --name" -- "$cur"))
+                ;;
+        esac
+    else
+        # File completion for input/output files
+        _filedir
+    fi
+}
+
+complete -F _milos_encrypt milos-encrypt
+

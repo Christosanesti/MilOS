@@ -1,0 +1,72 @@
+template:
+  id: command_center_3mon
+  name: Command Center 3-Monitor
+  description: Optimal layout for command center operations with three monitors
+  category: Command Center
+  template_type: COMMAND_CENTER_3MON
+  monitor_count: 3
+  version: "1.0"
+  created_at: "2024-01-01T00:00:00Z"
+  
+  monitor_configurations:
+    - index: 0
+      role: primary
+      resolution:
+        width: 1920
+        height: 1080
+    - index: 1
+      role: secondary
+      resolution:
+        width: 1920
+        height: 1080
+    - index: 2
+      role: tertiary
+      resolution:
+        width: 1920
+        height: 1080
+  
+  window_positions:
+    - application_name: milos-network-dashboard
+      monitor_index: 0
+      x_position: 0
+      y_position: 0
+      width: 1920
+      height: 1080
+      maximized: true
+    - application_name: milos-alert-zone
+      monitor_index: 0
+      x_position: 0
+      y_position: 0
+      width: 1920
+      height: 50
+      maximized: false
+    - application_name: milos-network-segmentation
+      monitor_index: 1
+      x_position: 0
+      y_position: 0
+      width: 960
+      height: 1080
+      maximized: false
+    - application_name: milos-threat-intelligence
+      monitor_index: 1
+      x_position: 960
+      y_position: 0
+      width: 960
+      height: 1080
+      maximized: false
+    - application_name: milos-security-status-dashboard
+      monitor_index: 2
+      x_position: 0
+      y_position: 0
+      width: 1920
+      height: 1080
+      maximized: true
+  
+  panel_configurations:
+    - panel_type: alert_bar
+      monitor_index: 0
+      position: top
+    - panel_type: quick_actions
+      monitor_index: 2
+      position: right
+

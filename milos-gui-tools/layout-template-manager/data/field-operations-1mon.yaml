@@ -1,0 +1,62 @@
+template:
+  id: field_operations_1mon
+  name: Field Operations Single-Monitor
+  description: Compact layout for field operations with single monitor
+  category: Field Operations
+  template_type: FIELD_OPS_1MON
+  monitor_count: 1
+  version: "1.0"
+  created_at: "2024-01-01T00:00:00Z"
+  
+  monitor_configurations:
+    - index: 0
+      role: primary
+      resolution:
+        width: 1920
+        height: 1080
+  
+  window_positions:
+    - application_name: milos-network-dashboard
+      monitor_index: 0
+      x_position: 0
+      y_position: 0
+      width: 960
+      height: 540
+      maximized: false
+    - application_name: milos-alert-zone
+      monitor_index: 0
+      x_position: 0
+      y_position: 0
+      width: 1920
+      height: 50
+      maximized: false
+    - application_name: milos-security-status-dashboard
+      monitor_index: 0
+      x_position: 960
+      y_position: 0
+      width: 960
+      height: 540
+      maximized: false
+    - application_name: milos-audit-gui
+      monitor_index: 0
+      x_position: 0
+      y_position: 540
+      width: 960
+      height: 540
+      maximized: false
+    - application_name: milos-threat-intelligence
+      monitor_index: 0
+      x_position: 960
+      y_position: 540
+      width: 960
+      height: 540
+      maximized: false
+  
+  panel_configurations:
+    - panel_type: alert_bar
+      monitor_index: 0
+      position: top
+    - panel_type: quick_actions
+      monitor_index: 0
+      position: right
+

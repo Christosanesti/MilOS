@@ -1,0 +1,67 @@
+#compdef milos-encrypt
+# zsh completion for milos-encrypt
+
+_milos_encrypt() {
+    local context state line
+    local -a commands options
+
+    commands=(
+        'encrypt:Encrypt data'
+        'decrypt:Decrypt data'
+        'list-keys:List available encryption keys'
+        'generate-key:Generate new encryption key'
+    )
+
+    _arguments -C \
+        "1: :->command" \
+        "*::arg:->args"
+
+    case $state in
+        command)
+            _describe 'command' commands
+            ;;
+        args)
+            case $words[1] in
+                encrypt|decrypt)
+                    _arguments \
+                        '(-i --input)'{-i,--input}'[Input file]:file:_files' \
+                        '(-o --output)'{-o,--output}'[Output file]:file:_files' \
+                        '(-a --algorithm)'{-a,--algorithm}'[Algorithm ID]:algorithm:->algorithms' \
+                        '(-k --key-id)'{-k,--key-id}'[Key ID]:key:->keys' \
+                        '--config[Configuration file]:file:_files'
+                    ;;
+                list-keys)
+                    _arguments \
+                        '--format[Output format]' \
+                        '--json[JSON output]'
+                    ;;
+                generate-key)
+                    _arguments \
+                        '(-a --algorithm)'{-a,--algorithm}'[Algorithm ID]:algorithm:->algorithms' \
+                        '(-o --output)'{-o,--output}'[Output file]:file:_files' \
+                        '--name[Key name]'
+                    ;;
+            esac
+            ;;
+    esac
+
+    case $state in
+        algorithms)
+            if command -v milos-encrypt &> /dev/null; then
+                local -a algs
+                algs=($(milos-encrypt --list-algorithms 2>/dev/null))
+                _describe 'algorithm' algs
+            fi
+            ;;
+        keys)
+            if command -v milos-encrypt &> /dev/null; then
+                local -a keys
+                keys=($(milos-encrypt --list-keys 2>/dev/null | awk '{print $1}'))
+                _describe 'key' keys
+            fi
+            ;;
+    esac
+}
+
+_milos_encrypt "$@"
+
