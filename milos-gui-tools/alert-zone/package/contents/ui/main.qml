@@ -14,9 +14,21 @@ PlasmoidItem {
     property var alertHistory: []
     property int maxHistoryItems: 20
     property bool historyExpanded: false
+    property bool configDialogVisible: false
     
     // Always visible - cannot be hidden
     Plasmoid.hideOnWindowDeactivate: false
+    
+    // Context menu
+    Plasmoid.contextualActions: [
+        PlasmaComponents.Action {
+            text: "Configure Widget"
+            icon: "configure"
+            onTriggered: {
+                configDialogVisible = true
+            }
+        }
+    ]
     
     // Compact representation (always-visible alert bar)
     Plasmoid.compactRepresentation: Item {
@@ -201,12 +213,55 @@ PlasmoidItem {
                     spacing: 5
                     
                     delegate: Rectangle {
+                        id: alertItem
                         width: historyList.width
                         height: 60
-                        color: "#1a1a1a"
-                        border.width: 1
+                        color: alertMouseArea.containsMouse ? "#2a2a2a" : "#1a1a1a"
+                        border.width: 2
                         border.color: getAlertSeverityColor(modelData.severity)
                         radius: 4
+                        
+                        // Xenon transition effect on click
+                        SequentialAnimation {
+                            id: navigationAnimation
+                            PropertyAnimation {
+                                target: alertItem
+                                property: "scale"
+                                from: 1.0
+                                to: 0.95
+                                duration: 100
+                            }
+                            PropertyAnimation {
+                                target: alertItem
+                                property: "scale"
+                                from: 0.95
+                                to: 1.0
+                                duration: 200
+                                easing.type: Easing.OutCubic
+                            }
+                            PropertyAnimation {
+                                target: alertItem
+                                property: "opacity"
+                                from: 1.0
+                                to: 0.3
+                                duration: 300
+                            }
+                        }
+                        
+                        // Xenon hover glow
+                        Rectangle {
+                            anchors.fill: parent
+                            anchors.margins: -2
+                            radius: parent.radius + 2
+                            color: "transparent"
+                            border.color: getAlertSeverityColor(modelData.severity)
+                            border.width: 2
+                            opacity: alertMouseArea.containsMouse ? 0.6 : 0
+                            
+                            Behavior on opacity {
+                                NumberAnimation { duration: 200 }
+                            }
+                        }
                         
                         RowLayout {
                             anchors.fill: parent
@@ -246,6 +301,25 @@ PlasmoidItem {
                                     font.pixelSize: 9
                                     elide: Text.ElideRight
                                     width: parent.width
+                                }
+                            }
+                        }
+                        
+                        MouseArea {
+                            id: alertMouseArea
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            onClicked: {
+                                // Xenon transition effect
+                                navigationAnimation.start()
+                                
+                                // Navigate to alert source
+                                if (modelData.alertId) {
+                                    alertZoneService.navigateToAlertSource(modelData.alertId)
+                                } else if (modelData.category) {
+                                    // Fallback: navigate by category
+                                    var alertId = "alert_" + modelData.category + "_" + Date.now()
+                                    alertZoneService.navigateToAlertSource(alertId)
                                 }
                             }
                         }
@@ -360,6 +434,49 @@ PlasmoidItem {
         
         onAlertReceived: function(severity, category, message) {
             addAlert(severity, category, message)
+        }
+        
+        onAvailableActionsChanged: {
+            // Update alert history with alert IDs from service
+            updateAlertHistory()
+        }
+    }
+    
+    function updateAlertHistory() {
+        var activeAlerts = alertZoneService.getActiveAlerts()
+        // Merge active alerts with history, preserving alert IDs
+        for (var i = 0; i < activeAlerts.length; i++) {
+            var activeAlert = activeAlerts[i]
+            var found = false
+            for (var j = 0; j < alertHistory.length; j++) {
+                if (alertHistory[j].alertId === activeAlert.alertId) {
+                    // Update existing alert
+                    alertHistory[j] = activeAlert
+                    found = true
+                    break
+                }
+            }
+            if (!found) {
+                // Add new alert
+                alertHistory.unshift(activeAlert)
+            }
+        }
+        
+        // Limit to maxHistoryItems
+        if (alertHistory.length > maxHistoryItems) {
+            alertHistory = alertHistory.slice(0, maxHistoryItems)
+        }
+    }
+    
+    // Configuration dialog loader
+    Loader {
+        id: configDialogLoader
+        active: configDialogVisible
+        source: "ConfigDialog.qml"
+        
+        onLoaded: {
+            item.service = alertZoneService
+            item.open()
         }
     }
     

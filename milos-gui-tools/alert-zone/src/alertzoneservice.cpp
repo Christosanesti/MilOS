@@ -7,6 +7,8 @@
 #include <QSettings>
 #include <QProcess>
 #include <QFile>
+#include <QTextStream>
+#include <QDir>
 #include <algorithm>
 #include <cstdlib>
 
@@ -23,19 +25,29 @@ AlertZoneService::AlertZoneService(QObject* parent)
     , m_dataGuardInterface(nullptr)
     , m_auditInterface(nullptr)
 {
-    // Load configuration from config
-    QSettings settings(QStandardPaths::writableLocation(QStandardPaths::ConfigLocation) + "/milos/alert-zone.ini", QSettings::IniFormat);
-    settings.beginGroup("Filtering");
-    m_enabledCategories = settings.value("enabledCategories", QStringList({"encryption_failures", "network_breaches", "blocked_transmissions", "hardening_violations"})).toStringList();
-    settings.endGroup();
+    // Load configuration - try YAML first, fallback to INI
+    bool yamlLoaded = false;
+    QString yamlPath = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation) + "/milos/alert-zone.yaml";
+    if (QFile::exists(yamlPath)) {
+        loadConfigurationFromYAML();
+        yamlLoaded = true;
+    }
     
-    settings.beginGroup("Escalation");
-    m_escalationTimeout = settings.value("timeout", 30000).toInt();
-    settings.endGroup();
-    
-    settings.beginGroup("Acknowledgment");
-    m_acknowledgmentTimeout = settings.value("timeout", 300000).toInt();
-    settings.endGroup();
+    // If YAML doesn't exist or didn't load properly, load from INI
+    if (!yamlLoaded) {
+        QSettings settings(QStandardPaths::writableLocation(QStandardPaths::ConfigLocation) + "/milos/alert-zone.ini", QSettings::IniFormat);
+        settings.beginGroup("Filtering");
+        m_enabledCategories = settings.value("enabledCategories", QStringList({"encryption_failures", "network_breaches", "blocked_transmissions", "hardening_violations"})).toStringList();
+        settings.endGroup();
+        
+        settings.beginGroup("Escalation");
+        m_escalationTimeout = settings.value("timeout", 30000).toInt();
+        settings.endGroup();
+        
+        settings.beginGroup("Acknowledgment");
+        m_acknowledgmentTimeout = settings.value("timeout", 300000).toInt();
+        settings.endGroup();
+    }
     
     // Setup queue processing timer
     m_queueTimer->setSingleShot(false);
@@ -89,11 +101,13 @@ void AlertZoneService::setEnabledCategories(const QStringList& categories)
     if (m_enabledCategories != categories) {
         m_enabledCategories = categories;
         
-        // Save to config
+        // Save to config (both INI and YAML)
         QSettings settings(QStandardPaths::writableLocation(QStandardPaths::ConfigLocation) + "/milos/alert-zone.ini", QSettings::IniFormat);
         settings.beginGroup("Filtering");
         settings.setValue("enabledCategories", categories);
         settings.endGroup();
+        
+        saveConfigurationToYAML();
         
         emit enabledCategoriesChanged();
     }
@@ -462,11 +476,13 @@ void AlertZoneService::setEscalationTimeout(int timeout)
     if (m_escalationTimeout != timeout) {
         m_escalationTimeout = timeout;
         
-        // Save to config
+        // Save to config (both INI and YAML)
         QSettings settings(QStandardPaths::writableLocation(QStandardPaths::ConfigLocation) + "/milos/alert-zone.ini", QSettings::IniFormat);
         settings.beginGroup("Escalation");
         settings.setValue("timeout", timeout);
         settings.endGroup();
+        
+        saveConfigurationToYAML();
         
         emit escalationTimeoutChanged();
     }
@@ -477,11 +493,13 @@ void AlertZoneService::setAcknowledgmentTimeout(int timeout)
     if (m_acknowledgmentTimeout != timeout) {
         m_acknowledgmentTimeout = timeout;
         
-        // Save to config
+        // Save to config (both INI and YAML)
         QSettings settings(QStandardPaths::writableLocation(QStandardPaths::ConfigLocation) + "/milos/alert-zone.ini", QSettings::IniFormat);
         settings.beginGroup("Acknowledgment");
         settings.setValue("timeout", timeout);
         settings.endGroup();
+        
+        saveConfigurationToYAML();
         
         emit acknowledgmentTimeoutChanged();
     }
@@ -671,4 +689,115 @@ void AlertZoneService::launchApplication(const QString& application, const QVari
     
     connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
             process, &QProcess::deleteLater);
+}
+
+void AlertZoneService::saveConfigurationToYAML()
+{
+    QString configDir = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation) + "/milos";
+    QDir().mkpath(configDir);
+    
+    QString yamlPath = configDir + "/alert-zone.yaml";
+    QFile file(yamlPath);
+    
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        qWarning() << "Failed to open YAML config file for writing:" << yamlPath;
+        return;
+    }
+    
+    QTextStream out(&file);
+    out << "alert_zone:\n";
+    out << "  filtering:\n";
+    out << "    enabled_categories:\n";
+    for (const QString& category : m_enabledCategories) {
+        out << "      - " << category << "\n";
+    }
+    out << "  escalation:\n";
+    out << "    timeout_ms: " << m_escalationTimeout << "\n";
+    out << "  acknowledgment:\n";
+    out << "    timeout_ms: " << m_acknowledgmentTimeout << "\n";
+    
+    file.close();
+}
+
+void AlertZoneService::loadConfigurationFromYAML()
+{
+    QString yamlPath = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation) + "/milos/alert-zone.yaml";
+    QFile file(yamlPath);
+    
+    if (!file.exists() || !file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        // YAML file doesn't exist, use defaults
+        return;
+    }
+    
+    QTextStream in(&file);
+    QStringList enabledCategories;
+    bool inFiltering = false;
+    bool inCategories = false;
+    bool inEscalation = false;
+    bool inAcknowledgment = false;
+    
+    while (!in.atEnd()) {
+        QString line = in.readLine();
+        QString trimmed = line.trimmed();
+        
+        // Skip empty lines and comments
+        if (trimmed.isEmpty() || trimmed.startsWith("#")) {
+            continue;
+        }
+        
+        // Detect sections
+        if (trimmed == "filtering:") {
+            inFiltering = true;
+            inEscalation = false;
+            inAcknowledgment = false;
+            continue;
+        } else if (trimmed == "escalation:") {
+            inEscalation = true;
+            inFiltering = false;
+            inAcknowledgment = false;
+            continue;
+        } else if (trimmed == "acknowledgment:") {
+            inAcknowledgment = true;
+            inFiltering = false;
+            inEscalation = false;
+            continue;
+        }
+        
+        // Parse enabled_categories
+        if (inFiltering && trimmed.startsWith("enabled_categories:")) {
+            inCategories = true;
+            continue;
+        }
+        
+        if (inCategories) {
+            if (trimmed.startsWith("- ")) {
+                QString category = trimmed.mid(2).trimmed();
+                enabledCategories.append(category);
+            } else if (!trimmed.startsWith(" ") && !trimmed.startsWith("\t")) {
+                // End of categories list
+                inCategories = false;
+            }
+        }
+        
+        // Parse timeout_ms
+        if (trimmed.startsWith("timeout_ms:")) {
+            QString valueStr = trimmed.mid(trimmed.indexOf(":") + 1).trimmed();
+            bool ok;
+            int timeout = valueStr.toInt(&ok);
+            
+            if (ok) {
+                if (inEscalation) {
+                    m_escalationTimeout = timeout;
+                } else if (inAcknowledgment) {
+                    m_acknowledgmentTimeout = timeout;
+                }
+            }
+        }
+    }
+    
+    if (!enabledCategories.isEmpty()) {
+        m_enabledCategories = enabledCategories;
+    }
+    
+    file.close();
 }

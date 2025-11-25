@@ -99,6 +99,10 @@ private:
     // Alert processing
     void processAlert(const Alert& alert);
     Alert parseAlertFromDBus(const QString& signalName, const QString& jsonData);
+    
+    // Configuration persistence
+    void saveConfigurationToYAML();
+    void loadConfigurationFromYAML();
     QString extractSeverity(const QVariantMap& data);
     QString extractCategory(const QVariantMap& data, const QString& signalName);
     QString extractMessage(const QVariantMap& data, const QString& signalName);

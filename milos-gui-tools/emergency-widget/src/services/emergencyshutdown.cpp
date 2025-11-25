@@ -1,8 +1,10 @@
 #include "emergencyshutdown.h"
+#include "auditlogger.h"
 #include <QDBusConnection>
 #include <QDBusInterface>
 #include <QDBusReply>
 #include <QDebug>
+#include <QDateTime>
 
 EmergencyShutdown::EmergencyShutdown(QObject *parent)
     : QObject(parent)
@@ -11,6 +13,14 @@ EmergencyShutdown::EmergencyShutdown(QObject *parent)
 
 void EmergencyShutdown::shutdown()
 {
+    // Log to audit service before shutdown
+    AuditLogger logger;
+    QVariantMap eventData;
+    eventData["action"] = "emergency_shutdown";
+    eventData["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+    eventData["user"] = qgetenv("USER");
+    logger.logEmergencyAction("emergency_shutdown", eventData);
+    
     bool success = shutdownViaSystemd();
     
     if (success) {
