@@ -11,9 +11,6 @@ EmergencyShutdown::EmergencyShutdown(QObject *parent)
 
 void EmergencyShutdown::shutdown()
 {
-    // TODO: Implement actual system shutdown via D-Bus
-    // This is a structure for systemd-logind integration
-    
     bool success = shutdownViaSystemd();
     
     if (success) {
@@ -25,10 +22,30 @@ void EmergencyShutdown::shutdown()
 
 bool EmergencyShutdown::shutdownViaSystemd()
 {
-    // TODO: Implement systemd-logind D-Bus integration
-    // Interface: org.freedesktop.login1
-    // Method: PowerOff(interactive=false)
-    // Requires proper D-Bus connection and authentication
-    return false;
+    // Connect to systemd-logind D-Bus interface
+    QDBusConnection systemBus = QDBusConnection::systemBus();
+    
+    // Get the login manager object path
+    QDBusInterface loginManager("org.freedesktop.login1",
+                                "/org/freedesktop/login1",
+                                "org.freedesktop.login1.Manager",
+                                systemBus);
+    
+    if (!loginManager.isValid()) {
+        qWarning() << "Cannot connect to systemd-logind D-Bus interface";
+        return false;
+    }
+    
+    // Call PowerOff method with interactive=false (non-interactive shutdown)
+    // The method signature is: PowerOff(boolean interactive)
+    QDBusReply<void> reply = loginManager.call("PowerOff", false);
+    
+    if (reply.isValid()) {
+        qDebug() << "Emergency shutdown initiated successfully";
+        return true;
+    } else {
+        qWarning() << "Failed to initiate shutdown:" << reply.error().message();
+        return false;
+    }
 }
 

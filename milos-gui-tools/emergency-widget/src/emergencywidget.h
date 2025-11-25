@@ -9,6 +9,9 @@
 #include "services/securemode.h"
 #include "services/emergencyshutdown.h"
 #include "services/auditlogger.h"
+#include "widgetconfig.h"
+#include "keyboardshortcut.h"
+#include "statusindicators.h"
 
 class EmergencyWidget : public QObject
 {
@@ -27,6 +30,9 @@ private:
     SecureMode *m_secureMode;
     EmergencyShutdown *m_emergencyShutdown;
     AuditLogger *m_auditLogger;
+    WidgetConfig *m_widgetConfig;
+    KeyboardShortcut *m_keyboardShortcut;
+    StatusIndicators *m_statusIndicators;
 };
 
 #endif // EMERGENCYWIDGET_H

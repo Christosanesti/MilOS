@@ -41,6 +41,9 @@ set(EMERGENCY_SOURCES
     src/services/emergencyshutdown.cpp
     src/services/auditlogger.cpp
     src/emergencywidget.cpp
+    src/widgetconfig.cpp
+    src/keyboardshortcut.cpp
+    src/statusindicators.cpp
 )
 
 set(EMERGENCY_HEADERS
@@ -50,6 +53,9 @@ set(EMERGENCY_HEADERS
     src/services/emergencyshutdown.h
     src/services/auditlogger.h
     src/emergencywidget.h
+    src/widgetconfig.h
+    src/keyboardshortcut.h
+    src/statusindicators.h
 )
 
 # Create library
