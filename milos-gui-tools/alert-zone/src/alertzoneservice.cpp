@@ -5,20 +5,36 @@
 #include <QDateTime>
 #include <QStandardPaths>
 #include <QSettings>
+#include <QProcess>
+#include <QFile>
 #include <algorithm>
+#include <cstdlib>
 
 AlertZoneService::AlertZoneService(QObject* parent)
     : QObject(parent)
     , m_alertCount(0)
+    , m_escalationTimeout(30000) // 30 seconds default
+    , m_acknowledgmentTimeout(300000) // 5 minutes default
     , m_queueTimer(new QTimer(this))
     , m_deduplicationTimer(new QTimer(this))
+    , m_escalationTimer(new QTimer(this))
+    , m_acknowledgmentTimer(new QTimer(this))
     , m_dbusConnection(QDBusConnection::systemBus())
     , m_dataGuardInterface(nullptr)
+    , m_auditInterface(nullptr)
 {
-    // Load enabled categories from config
+    // Load configuration from config
     QSettings settings(QStandardPaths::writableLocation(QStandardPaths::ConfigLocation) + "/milos/alert-zone.ini", QSettings::IniFormat);
     settings.beginGroup("Filtering");
     m_enabledCategories = settings.value("enabledCategories", QStringList({"encryption_failures", "network_breaches", "blocked_transmissions", "hardening_violations"})).toStringList();
+    settings.endGroup();
+    
+    settings.beginGroup("Escalation");
+    m_escalationTimeout = settings.value("timeout", 30000).toInt();
+    settings.endGroup();
+    
+    settings.beginGroup("Acknowledgment");
+    m_acknowledgmentTimeout = settings.value("timeout", 300000).toInt();
     settings.endGroup();
     
     // Setup queue processing timer
@@ -32,6 +48,27 @@ AlertZoneService::AlertZoneService(QObject* parent)
     m_deduplicationTimer->setInterval(5000); // Check deduplication every 5 seconds
     m_deduplicationTimer->start();
     
+    // Setup escalation timer
+    m_escalationTimer->setSingleShot(false);
+    m_escalationTimer->setInterval(1000); // Check escalation every second
+    connect(m_escalationTimer, &QTimer::timeout, this, &AlertZoneService::updateEscalationLevels);
+    m_escalationTimer->start();
+    
+    // Setup acknowledgment timer
+    m_acknowledgmentTimer->setSingleShot(false);
+    m_acknowledgmentTimer->setInterval(10000); // Check auto-acknowledgment every 10 seconds
+    connect(m_acknowledgmentTimer, &QTimer::timeout, this, &AlertZoneService::autoAcknowledgeLowSeverityAlerts);
+    m_acknowledgmentTimer->start();
+    
+    // Connect to audit service
+    m_auditInterface = new QDBusInterface(
+        "org.milos.AuditService",
+        "/org/milos/AuditService",
+        "org.milos.AuditService",
+        m_dbusConnection,
+        this
+    );
+    
     // Subscribe to D-Bus signals
     subscribeToDBusSignals();
 }
@@ -41,6 +78,9 @@ AlertZoneService::~AlertZoneService()
     unsubscribeFromDBusSignals();
     if (m_dataGuardInterface) {
         delete m_dataGuardInterface;
+    }
+    if (m_auditInterface) {
+        delete m_auditInterface;
     }
 }
 
@@ -68,6 +108,10 @@ void AlertZoneService::addAlert(const QString& severity, const QString& category
     alert.timestamp = QDateTime::currentMSecsSinceEpoch();
     alert.source = "manual";
     alert.count = 1;
+    alert.acknowledged = false;
+    alert.escalationLevel = 1;
+    alert.escalationStartTime = alert.timestamp;
+    alert.alertId = generateAlertId();
     
     m_alertQueue.enqueue(alert);
 }
@@ -82,6 +126,10 @@ void AlertZoneService::addAlertWithData(const QString& severity, const QString& 
     alert.timestamp = QDateTime::currentMSecsSinceEpoch();
     alert.source = data.value("source", "unknown").toString();
     alert.count = 1;
+    alert.acknowledged = false;
+    alert.escalationLevel = 1;
+    alert.escalationStartTime = alert.timestamp;
+    alert.alertId = generateAlertId();
     
     m_alertQueue.enqueue(alert);
 }
@@ -177,9 +225,13 @@ void AlertZoneService::processAlert(const Alert& alert)
 AlertZoneService::Alert AlertZoneService::parseAlertFromDBus(const QString& signalName, const QString& jsonData)
 {
     Alert alert;
-    alert.source = "data_guard";
-    alert.timestamp = QDateTime::currentMSecsSinceEpoch();
-    alert.count = 1;
+        alert.source = "data_guard";
+        alert.timestamp = QDateTime::currentMSecsSinceEpoch();
+        alert.count = 1;
+        alert.acknowledged = false;
+        alert.escalationLevel = 1;
+        alert.escalationStartTime = alert.timestamp;
+        alert.alertId = generateAlertId();
     
     // Parse JSON data
     QJsonDocument doc = QJsonDocument::fromJson(jsonData.toUtf8());
@@ -403,4 +455,220 @@ void AlertZoneService::connectToGUIApplicationSignals()
         this,
         SLOT(onPolicyViolationDetected(QString))
     );
+}
+
+void AlertZoneService::setEscalationTimeout(int timeout)
+{
+    if (m_escalationTimeout != timeout) {
+        m_escalationTimeout = timeout;
+        
+        // Save to config
+        QSettings settings(QStandardPaths::writableLocation(QStandardPaths::ConfigLocation) + "/milos/alert-zone.ini", QSettings::IniFormat);
+        settings.beginGroup("Escalation");
+        settings.setValue("timeout", timeout);
+        settings.endGroup();
+        
+        emit escalationTimeoutChanged();
+    }
+}
+
+void AlertZoneService::setAcknowledgmentTimeout(int timeout)
+{
+    if (m_acknowledgmentTimeout != timeout) {
+        m_acknowledgmentTimeout = timeout;
+        
+        // Save to config
+        QSettings settings(QStandardPaths::writableLocation(QStandardPaths::ConfigLocation) + "/milos/alert-zone.ini", QSettings::IniFormat);
+        settings.beginGroup("Acknowledgment");
+        settings.setValue("timeout", timeout);
+        settings.endGroup();
+        
+        emit acknowledgmentTimeoutChanged();
+    }
+}
+
+QString AlertZoneService::generateAlertId()
+{
+    return QString("alert_%1_%2").arg(QDateTime::currentMSecsSinceEpoch()).arg(qrand());
+}
+
+void AlertZoneService::acknowledgeAlert(const QString& alertId)
+{
+    for (int i = 0; i < m_activeAlerts.size(); ++i) {
+        if (m_activeAlerts[i].alertId == alertId) {
+            m_activeAlerts[i].acknowledged = true;
+            m_activeAlerts[i].acknowledgmentTimestamp = QDateTime::currentMSecsSinceEpoch();
+            
+            // Log to audit service
+            logAcknowledgmentToAudit(alertId, m_activeAlerts[i]);
+            
+            emit alertAcknowledged(alertId);
+            return;
+        }
+    }
+}
+
+void AlertZoneService::navigateToAlertSource(const QString& alertId)
+{
+    for (const Alert& alert : m_activeAlerts) {
+        if (alert.alertId == alertId) {
+            QString target = getNavigationTarget(alert.category);
+            QVariantMap context;
+            context["alertId"] = alertId;
+            context["category"] = alert.category;
+            context["severity"] = alert.severity;
+            context["message"] = alert.message;
+            launchApplication(target, context);
+            return;
+        }
+    }
+}
+
+QVariantMap AlertZoneService::getAlert(const QString& alertId)
+{
+    for (const Alert& alert : m_activeAlerts) {
+        if (alert.alertId == alertId) {
+            QVariantMap result;
+            result["alertId"] = alert.alertId;
+            result["severity"] = alert.severity;
+            result["category"] = alert.category;
+            result["message"] = alert.message;
+            result["timestamp"] = alert.timestamp;
+            result["acknowledged"] = alert.acknowledged;
+            result["escalationLevel"] = alert.escalationLevel;
+            result["data"] = alert.data;
+            return result;
+        }
+    }
+    return QVariantMap();
+}
+
+QVariantList AlertZoneService::getActiveAlerts()
+{
+    QVariantList result;
+    for (const Alert& alert : m_activeAlerts) {
+        QVariantMap alertMap;
+        alertMap["alertId"] = alert.alertId;
+        alertMap["severity"] = alert.severity;
+        alertMap["category"] = alert.category;
+        alertMap["message"] = alert.message;
+        alertMap["timestamp"] = alert.timestamp;
+        alertMap["acknowledged"] = alert.acknowledged;
+        alertMap["escalationLevel"] = alert.escalationLevel;
+        alertMap["count"] = alert.count;
+        result.append(alertMap);
+    }
+    return result;
+}
+
+void AlertZoneService::updateEscalationLevels()
+{
+    qint64 currentTime = QDateTime::currentMSecsSinceEpoch();
+    
+    for (int i = 0; i < m_activeAlerts.size(); ++i) {
+        if (m_activeAlerts[i].acknowledged) {
+            continue; // Don't escalate acknowledged alerts
+        }
+        
+        int newLevel = calculateEscalationLevel(m_activeAlerts[i]);
+        if (newLevel != m_activeAlerts[i].escalationLevel) {
+            m_activeAlerts[i].escalationLevel = newLevel;
+            emit alertEscalated(m_activeAlerts[i].alertId, newLevel);
+        }
+    }
+}
+
+int AlertZoneService::calculateEscalationLevel(const Alert& alert)
+{
+    qint64 currentTime = QDateTime::currentMSecsSinceEpoch();
+    qint64 timeSinceCreation = currentTime - alert.timestamp;
+    
+    // Escalation levels based on time
+    if (timeSinceCreation < m_escalationTimeout) {
+        return 1; // Subtle
+    } else if (timeSinceCreation < m_escalationTimeout * 2) {
+        return 2; // Standard
+    } else if (timeSinceCreation < m_escalationTimeout * 3) {
+        return 3; // Intense
+    } else {
+        return 4; // Maximum
+    }
+}
+
+void AlertZoneService::autoAcknowledgeLowSeverityAlerts()
+{
+    qint64 currentTime = QDateTime::currentMSecsSinceEpoch();
+    
+    for (int i = 0; i < m_activeAlerts.size(); ++i) {
+        if (!m_activeAlerts[i].acknowledged &&
+            m_activeAlerts[i].severity == "low" &&
+            (currentTime - m_activeAlerts[i].timestamp) > m_acknowledgmentTimeout) {
+            acknowledgeAlert(m_activeAlerts[i].alertId);
+        }
+    }
+}
+
+void AlertZoneService::logAcknowledgmentToAudit(const QString& alertId, const Alert& alert)
+{
+    if (!m_auditInterface || !m_auditInterface->isValid()) {
+        qWarning() << "Cannot connect to audit service for acknowledgment logging";
+        return;
+    }
+    
+    QVariantMap eventData;
+    eventData["event_type"] = "alert_acknowledged";
+    eventData["alert_id"] = alertId;
+    eventData["alert_category"] = alert.category;
+    eventData["alert_severity"] = alert.severity;
+    eventData["alert_message"] = alert.message;
+    eventData["acknowledgment_timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+    eventData["user"] = qgetenv("USER");
+    
+    QJsonDocument doc = QJsonDocument::fromVariant(eventData);
+    QString jsonData = QString::fromUtf8(doc.toJson());
+    
+    m_auditInterface->call("LogEvent", "alert_acknowledgment", jsonData);
+}
+
+QString AlertZoneService::getNavigationTarget(const QString& category)
+{
+    if (category == "encryption_failures") {
+        return "milos-encryption-manager";
+    } else if (category == "network_breaches") {
+        return "milos-network-dashboard";
+    } else if (category == "blocked_transmissions") {
+        return "milos-data-guard-gui";
+    } else if (category == "hardening_violations") {
+        return "systemsettings"; // KDE System Settings
+    }
+    return "";
+}
+
+void AlertZoneService::launchApplication(const QString& application, const QVariantMap& context)
+{
+    QProcess* process = new QProcess(this);
+    
+    if (application == "systemsettings") {
+        // Launch KDE System Settings with security section
+        process->start("systemsettings5", QStringList() << "--args" << "security");
+    } else {
+        // Launch MilOS application
+        QString appPath = QString("/usr/bin/%1").arg(application);
+        if (QFile::exists(appPath)) {
+            process->start(appPath);
+        } else {
+            // Try desktop file
+            QString desktopFile = QString("/usr/share/applications/%1.desktop").arg(application);
+            if (QFile::exists(desktopFile)) {
+                process->start("gtk-launch", QStringList() << application);
+            } else {
+                qWarning() << "Cannot find application:" << application;
+                delete process;
+                return;
+            }
+        }
+    }
+    
+    connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+            process, &QProcess::deleteLater);
 }

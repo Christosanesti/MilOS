@@ -22,6 +22,8 @@ class AlertZoneService : public QObject
     Q_OBJECT
     Q_PROPERTY(int alertCount READ alertCount NOTIFY alertCountChanged)
     Q_PROPERTY(QStringList enabledCategories READ enabledCategories WRITE setEnabledCategories NOTIFY enabledCategoriesChanged)
+    Q_PROPERTY(int escalationTimeout READ escalationTimeout WRITE setEscalationTimeout NOTIFY escalationTimeoutChanged)
+    Q_PROPERTY(int acknowledgmentTimeout READ acknowledgmentTimeout WRITE setAcknowledgmentTimeout NOTIFY acknowledgmentTimeoutChanged)
 
 public:
     explicit AlertZoneService(QObject* parent = nullptr);
@@ -30,6 +32,10 @@ public:
     int alertCount() const { return m_alertCount; }
     QStringList enabledCategories() const { return m_enabledCategories; }
     void setEnabledCategories(const QStringList& categories);
+    int escalationTimeout() const { return m_escalationTimeout; }
+    void setEscalationTimeout(int timeout);
+    int acknowledgmentTimeout() const { return m_acknowledgmentTimeout; }
+    void setAcknowledgmentTimeout(int timeout);
 
 public Q_SLOTS:
     Q_INVOKABLE void addAlert(const QString& severity, const QString& category, const QString& message);
@@ -38,12 +44,20 @@ public Q_SLOTS:
     Q_INVOKABLE void subscribeToDBusSignals();
     Q_INVOKABLE void unsubscribeFromDBusSignals();
     Q_INVOKABLE void processAlertQueue();
+    Q_INVOKABLE void acknowledgeAlert(const QString& alertId);
+    Q_INVOKABLE void navigateToAlertSource(const QString& alertId);
+    Q_INVOKABLE QVariantMap getAlert(const QString& alertId);
+    Q_INVOKABLE QVariantList getActiveAlerts();
 
 Q_SIGNALS:
     void alertReceived(const QString& severity, const QString& category, const QString& message);
     void alertCountChanged(int count);
     void alertsCleared();
     void enabledCategoriesChanged();
+    void escalationTimeoutChanged();
+    void acknowledgmentTimeoutChanged();
+    void alertAcknowledged(const QString& alertId);
+    void alertEscalated(const QString& alertId, int escalationLevel);
 
 private slots:
     void onTransmissionBlocked(const QString& transmissionInfo);
@@ -60,14 +74,23 @@ private:
         qint64 timestamp;
         QString source;
         int count; // For deduplication
+        bool acknowledged;
+        qint64 acknowledgmentTimestamp;
+        int escalationLevel; // 1-4 (subtle, standard, intense, maximum)
+        qint64 escalationStartTime;
+        QString alertId; // Unique ID for tracking
     };
     
     int m_alertCount;
     QStringList m_enabledCategories;
+    int m_escalationTimeout; // milliseconds
+    int m_acknowledgmentTimeout; // milliseconds
     QQueue<Alert> m_alertQueue;
     QList<Alert> m_activeAlerts;
     QTimer* m_queueTimer;
     QTimer* m_deduplicationTimer;
+    QTimer* m_escalationTimer;
+    QTimer* m_acknowledgmentTimer;
     
     // D-Bus interfaces
     QDBusConnection m_dbusConnection;
@@ -91,10 +114,24 @@ private:
     // Filtering
     bool shouldDisplayAlert(const Alert& alert);
     
+    // Escalation
+    void updateEscalationLevels();
+    int calculateEscalationLevel(const Alert& alert);
+    QString generateAlertId();
+    
+    // Acknowledgment
+    void logAcknowledgmentToAudit(const QString& alertId, const Alert& alert);
+    void autoAcknowledgeLowSeverityAlerts();
+    
+    // Navigation
+    QString getNavigationTarget(const QString& category);
+    void launchApplication(const QString& application, const QVariantMap& context);
+    
     // D-Bus connection
     void connectToDataGuardService();
     void disconnectFromDataGuardService();
     void connectToGUIApplicationSignals();
+    QDBusInterface* m_auditInterface;
 };
 
 #endif // ALERTZONESERVICE_H
