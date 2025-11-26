@@ -65,6 +65,14 @@ bool FIMService::initialize() {
         std::cerr << "Failed to initialize file monitor" << std::endl;
         return false;
     }
+    
+    // Load monitored directories from configuration
+    if (m_configParser && m_configParser->isLoaded()) {
+        std::vector<std::string> directories = m_configParser->getStringArray("monitoring.monitored_directories");
+        for (const auto& dir : directories) {
+            m_fileMonitor->addDirectory(dir);
+        }
+    }
 
     // Initialize remediation manager
     m_remediationManager = std::make_unique<RemediationManager>();
