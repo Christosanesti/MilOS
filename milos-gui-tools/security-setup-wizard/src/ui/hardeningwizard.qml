@@ -2,6 +2,7 @@ import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
 import MilosComponents 1.0
+import SecuritySetupWizard 1.0
 
 Rectangle {
     id: hardeningWizard
@@ -10,8 +11,29 @@ Rectangle {
     
     property string selectedLevel: "standard"
     property bool applying: false
+    property int hardeningProgress: 0
     
     signal nextClicked()
+    
+    // Hardening manager service
+    HardeningManager {
+        id: hardeningManager
+        
+        onHardeningProgress: function(percentage) {
+            hardeningWizard.hardeningProgress = percentage
+        }
+        
+        onHardeningComplete: {
+            applying = false
+            hardeningWizard.nextClicked()
+        }
+        
+        onHardeningError: function(error) {
+            console.error("Hardening error:", error)
+            applying = false
+            // Could show error dialog here
+        }
+    }
     
     ColumnLayout {
         anchors.fill: parent
@@ -195,7 +217,7 @@ Rectangle {
                 Layout.fillWidth: true
                 Layout.preferredHeight: 32
                 variant: "linear"
-                value: 75
+                value: hardeningWizard.hardeningProgress
                 status: "processing"
             }
             
@@ -221,16 +243,13 @@ Rectangle {
                 Layout.preferredWidth: 120
                 Layout.preferredHeight: 48
                 variant: "primary"
-                text: "Next"
+                text: applying ? "Applying..." : "Next"
                 enabled: !applying
                 onClicked: {
                     if (!applying) {
                         applying = true
-                        // Simulate hardening application
-                        Qt.callLater(function() {
-                            applying = false
-                            hardeningWizard.nextClicked()
-                        })
+                        hardeningProgress = 0
+                        hardeningManager.applyHardening(selectedLevel)
                     }
                 }
             }

@@ -4,6 +4,7 @@
 #include <QDir>
 #include <QFile>
 #include "ui/mainwindow.h"
+#include "services/hardeningmanager.h"
 
 int main(int argc, char *argv[])
 {
@@ -15,6 +16,7 @@ int main(int argc, char *argv[])
     
     // Register QML types
     qmlRegisterType<MainWindow>("SecuritySetupWizard", 1, 0, "MainWindow");
+    qmlRegisterType<HardeningManager>("SecuritySetupWizard", 1, 0, "HardeningManager");
     
     // Create QML engine
     QQmlApplicationEngine engine;
