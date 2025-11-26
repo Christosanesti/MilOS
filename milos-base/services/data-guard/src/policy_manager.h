@@ -93,6 +93,13 @@ public:
      */
     bool applyPolicy(const std::string& policyId);
 
+    /**
+     * @brief Add or update a policy
+     * @param policy Policy to add or update
+     * @return true if successful, false otherwise
+     */
+    bool addOrUpdatePolicy(const NetworkPolicy& policy);
+
 private:
     ConfigParser* m_configParser;
     std::vector<NetworkPolicy> m_policies;

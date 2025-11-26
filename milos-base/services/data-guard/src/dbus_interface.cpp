@@ -7,6 +7,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
+#include <QJsonValue>
 #include <QDateTime>
 #include <iostream>
 
@@ -106,9 +107,15 @@ QString DBusInterface::GetTransmissionStatus() {
 QStringList DBusInterface::GetBlockedTransmissions() {
     QStringList blocked;
     
-    // TODO: Retrieve actual blocked transmission list from network enforcement
-    // For now, return empty list
-    // This would require storing blocked transmission details
+    if (!m_networkEnforcement) {
+        return blocked;
+    }
+    
+    // Retrieve actual blocked transmission list from network enforcement
+    std::vector<std::string> blockedList = m_networkEnforcement->getBlockedTransmissions();
+    for (const auto& transmission : blockedList) {
+        blocked.append(QString::fromStdString(transmission));
+    }
     
     return blocked;
 }
@@ -135,11 +142,62 @@ bool DBusInterface::ConfigurePolicy(const QString& policy) {
 
     QJsonObject policyObj = doc.object();
     
-    // TODO: Create NetworkPolicy from JSON and add to policy manager
-    // For now, return false as full implementation requires policy manager extension
+    // Create NetworkPolicy from JSON
+    NetworkPolicy policy;
     
-    std::cerr << "Policy configuration not fully implemented yet" << std::endl;
-    return false;
+    // Required fields
+    if (!policyObj.contains("policy_id") || !policyObj.contains("policy_name") || 
+        !policyObj.contains("policy_type")) {
+        std::cerr << "Missing required policy fields (policy_id, policy_name, policy_type)" << std::endl;
+        return false;
+    }
+    
+    policy.policy_id = policyObj["policy_id"].toString().toStdString();
+    policy.policy_name = policyObj["policy_name"].toString().toStdString();
+    policy.policy_type = policyObj["policy_type"].toString().toStdString();
+    policy.enabled = policyObj.value("enabled").toBool(true);
+    policy.priority = policyObj.value("priority").toInt(100);
+    
+    // Parse rules
+    if (policyObj.contains("rules") && policyObj["rules"].isArray()) {
+        QJsonArray rulesArray = policyObj["rules"].toArray();
+        for (const QJsonValue& ruleValue : rulesArray) {
+            if (!ruleValue.isObject()) {
+                continue;
+            }
+            
+            QJsonObject ruleObj = ruleValue.toObject();
+            PolicyRule rule;
+            
+            rule.rule_id = ruleObj.value("rule_id").toString("").toStdString();
+            rule.source = ruleObj.value("source").toString("").toStdString();
+            rule.destination = ruleObj.value("destination").toString("").toStdString();
+            rule.protocol = ruleObj.value("protocol").toString("").toStdString();
+            rule.port = ruleObj.value("port").toInt(-1);
+            rule.encryption_required = ruleObj.value("encryption_required").toBool(false);
+            rule.action = ruleObj.value("action").toString("ALLOW").toStdString();
+            
+            policy.rules.push_back(rule);
+        }
+    }
+    
+    // Add timestamps
+    policy.created_at = QDateTime::currentDateTime().toString(Qt::ISODate).toStdString();
+    policy.updated_at = policy.created_at;
+    
+    // Add or update policy in policy manager
+    if (!m_policyManager->addOrUpdatePolicy(policy)) {
+        std::cerr << "Failed to add/update policy" << std::endl;
+        return false;
+    }
+    
+    // Apply policy
+    if (!m_policyManager->applyPolicy(policy.policy_id)) {
+        std::cerr << "Failed to apply policy" << std::endl;
+        return false;
+    }
+    
+    return true;
 }
 
 QString DBusInterface::GetPolicyStatus(const QString& policyId) {

@@ -104,6 +104,12 @@ public:
      */
     bool rollbackBaseline(const std::string& baselineId, const std::string& version);
 
+    /**
+     * @brief Get all file paths that have baselines (monitored files)
+     * @return List of file paths
+     */
+    std::vector<std::string> getAllMonitoredFiles() const;
+
 private:
     bool m_initialized;
     std::string m_storagePath;

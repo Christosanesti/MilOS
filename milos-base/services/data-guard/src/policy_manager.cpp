@@ -155,9 +155,30 @@ bool PolicyManager::applyPolicy(const std::string& policyId) {
         return false;
     }
 
-    // TODO: Apply policy to network enforcement
-    // This will be implemented when network enforcement is complete
+    // Policy is automatically applied through network enforcement's policy manager reference
+    // Network enforcement reads policies from policy manager when inspecting packets
+    // No explicit application needed - policies are evaluated in priority order
 
+    return true;
+}
+
+bool PolicyManager::addOrUpdatePolicy(const NetworkPolicy& policy) {
+    if (!validatePolicy(policy)) {
+        std::cerr << "Policy validation failed: " << policy.policy_id << std::endl;
+        return false;
+    }
+
+    // Check if policy already exists
+    auto it = m_policyIndex.find(policy.policy_id);
+    if (it != m_policyIndex.end()) {
+        // Update existing policy
+        m_policies[it->second] = policy;
+    } else {
+        // Add new policy
+        m_policies.push_back(policy);
+    }
+
+    sortPoliciesByPriority();
     return true;
 }
 

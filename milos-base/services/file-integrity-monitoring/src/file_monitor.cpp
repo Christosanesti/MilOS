@@ -132,8 +132,40 @@ void FileMonitor::removeDirectory(const std::string& directoryPath) {
 #endif
 }
 
-void FileMonitor::reloadConfiguration() {
-    // TODO: Reload monitored directories from configuration
+void FileMonitor::reloadConfiguration(const std::vector<std::string>& directories) {
+    // Reload monitored directories from configuration
+    if (directories.empty()) {
+        return;  // No directories provided, keep current configuration
+    }
+    
+    // Stop current monitoring temporarily
+    bool wasMonitoring = m_monitoring;
+    if (wasMonitoring) {
+        stop();
+    }
+    
+    // Clear current directories
+    m_monitoredDirectories.clear();
+    
+#ifdef HAVE_INOTIFY
+    // Clear watch descriptors
+    if (m_inotifyFd >= 0) {
+        for (int wd : m_watchDescriptors) {
+            inotify_rm_watch(m_inotifyFd, wd);
+        }
+        m_watchDescriptors.clear();
+    }
+#endif
+    
+    // Add new directories
+    for (const auto& dir : directories) {
+        addDirectory(dir);
+    }
+    
+    // Restart monitoring if it was running
+    if (wasMonitoring) {
+        start();
+    }
 }
 
 void FileMonitor::monitorLoop() {

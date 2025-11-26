@@ -117,8 +117,69 @@ FileChange ChangeDetector::detectChange(const std::string& filePath) {
 }
 
 std::vector<FileChange> ChangeDetector::getChanges(const std::vector<std::string>& filters) const {
-    // TODO: Apply filters
-    return m_detectedChanges;
+    if (filters.empty()) {
+        return m_detectedChanges;
+    }
+    
+    std::vector<FileChange> filteredChanges;
+    
+    // Parse filters: format is "key:value" (e.g., "file_path:/etc/*", "severity:high", "change_type:modified")
+    std::map<std::string, std::string> filterMap;
+    for (const auto& filter : filters) {
+        size_t colonPos = filter.find(':');
+        if (colonPos != std::string::npos) {
+            std::string key = filter.substr(0, colonPos);
+            std::string value = filter.substr(colonPos + 1);
+            filterMap[key] = value;
+        }
+    }
+    
+    // Apply filters
+    for (const auto& change : m_detectedChanges) {
+        bool matches = true;
+        
+        // Filter by file path pattern
+        if (filterMap.find("file_path") != filterMap.end()) {
+            if (!matchPattern(filterMap.at("file_path"), change.file_path)) {
+                matches = false;
+            }
+        }
+        
+        // Filter by change type
+        if (matches && filterMap.find("change_type") != filterMap.end()) {
+            std::string changeTypeStr;
+            switch (change.change_type) {
+                case ChangeType::MODIFIED: changeTypeStr = "modified"; break;
+                case ChangeType::DELETED: changeTypeStr = "deleted"; break;
+                case ChangeType::CREATED: changeTypeStr = "created"; break;
+                case ChangeType::PERMISSIONS_CHANGED: changeTypeStr = "permissions_changed"; break;
+                case ChangeType::OWNERSHIP_CHANGED: changeTypeStr = "ownership_changed"; break;
+            }
+            if (changeTypeStr != filterMap.at("change_type")) {
+                matches = false;
+            }
+        }
+        
+        // Filter by severity
+        if (matches && filterMap.find("severity") != filterMap.end()) {
+            if (change.severity != filterMap.at("severity")) {
+                matches = false;
+            }
+        }
+        
+        // Filter by baseline ID
+        if (matches && filterMap.find("baseline_id") != filterMap.end()) {
+            if (change.baseline_id != filterMap.at("baseline_id")) {
+                matches = false;
+            }
+        }
+        
+        if (matches) {
+            filteredChanges.push_back(change);
+        }
+    }
+    
+    return filteredChanges;
 }
 
 void ChangeDetector::registerChangeCallback(ChangeCallback callback) {

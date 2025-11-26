@@ -245,6 +245,14 @@ BaselineInfo BaselineManager::getBaselineVersion(const std::string& baselineId, 
     return BaselineInfo();  // Return empty if not found
 }
 
+std::vector<std::string> BaselineManager::getAllMonitoredFiles() const {
+    std::vector<std::string> files;
+    for (const auto& [filePath, baselineId] : m_fileToBaseline) {
+        files.push_back(filePath);
+    }
+    return files;
+}
+
 bool BaselineManager::rollbackBaseline(const std::string& baselineId, const std::string& version) {
     auto versionsIt = m_baselineVersions.find(baselineId);
     if (versionsIt == m_baselineVersions.end()) {

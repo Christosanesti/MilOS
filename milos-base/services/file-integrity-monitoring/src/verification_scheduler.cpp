@@ -374,9 +374,10 @@ void VerificationScheduler::executeSchedule(const VerificationSchedule& schedule
     // Get files to verify
     std::vector<std::string> filesToVerify;
     if (schedule.file_paths.empty()) {
-        // TODO: Get all monitored files from BaselineManager
-        // For now, we'll need to get this from the service
-        // This is a limitation - we may need to pass monitored files list
+        // Get all monitored files from BaselineManager
+        if (m_baselineManager) {
+            filesToVerify = m_baselineManager->getAllMonitoredFiles();
+        }
     } else {
         filesToVerify = schedule.file_paths;
     }

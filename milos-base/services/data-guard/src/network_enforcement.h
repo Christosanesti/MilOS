@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <mutex>
 
 class ConfigParser;
 class PolicyManager;
@@ -64,6 +65,12 @@ public:
      */
     size_t getAllowedCount() const { return m_allowedCount; }
 
+    /**
+     * @brief Get list of blocked transmissions (JSON strings)
+     * @return List of blocked transmission information
+     */
+    std::vector<std::string> getBlockedTransmissions() const;
+
 private:
     bool m_running;
     bool m_initialized;
@@ -80,6 +87,19 @@ private:
     // Packet capture thread
     bool m_captureRunning;
     void* m_captureThread;  // Thread handle for packet capture loop
+
+    // Blocked transmission storage
+    struct BlockedTransmission {
+        std::string source;
+        std::string destination;
+        std::string protocol;
+        int port;
+        std::string timestamp;
+        std::string reason;
+    };
+    mutable std::vector<BlockedTransmission> m_blockedTransmissions;
+    mutable std::mutex m_blockedMutex;  // Mutex for thread-safe access to blocked transmissions
+    static const size_t MAX_BLOCKED_HISTORY = 1000;  // Maximum number of blocked transmissions to store
 
     /**
      * @brief Initialize network hooks (libpcap)
@@ -121,6 +141,26 @@ private:
      * @return true if encrypted, false otherwise
      */
     bool isPacketEncrypted(const void* packetData, size_t packetSize);
+
+    /**
+     * @brief Extract packet information (source, destination, protocol, port)
+     * @param packetData Packet data
+     * @param packetSize Packet size
+     * @param source Output: source IP address
+     * @param destination Output: destination IP address
+     * @param protocol Output: protocol name
+     * @param port Output: port number (-1 if not applicable)
+     */
+    void extractPacketInfo(const void* packetData, size_t packetSize,
+                          QString& source, QString& destination, QString& protocol, int& port);
+
+    /**
+     * @brief Match IP address against CIDR notation
+     * @param ip IP address
+     * @param cidr CIDR notation (e.g., "192.168.1.0/24")
+     * @return true if IP matches CIDR, false otherwise
+     */
+    bool matchCIDR(const std::string& ip, const std::string& cidr);
 };
 
 #endif // NETWORK_ENFORCEMENT_H

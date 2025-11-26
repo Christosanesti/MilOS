@@ -1,11 +1,20 @@
 #include "network_enforcement.h"
 #include "config_parser.h"
 #include "policy_manager.h"
+#include "audit_logger.h"
 #include <pcap/pcap.h>
 #include <pthread.h>
 #include <iostream>
 #include <cstring>
 #include <atomic>
+#include <QString>
+#include <QVariantMap>
+#include <QDateTime>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <sstream>
+#include <arpa/inet.h>
+#include <mutex>
 
 NetworkEnforcement::NetworkEnforcement()
     : m_running(false)
@@ -38,7 +47,12 @@ bool NetworkEnforcement::initialize(ConfigParser* configParser, PolicyManager* p
     if (!initializeNetworkHooks()) {
         std::cerr << "Failed to initialize network hooks (graceful degradation enabled)" << std::endl;
         // Continue with reduced functionality if graceful degradation is enabled
-        // TODO: Check config for graceful_degradation setting
+        bool gracefulDegradation = m_configParser ? 
+            m_configParser->getBool("network_enforcement.graceful_degradation", true) : true;
+        if (!gracefulDegradation) {
+            std::cerr << "Graceful degradation disabled, initialization failed" << std::endl;
+            return false;
+        }
     }
 
     m_initialized = true;
@@ -94,7 +108,21 @@ bool NetworkEnforcement::isHealthy() const {
         return false;
     }
 
-    // TODO: Add health checks (e.g., network hook status)
+    // Check network hook status
+    if (m_pcapHandle == nullptr) {
+        // If graceful degradation is enabled, this is acceptable
+        bool gracefulDegradation = m_configParser ? 
+            m_configParser->getBool("network_enforcement.graceful_degradation", true) : true;
+        if (!gracefulDegradation) {
+            return false;
+        }
+    }
+    
+    // Check if capture thread is running (if hooks are available)
+    if (m_pcapHandle != nullptr && !m_captureRunning) {
+        return false;
+    }
+    
     return true;
 }
 
@@ -155,11 +183,41 @@ bool NetworkEnforcement::inspectPacket(const void* packetData, size_t packetSize
 
         // Evaluate policy rules
         for (const auto& rule : policy.rules) {
+            // Extract packet information for rule matching
+            QString source, destination, protocol;
+            int port = -1;
+            extractPacketInfo(packetData, packetSize, source, destination, protocol, port);
+            
             // Check if rule matches packet
             bool ruleMatches = true;
             
-            // TODO: Implement full rule matching (source, destination, protocol, port)
-            // For MVP, we'll use simplified matching based on encryption requirement
+            // Match source (CIDR notation)
+            if (!rule.source.empty() && !source.isEmpty()) {
+                if (!matchCIDR(source.toStdString(), rule.source)) {
+                    ruleMatches = false;
+                }
+            }
+            
+            // Match destination (CIDR notation)
+            if (ruleMatches && !rule.destination.empty() && !destination.isEmpty()) {
+                if (!matchCIDR(destination.toStdString(), rule.destination)) {
+                    ruleMatches = false;
+                }
+            }
+            
+            // Match protocol
+            if (ruleMatches && !rule.protocol.empty() && !protocol.isEmpty()) {
+                if (protocol.toUpper().toStdString() != rule.protocol) {
+                    ruleMatches = false;
+                }
+            }
+            
+            // Match port
+            if (ruleMatches && rule.port != -1 && port != -1) {
+                if (port != rule.port) {
+                    ruleMatches = false;
+                }
+            }
             
             if (ruleMatches) {
                 // Check encryption requirement
@@ -168,10 +226,19 @@ bool NetworkEnforcement::inspectPacket(const void* packetData, size_t packetSize
                     if (rule.action == "BLOCK") {
                         m_blockedCount++;
                         return false;  // Block packet
-                    } else if (rule.action == "LOG") {
-                        // Log but allow
-                        // TODO: Log to audit service
+                } else if (rule.action == "LOG") {
+                    // Log but allow
+                    if (m_auditLogger) {
+                        QString source, destination, protocol;
+                        int port = -1;
+                        extractPacketInfo(packetData, packetSize, source, destination, protocol, port);
+                        m_auditLogger->logPolicyViolation(
+                            QString::fromStdString(policy.policy_id),
+                            "encryption_required_violation",
+                            QVariantMap()
+                        );
                     }
+                }
                 } else if (!rule.encryption_required || encrypted) {
                     // Encryption not required or packet is encrypted
                     if (rule.action == "ALLOW") {
@@ -270,6 +337,125 @@ bool NetworkEnforcement::isPacketEncrypted(const void* packetData, size_t packet
     return false;
 }
 
+void NetworkEnforcement::extractPacketInfo(const void* packetData, size_t packetSize,
+                                           QString& source, QString& destination, QString& protocol, int& port) {
+    source = "unknown";
+    destination = "unknown";
+    protocol = "unknown";
+    port = -1;
+    
+    if (!packetData || packetSize < 14) {
+        return;  // Not enough data for Ethernet header
+    }
+    
+    const unsigned char* data = static_cast<const unsigned char*>(packetData);
+    
+    // Skip Ethernet header (14 bytes) to get IP header
+    const unsigned char* ipHeader = data + 14;
+    size_t ipHeaderSize = packetSize - 14;
+    
+    if (ipHeaderSize < 1) {
+        return;
+    }
+    
+    // Check for IP version (IPv4 = 0x45, IPv6 = 0x60)
+    if ((ipHeader[0] & 0xF0) == 0x40 && ipHeaderSize >= 20) {
+        // IPv4
+        struct in_addr srcAddr, dstAddr;
+        memcpy(&srcAddr, ipHeader + 12, 4);
+        memcpy(&dstAddr, ipHeader + 16, 4);
+        
+        char srcStr[INET_ADDRSTRLEN], dstStr[INET_ADDRSTRLEN];
+        inet_ntop(AF_INET, &srcAddr, srcStr, INET_ADDRSTRLEN);
+        inet_ntop(AF_INET, &dstAddr, dstStr, INET_ADDRSTRLEN);
+        
+        source = QString::fromUtf8(srcStr);
+        destination = QString::fromUtf8(dstStr);
+        
+        // Get protocol field (offset 9 in IP header)
+        unsigned char ipProtocol = ipHeader[9];
+        size_t ipHeaderLength = (ipHeader[0] & 0x0F) * 4;
+        
+        if (ipProtocol == 6) {
+            // TCP
+            protocol = "TCP";
+            if (ipHeaderSize >= ipHeaderLength + 4) {
+                const unsigned char* tcpHeader = ipHeader + ipHeaderLength;
+                port = (tcpHeader[0] << 8) | tcpHeader[1];  // Source port
+                // Could also extract destination port: (tcpHeader[2] << 8) | tcpHeader[3]
+            }
+        } else if (ipProtocol == 17) {
+            // UDP
+            protocol = "UDP";
+            if (ipHeaderSize >= ipHeaderLength + 4) {
+                const unsigned char* udpHeader = ipHeader + ipHeaderLength;
+                port = (udpHeader[0] << 8) | udpHeader[1];  // Source port
+            }
+        } else if (ipProtocol == 1) {
+            protocol = "ICMP";
+        } else {
+            protocol = QString("IP-%1").arg(ipProtocol);
+        }
+    } else if ((ipHeader[0] & 0xF0) == 0x60 && ipHeaderSize >= 40) {
+        // IPv6 (simplified - just mark as IPv6)
+        protocol = "IPv6";
+        source = "::";
+        destination = "::";
+    }
+}
+
+bool NetworkEnforcement::matchCIDR(const std::string& ip, const std::string& cidr) {
+    if (cidr.empty() || ip.empty()) {
+        return true;  // Empty rule matches all
+    }
+    
+    // Parse CIDR notation (e.g., "192.168.1.0/24")
+    size_t slashPos = cidr.find('/');
+    if (slashPos == std::string::npos) {
+        // No prefix length, exact match
+        return ip == cidr;
+    }
+    
+    std::string cidrIp = cidr.substr(0, slashPos);
+    int prefixLen = std::stoi(cidr.substr(slashPos + 1));
+    
+    if (prefixLen < 0 || prefixLen > 32) {
+        return false;
+    }
+    
+    // Convert IPs to network byte order
+    struct in_addr ipAddr, cidrAddr;
+    if (inet_aton(ip.c_str(), &ipAddr) == 0 || inet_aton(cidrIp.c_str(), &cidrAddr) == 0) {
+        return false;
+    }
+    
+    uint32_t ipNet = ntohl(ipAddr.s_addr);
+    uint32_t cidrNet = ntohl(cidrAddr.s_addr);
+    uint32_t mask = (0xFFFFFFFF << (32 - prefixLen)) & 0xFFFFFFFF;
+    
+    return (ipNet & mask) == (cidrNet & mask);
+}
+
+std::vector<std::string> NetworkEnforcement::getBlockedTransmissions() const {
+    std::lock_guard<std::mutex> lock(m_blockedMutex);
+    std::vector<std::string> result;
+    
+    for (const auto& blocked : m_blockedTransmissions) {
+        QJsonObject obj;
+        obj["source"] = QString::fromStdString(blocked.source);
+        obj["destination"] = QString::fromStdString(blocked.destination);
+        obj["protocol"] = QString::fromStdString(blocked.protocol);
+        obj["port"] = blocked.port;
+        obj["timestamp"] = QString::fromStdString(blocked.timestamp);
+        obj["reason"] = QString::fromStdString(blocked.reason);
+        
+        QJsonDocument doc(obj);
+        result.push_back(QString::fromUtf8(doc.toJson()).toStdString());
+    }
+    
+    return result;
+}
+
 void* NetworkEnforcement::packetCaptureThread(void* arg) {
     NetworkEnforcement* self = static_cast<NetworkEnforcement*>(arg);
     pcap_t* handle = reinterpret_cast<pcap_t*>(self->m_pcapHandle);
@@ -302,23 +488,40 @@ void* NetworkEnforcement::packetCaptureThread(void* arg) {
 void NetworkEnforcement::processPacket(const void* header, const unsigned char* packet) {
     const pcap_pkthdr* hdr = static_cast<const pcap_pkthdr*>(header);
     
+    // Extract packet information for logging
+    QString source, destination, protocol;
+    int port = -1;
+    extractPacketInfo(packet, hdr->caplen, source, destination, protocol, port);
+    
     // Inspect packet
+    bool encrypted = isPacketEncrypted(packet, hdr->caplen);
     bool allowed = inspectPacket(packet, hdr->caplen);
     
-    // Extract packet information for logging
-    QString source = "unknown";
-    QString destination = "unknown";
-    QString protocol = "unknown";
-    
-    // TODO: Extract actual source/destination/protocol from packet headers
-    // For now, use placeholder values
-    
     if (!allowed) {
+        // Store blocked transmission (thread-safe)
+        {
+            std::lock_guard<std::mutex> lock(m_blockedMutex);
+            BlockedTransmission blocked;
+            blocked.source = source.toStdString();
+            blocked.destination = destination.toStdString();
+            blocked.protocol = protocol.toStdString();
+            blocked.port = port;
+            blocked.timestamp = QDateTime::currentDateTime().toString(Qt::ISODate).toStdString();
+            blocked.reason = encrypted ? "policy_violation" : "encryption_required";
+            
+            m_blockedTransmissions.push_back(blocked);
+            if (m_blockedTransmissions.size() > MAX_BLOCKED_HISTORY) {
+                m_blockedTransmissions.erase(m_blockedTransmissions.begin());
+            }
+        }
+        
         // Packet blocked - log to audit service
         if (m_auditLogger) {
-            m_auditLogger->logTransmissionAttempt(source, destination, protocol, false, "BLOCK");
+            m_auditLogger->logTransmissionAttempt(source, destination, protocol, encrypted, "BLOCK");
         }
-        std::cout << "Packet blocked: size=" << hdr->caplen << std::endl;
+        std::cout << "Packet blocked: " << source.toStdString() << " -> " 
+                  << destination.toStdString() << " (" << protocol.toStdString() 
+                  << ", size=" << hdr->caplen << ")" << std::endl;
     } else {
         // Packet allowed - log to audit service (optional, can be configured)
         if (m_auditLogger) {

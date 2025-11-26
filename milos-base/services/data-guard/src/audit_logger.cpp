@@ -3,6 +3,8 @@
 #include <QDBusInterface>
 #include <QDBusReply>
 #include <QDBusError>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <iostream>
 
 AuditLogger::AuditLogger(QObject* parent)
@@ -74,11 +76,9 @@ bool AuditLogger::isAuditServiceAvailable() const {
         return false;
     }
     
-    // Try to call a simple method to verify service is responding
-    // TODO: Use actual method name from Audit Service interface
-    // For now, just check if interface is valid
-    
-    return true;
+    // Try to call GetHealthStatus method to verify service is responding
+    QDBusReply<QString> reply = interface.call("GetHealthStatus");
+    return reply.isValid();
 }
 
 bool AuditLogger::logToAuditService(const QString& eventType, const QVariantMap& eventData) {
@@ -114,8 +114,17 @@ bool AuditLogger::logToAuditService(const QString& eventType, const QVariantMap&
     }
     
     // Call LogEvent method on audit service
-    // Method signature: LogEvent(QString eventType, QVariantMap eventData)
-    QDBusReply<bool> reply = interface.call("LogEvent", eventType, QVariant::fromValue(eventData));
+    // Method signature: LogEvent(QString eventData) - takes JSON string
+    QJsonObject eventObj;
+    eventObj["event_type"] = eventType;
+    eventObj["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+    for (auto it = eventData.begin(); it != eventData.end(); ++it) {
+        eventObj[it.key()] = it.value();
+    }
+    QJsonDocument doc(eventObj);
+    QString eventDataJson = QString::fromUtf8(doc.toJson());
+    
+    QDBusReply<QString> reply = interface.call("LogEvent", eventDataJson);
     
     if (!reply.isValid()) {
         if (m_gracefulDegradation) {
@@ -129,6 +138,7 @@ bool AuditLogger::logToAuditService(const QString& eventType, const QVariantMap&
         return false;
     }
     
-    return reply.value();
+    // LogEvent returns event ID (QString), not bool
+    return !reply.value().isEmpty();
 }
 

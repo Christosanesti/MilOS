@@ -197,7 +197,12 @@ bool FIMService::reloadConfiguration() {
 
     // Reload components with new configuration
     if (m_fileMonitor) {
-        m_fileMonitor->reloadConfiguration();
+        // Get monitored directories from config
+        // For now, we'll pass empty vector to keep current directories
+        // TODO: Parse monitoring.monitored_directories array from config
+        // This would require ConfigParser to support array parsing
+        std::vector<std::string> directories;
+        m_fileMonitor->reloadConfiguration(directories);
     }
 
     if (m_auditLogger) {

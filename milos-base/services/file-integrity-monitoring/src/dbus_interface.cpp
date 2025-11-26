@@ -126,7 +126,21 @@ QString DBusInterface::GetChanges(const QString& filters) {
     if (!filters.isEmpty()) {
         QJsonDocument doc = QJsonDocument::fromJson(filters.toUtf8());
         if (doc.isObject()) {
-            // TODO: Parse filter object
+            QJsonObject filterObj = doc.object();
+            
+            // Parse filter object and convert to "key:value" format
+            if (filterObj.contains("file_path")) {
+                filterList.push_back("file_path:" + filterObj["file_path"].toString().toStdString());
+            }
+            if (filterObj.contains("change_type")) {
+                filterList.push_back("change_type:" + filterObj["change_type"].toString().toStdString());
+            }
+            if (filterObj.contains("severity")) {
+                filterList.push_back("severity:" + filterObj["severity"].toString().toStdString());
+            }
+            if (filterObj.contains("baseline_id")) {
+                filterList.push_back("baseline_id:" + filterObj["baseline_id"].toString().toStdString());
+            }
         }
     }
 

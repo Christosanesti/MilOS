@@ -51,8 +51,9 @@ public:
 
     /**
      * @brief Reload configuration
+     * @param directories List of directories to monitor (from configuration)
      */
-    void reloadConfiguration();
+    void reloadConfiguration(const std::vector<std::string>& directories = {});
 
     /**
      * @brief Check if monitoring is active
