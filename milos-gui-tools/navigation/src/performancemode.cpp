@@ -105,3 +105,4 @@ void PerformanceMode::adjustXenonEffects(const QString& mode)
     connection.call(message);
 }
 
+

@@ -131,3 +131,4 @@ QString QuickActionsServiceDBus::RegisterAction(const QVariantMap& actionDefinit
     return QString(); // Would return action_id
 }
 
+

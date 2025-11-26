@@ -158,3 +158,4 @@ QVariantList ActionDetector::getActionsForApplication(const QString& application
     return actions;
 }
 
+

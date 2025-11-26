@@ -266,3 +266,4 @@ void NavigationReset::logToAudit(const QString& eventType, const QVariantMap& ev
     connection.call(message);
 }
 
+

@@ -50,3 +50,4 @@ private:
 
 #endif // QUICKACTIONSSERVICE_DBUS_H
 
+
