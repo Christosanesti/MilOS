@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <functional>
+#include <mutex>
 
 class ConfigParser;
 class PackageManager;
@@ -81,6 +82,18 @@ public:
      */
     std::unique_ptr<UpdateInfo> getUpdateStatus(const std::string& updateId);
 
+    /**
+     * @brief Get all update history
+     * @return Vector of update information
+     */
+    std::vector<UpdateInfo> getUpdateHistory() const;
+
+    /**
+     * @brief Get current update (if any)
+     * @return Update information, nullptr if no update in progress
+     */
+    std::unique_ptr<UpdateInfo> getCurrentUpdate() const;
+
 private:
     bool m_initialized;
     ConfigParser* m_configParser;
@@ -88,6 +101,12 @@ private:
     SignatureVerifier* m_signatureVerifier;
     RollbackManager* m_rollbackManager;
     AuditLogger* m_auditLogger;
+    
+    // Update history storage
+    mutable std::vector<UpdateInfo> m_updateHistory;
+    mutable std::mutex m_historyMutex;
+    std::unique_ptr<UpdateInfo> m_currentUpdate;
+    mutable std::mutex m_currentUpdateMutex;
 
     /**
      * @brief Create backup before update

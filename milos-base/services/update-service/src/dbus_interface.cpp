@@ -176,10 +176,30 @@ bool DBusInterface::RollbackUpdate(const QString& updateId) {
         return false;
     }
 
-    // Get snapshot for this update
-    // TODO: Get snapshot ID from update history
-    // For now, use update ID as snapshot ID
-    bool success = m_rollbackManager->rollbackToSnapshot(updateId.toStdString());
+    // Get snapshot for this update from update history
+    std::string snapshotId;
+    if (m_updateApplier) {
+        auto updateInfo = m_updateApplier->getUpdateStatus(updateId.toStdString());
+        if (updateInfo && !updateInfo->rollback_info.empty()) {
+            // Parse rollback_info JSON to get snapshot_id
+            QJsonParseError error;
+            QJsonDocument doc = QJsonDocument::fromJson(
+                QByteArray::fromStdString(updateInfo->rollback_info), &error);
+            if (error.error == QJsonParseError::NoError && doc.isObject()) {
+                QJsonObject rollbackObj = doc.object();
+                if (rollbackObj.contains("snapshot_id")) {
+                    snapshotId = rollbackObj["snapshot_id"].toString().toStdString();
+                }
+            }
+        }
+    }
+    
+    // If no snapshot ID found, try using update ID as snapshot ID
+    if (snapshotId.empty()) {
+        snapshotId = updateId.toStdString();
+    }
+    
+    bool success = m_rollbackManager->rollbackToSnapshot(snapshotId);
 
     if (success && m_auditLogger) {
         m_auditLogger->logUpdateActivity(
@@ -202,9 +222,40 @@ QString DBusInterface::GetUpdateStatus(const QString& updateId) {
     std::string updateIdStr = updateId.toStdString();
     if (updateIdStr.empty()) {
         // Return current update status
-        // TODO: Get current update from update applier
+        auto currentUpdate = m_updateApplier->getCurrentUpdate();
+        if (!currentUpdate) {
+            QJsonObject status;
+            status["status"] = "no_update_in_progress";
+            QJsonDocument doc(status);
+            return QString::fromUtf8(doc.toJson());
+        }
+        
+        // Convert current update to JSON
         QJsonObject status;
-        status["status"] = "no_update_in_progress";
+        status["update_id"] = QString::fromStdString(currentUpdate->update_id);
+        QJsonArray packageArray;
+        for (const auto& pkg : currentUpdate->package_list) {
+            packageArray.append(QString::fromStdString(pkg));
+        }
+        status["package_list"] = packageArray;
+        
+        QString statusStr;
+        switch (currentUpdate->status) {
+            case UpdateStatus::PENDING: statusStr = "PENDING"; break;
+            case UpdateStatus::IN_PROGRESS: statusStr = "IN_PROGRESS"; break;
+            case UpdateStatus::COMPLETED: statusStr = "COMPLETED"; break;
+            case UpdateStatus::FAILED: statusStr = "FAILED"; break;
+            case UpdateStatus::ROLLED_BACK: statusStr = "ROLLED_BACK"; break;
+        }
+        status["status"] = statusStr;
+        status["signature_verified"] = currentUpdate->signature_verified;
+        if (!currentUpdate->error_message.empty()) {
+            status["error_message"] = QString::fromStdString(currentUpdate->error_message);
+        }
+        if (!currentUpdate->rollback_info.empty()) {
+            status["rollback_info"] = QString::fromStdString(currentUpdate->rollback_info);
+        }
+        
         QJsonDocument doc(status);
         return QString::fromUtf8(doc.toJson());
     }
@@ -258,11 +309,50 @@ QString DBusInterface::GetUpdateStatus(const QString& updateId) {
 }
 
 QString DBusInterface::GetUpdateHistory() {
-    // TODO: Load from update history database
-    // For now, return empty history
+    if (!m_updateApplier) {
+        QJsonObject history;
+        history["updates"] = QJsonArray();
+        history["count"] = 0;
+        history["error"] = "Update applier not available";
+        QJsonDocument doc(history);
+        return QString::fromUtf8(doc.toJson());
+    }
+
+    auto updates = m_updateApplier->getUpdateHistory();
+    QJsonArray updatesArray;
+
+    for (const auto& update : updates) {
+        QJsonObject updateObj;
+        updateObj["update_id"] = QString::fromStdString(update.update_id);
+        QJsonArray packageArray;
+        for (const auto& pkg : update.package_list) {
+            packageArray.append(QString::fromStdString(pkg));
+        }
+        updateObj["package_list"] = packageArray;
+        
+        QString statusStr;
+        switch (update.status) {
+            case UpdateStatus::PENDING: statusStr = "PENDING"; break;
+            case UpdateStatus::IN_PROGRESS: statusStr = "IN_PROGRESS"; break;
+            case UpdateStatus::COMPLETED: statusStr = "COMPLETED"; break;
+            case UpdateStatus::FAILED: statusStr = "FAILED"; break;
+            case UpdateStatus::ROLLED_BACK: statusStr = "ROLLED_BACK"; break;
+        }
+        updateObj["status"] = statusStr;
+        updateObj["signature_verified"] = update.signature_verified;
+        if (!update.error_message.empty()) {
+            updateObj["error_message"] = QString::fromStdString(update.error_message);
+        }
+        if (!update.rollback_info.empty()) {
+            updateObj["rollback_info"] = QString::fromStdString(update.rollback_info);
+        }
+        
+        updatesArray.append(updateObj);
+    }
+
     QJsonObject history;
-    history["updates"] = QJsonArray();
-    history["count"] = 0;
+    history["updates"] = updatesArray;
+    history["count"] = static_cast<int>(updates.size());
 
     QJsonDocument doc(history);
     return QString::fromUtf8(doc.toJson());

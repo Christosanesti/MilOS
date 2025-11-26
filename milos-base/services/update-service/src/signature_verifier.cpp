@@ -31,9 +31,13 @@ bool SignatureVerifier::initialize(ConfigParser* configParser) {
     m_keyringPath = configParser->getString("signature_verification.keyring_path");
 
     // Get repository keys
-    // TODO: Parse repository_keys from YAML array
-    // For now, use default Arch Linux key
-    m_repositoryKeys.push_back("F66F4D7C");
+    std::vector<std::string> keys = configParser->getStringArray("signature_verification.repository_keys");
+    if (keys.empty()) {
+        // Use default Arch Linux key if none configured
+        m_repositoryKeys.push_back("F66F4D7C");
+    } else {
+        m_repositoryKeys = keys;
+    }
 
     // Initialize GPGME
     gpgme_error_t err = gpgme_check_version(nullptr);

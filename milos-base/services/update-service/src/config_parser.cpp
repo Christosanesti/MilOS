@@ -3,6 +3,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <vector>
 
 ConfigParser::ConfigParser()
     : m_loaded(false)
@@ -131,5 +132,41 @@ int ConfigParser::getInt(const std::string& key, int defaultValue) const {
     }
     
     return defaultValue;
+}
+
+std::vector<std::string> ConfigParser::getStringArray(const std::string& key) const {
+    std::vector<std::string> result;
+    
+    if (!m_loaded || !m_yamlRoot) {
+        return result;
+    }
+
+    try {
+        YAML::Node* config = static_cast<YAML::Node*>(m_yamlRoot);
+        YAML::Node node = *config;
+        
+        // Split key by dots
+        std::istringstream iss(key);
+        std::string token;
+        while (std::getline(iss, token, '.')) {
+            if (node.IsMap() && node[token]) {
+                node = node[token];
+            } else {
+                return result;
+            }
+        }
+        
+        if (node.IsSequence()) {
+            for (const auto& item : node) {
+                if (item.IsScalar()) {
+                    result.push_back(item.as<std::string>());
+                }
+            }
+        }
+    } catch (const YAML::Exception& e) {
+        std::cerr << "Error getting string array for key " << key << ": " << e.what() << std::endl;
+    }
+    
+    return result;
 }
 

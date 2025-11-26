@@ -8,6 +8,7 @@
 #include <QDateTime>
 #include <iostream>
 #include <algorithm>
+#include <mutex>
 
 UpdateApplier::UpdateApplier()
     : m_initialized(false)
@@ -16,6 +17,7 @@ UpdateApplier::UpdateApplier()
     , m_signatureVerifier(nullptr)
     , m_rollbackManager(nullptr)
     , m_auditLogger(nullptr)
+    , m_currentUpdate(nullptr)
 {
 }
 
@@ -107,6 +109,12 @@ UpdateInfo UpdateApplier::applyUpdates(
         updateInfo.signature_verified = true;
     }
 
+    // Store as current update
+    {
+        std::lock_guard<std::mutex> lock(m_currentUpdateMutex);
+        m_currentUpdate = std::make_unique<UpdateInfo>(updateInfo);
+    }
+
     // Apply updates
     if (progressCallback) {
         progressCallback("Installing packages", 50);
@@ -151,12 +159,55 @@ UpdateInfo UpdateApplier::applyUpdates(
         }
     }
 
+    // Store in history
+    {
+        std::lock_guard<std::mutex> lock(m_historyMutex);
+        m_updateHistory.push_back(updateInfo);
+        // Keep only last 1000 updates
+        if (m_updateHistory.size() > 1000) {
+            m_updateHistory.erase(m_updateHistory.begin());
+        }
+    }
+
+    // Clear current update
+    {
+        std::lock_guard<std::mutex> lock(m_currentUpdateMutex);
+        m_currentUpdate.reset();
+    }
+
     return updateInfo;
 }
 
 std::unique_ptr<UpdateInfo> UpdateApplier::getUpdateStatus(const std::string& updateId) {
-    // TODO: Load from update history database
-    // For now, return nullptr
+    // Check current update first
+    {
+        std::lock_guard<std::mutex> lock(m_currentUpdateMutex);
+        if (m_currentUpdate && m_currentUpdate->update_id == updateId) {
+            return std::make_unique<UpdateInfo>(*m_currentUpdate);
+        }
+    }
+
+    // Search in history
+    std::lock_guard<std::mutex> lock(m_historyMutex);
+    for (const auto& update : m_updateHistory) {
+        if (update.update_id == updateId) {
+            return std::make_unique<UpdateInfo>(update);
+        }
+    }
+
+    return nullptr;
+}
+
+std::vector<UpdateInfo> UpdateApplier::getUpdateHistory() const {
+    std::lock_guard<std::mutex> lock(m_historyMutex);
+    return m_updateHistory;
+}
+
+std::unique_ptr<UpdateInfo> UpdateApplier::getCurrentUpdate() const {
+    std::lock_guard<std::mutex> lock(m_currentUpdateMutex);
+    if (m_currentUpdate) {
+        return std::make_unique<UpdateInfo>(*m_currentUpdate);
+    }
     return nullptr;
 }
 
