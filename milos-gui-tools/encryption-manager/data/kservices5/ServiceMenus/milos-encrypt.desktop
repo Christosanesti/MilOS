@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Service
+ServiceTypes=KonqPopupMenu/Plugin
+MimeType=all/allfiles;
+Actions=encrypt;
+X-KDE-Submenu=MilOS Security
+
+[Desktop Action encrypt]
+Name=Encrypt with MilOS
+Name[en]=Encrypt with MilOS
+Icon=milos-encrypt-service-menu
+Exec=milos-encryption-manager --encrypt %U
+X-KDE-Shortcut=
+
