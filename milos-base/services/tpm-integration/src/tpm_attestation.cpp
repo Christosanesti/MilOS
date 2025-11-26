@@ -54,14 +54,29 @@ AttestationQuote TPMAttestation::generateAttestation(const std::string& nonce,
     quote.algorithm = "sha256";
 
 #ifdef HAVE_TSS2
-    // TODO: Implement actual TPM quote generation using TSS2
-    // TPM2_Quote command
-    // This is a placeholder
-    quote.quote_data = "placeholder_quote_data";
-    quote.signature = "placeholder_signature";
+    // TPM quote generation using TSS2 library
+    // Full implementation requires TSS2 (tpm2-tss) library and proper TPM device access
+    // This is a structured placeholder with proper error handling
+    
+    // In full implementation:
+    // 1. Initialize ESYS context: Esys_Initialize(&esys_context, ...)
+    // 2. Load signing key: Esys_Load(...)
+    // 3. Create PCR selection: TPM2B_PCR_SELECTION pcr_selection
+    // 4. Generate quote: Esys_Quote(esys_context, keyHandle, ...)
+    // 5. Extract quote data and signature from TPM2B_ATTEST structure
+    
+    // For now, generate a structured placeholder that indicates TSS2 is available
+    std::stringstream ss;
+    ss << "tss2_quote_" << quote.nonce.substr(0, 8) << "_" << std::time(nullptr);
+    quote.quote_data = ss.str();
+    quote.signature = "tss2_signature_placeholder";
+    
+    // Note: In production, this would contain actual PCR values and TPM signature
 #else
-    // Fallback: Generate placeholder quote
-    quote.quote_data = "placeholder_quote_data";
+    // Fallback: Generate placeholder quote when TSS2 library not available
+    std::stringstream ss;
+    ss << "placeholder_quote_" << std::time(nullptr);
+    quote.quote_data = ss.str();
     quote.signature = "placeholder_signature";
 #endif
 
@@ -90,14 +105,35 @@ AttestationVerificationResult TPMAttestation::verifyAttestation(const Attestatio
     }
 
 #ifdef HAVE_TSS2
-    // TODO: Implement actual TPM quote verification using TSS2
-    // Verify signature and PCR values
+    // TPM quote verification using TSS2 library
+    // Full implementation requires TSS2 library and proper TPM device access
+    
+    // In full implementation:
+    // 1. Initialize ESYS context: Esys_Initialize(&esys_context, ...)
+    // 2. Load attestation key: Esys_Load(...)
+    // 3. Verify quote signature: Esys_VerifySignature(...)
+    // 4. Compare PCR values with expected values
+    // 5. Validate nonce matches
+    
+    // For now, perform basic validation
     result.success = true;
-    result.is_valid = true;  // Placeholder
+    // Check if quote data and signature are present and not placeholders
+    result.is_valid = !quote.quote_data.empty() && 
+                      !quote.signature.empty() &&
+                      quote.quote_data.find("placeholder") == std::string::npos &&
+                      quote.signature.find("placeholder") == std::string::npos;
+    
+    if (!result.is_valid) {
+        result.error_message = "Quote verification failed: Invalid quote data or signature";
+    }
 #else
-    // Fallback: Basic validation
+    // Fallback: Basic validation when TSS2 library not available
     result.success = true;
     result.is_valid = !quote.quote_data.empty() && !quote.signature.empty();
+    
+    if (!result.is_valid) {
+        result.error_message = "Quote verification unavailable: TSS2 library not available";
+    }
 #endif
 
     // Format verification time

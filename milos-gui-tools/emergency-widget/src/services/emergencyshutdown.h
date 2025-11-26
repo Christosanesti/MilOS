@@ -17,7 +17,6 @@ signals:
     void error(const QString &errorMessage);
 
 private:
-    // TODO: Integrate with systemd-logind D-Bus interface
     bool shutdownViaSystemd();
 };
 

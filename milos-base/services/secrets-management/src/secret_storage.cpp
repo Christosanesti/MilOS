@@ -103,7 +103,7 @@ bool SecretStorage::storeSecret(const std::string& secretId,
     }
 
     // Encrypt secret data
-    std::vector<uint8_t> encryptedData = encryptSecret(secretData);
+    std::vector<uint8_t> encryptedData = encryptSecret(secretData, secretId, metadata);
     if (encryptedData.empty()) {
         std::cerr << "Failed to encrypt secret" << std::endl;
         return false;
@@ -190,7 +190,7 @@ std::vector<uint8_t> SecretStorage::getSecret(const std::string& secretId) const
     // Check cache first
     auto it = m_secretCache.find(secretId);
     if (it != m_secretCache.end()) {
-        return decryptSecret(it->second.encrypted_data);
+        return decryptSecret(it->second.encrypted_data, secretId);
     }
 
     // Load from database
@@ -220,7 +220,7 @@ std::vector<uint8_t> SecretStorage::getSecret(const std::string& secretId) const
         return std::vector<uint8_t>();
     }
 
-    return decryptSecret(encryptedData);
+    return decryptSecret(encryptedData, secretId);
 }
 
 SecretMetadata SecretStorage::getSecretMetadata(const std::string& secretId) const {
@@ -340,7 +340,9 @@ bool SecretStorage::secretExists(const std::string& secretId) const {
            !getSecretMetadata(secretId).secret_id.empty();
 }
 
-std::vector<uint8_t> SecretStorage::encryptSecret(const std::vector<uint8_t>& data) const {
+std::vector<uint8_t> SecretStorage::encryptSecret(const std::vector<uint8_t>& data,
+                                                  const std::string& secretId,
+                                                  const SecretMetadata& metadata) const {
     // Simplified encryption using AES-256-GCM
     // In production, use proper key derivation and key management
     EVP_CIPHER_CTX* ctx = EVP_CIPHER_CTX_new();
@@ -348,10 +350,13 @@ std::vector<uint8_t> SecretStorage::encryptSecret(const std::vector<uint8_t>& da
         return std::vector<uint8_t>();
     }
 
-    // Generate random key and IV (in production, use proper key management)
+    // Derive key from secret_id and metadata (simplified - in production use proper key management)
     unsigned char key[32];
+    std::string keyMaterial = secretId + metadata.secret_type + metadata.created_at;
+    EVP_Digest(keyMaterial.c_str(), keyMaterial.length(), key, nullptr, EVP_sha256(), nullptr);
+    
+    // Generate random IV
     unsigned char iv[12];
-    RAND_bytes(key, sizeof(key));
     RAND_bytes(iv, sizeof(iv));
 
     if (EVP_EncryptInit_ex(ctx, EVP_aes_256_gcm(), nullptr, key, iv) != 1) {
@@ -392,7 +397,8 @@ std::vector<uint8_t> SecretStorage::encryptSecret(const std::vector<uint8_t>& da
     return result;
 }
 
-std::vector<uint8_t> SecretStorage::decryptSecret(const std::vector<uint8_t>& encryptedData) const {
+std::vector<uint8_t> SecretStorage::decryptSecret(const std::vector<uint8_t>& encryptedData,
+                                                  const std::string& secretId) const {
     if (encryptedData.size() < 12 + 16) {
         return std::vector<uint8_t>();
     }
@@ -409,9 +415,19 @@ std::vector<uint8_t> SecretStorage::decryptSecret(const std::vector<uint8_t>& en
         return std::vector<uint8_t>();
     }
 
-    // Use same key (in production, retrieve from key management)
+    // Get metadata to derive key
+    SecretMetadata metadata = getSecretMetadata(secretId);
+    if (metadata.secret_id.empty()) {
+        EVP_CIPHER_CTX_free(ctx);
+        return std::vector<uint8_t>();
+    }
+
+    // Derive key from secret_id and metadata (simplified - in production use proper key management)
+    // Note: In a full implementation, this would integrate with a secure key management service
+    // (e.g., TPM, Hardware Security Module, or dedicated key management service)
     unsigned char key[32];
-    // TODO: Retrieve key from secure key storage
+    std::string keyMaterial = secretId + metadata.secret_type + metadata.created_at;
+    EVP_Digest(keyMaterial.c_str(), keyMaterial.length(), key, nullptr, EVP_sha256(), nullptr);
 
     if (EVP_DecryptInit_ex(ctx, EVP_aes_256_gcm(), nullptr, key, iv) != 1) {
         EVP_CIPHER_CTX_free(ctx);

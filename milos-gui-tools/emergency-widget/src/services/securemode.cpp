@@ -1,5 +1,6 @@
 #include "securemode.h"
 #include "auditlogger.h"
+#include "widgetconfig.h"
 #include <QDBusConnection>
 #include <QDBusInterface>
 #include <QDBusReply>
@@ -9,6 +10,7 @@
 #include <QDir>
 #include <QTextStream>
 #include <QDateTime>
+#include <QSettings>
 
 SecureMode::SecureMode(QObject *parent)
     : QObject(parent)
@@ -156,13 +158,31 @@ void SecureMode::checkSecureModeStatus()
 
 QStringList SecureMode::getNonEssentialServiceList()
 {
-    // TODO: Make this configurable
-    // For now, return a basic list of non-essential services
-    return QStringList({
-        "bluetooth.service",
-        "cups.service",
-        "avahi-daemon.service"
-        // Add more non-essential services as needed
-    });
+    // Load from configuration file
+    QString configPath = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation) + "/milos/emergency-widget.ini";
+    QSettings settings(configPath, QSettings::IniFormat);
+    
+    settings.beginGroup("SecureMode");
+    QStringList services = settings.value("nonEssentialServices", QStringList()).toStringList();
+    settings.endGroup();
+    
+    // If no services configured, use defaults
+    if (services.isEmpty()) {
+        services = QStringList({
+            "bluetooth.service",
+            "cups.service",
+            "avahi-daemon.service",
+            "NetworkManager-dispatcher.service",
+            "ModemManager.service"
+        });
+        
+        // Save defaults to config
+        settings.beginGroup("SecureMode");
+        settings.setValue("nonEssentialServices", services);
+        settings.endGroup();
+        settings.sync();
+    }
+    
+    return services;
 }
 

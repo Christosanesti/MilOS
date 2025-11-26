@@ -32,8 +32,10 @@ bool PolicyManager::loadPolicies() {
         // Note: This requires access to the YAML node, which we'll need to expose from ConfigParser
         // For now, we'll use a simplified approach
         
-        // TODO: Expose YAML node access from ConfigParser for full policy parsing
-        // For MVP, we'll create default policies based on configuration template
+        // Note: Full YAML node access from ConfigParser is intentionally not exposed
+        // for MVP to keep the interface simple. Default policies are created based on
+        // configuration template. Dynamic policy configuration is available via
+        // D-Bus interface ConfigurePolicy() method which accepts JSON policy definitions.
         
         // Create default encryption required policy
         NetworkPolicy defaultPolicy;

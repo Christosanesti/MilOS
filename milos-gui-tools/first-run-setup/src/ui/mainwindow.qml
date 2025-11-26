@@ -16,6 +16,53 @@ ApplicationWindow {
     property int currentStep: 0
     property var steps: ["Welcome", "Security Overview", "Firewall", "Updates", "Hardening", "Preferences", "Tour", "Complete"]
     
+    // Skip warning dialog
+    Dialog {
+        id: skipWarningDialog
+        title: "Skip Security Setup?"
+        width: 500
+        height: 300
+        modal: true
+        
+        Column {
+            anchors.fill: parent
+            anchors.margins: 20
+            spacing: 20
+            
+            Text {
+                width: parent.width
+                wrapMode: Text.WordWrap
+                text: "Are you sure you want to skip the security setup?\n\n" +
+                      "Skipping the setup means:\n" +
+                      "• Firewall may not be configured\n" +
+                      "• System updates may not be enabled\n" +
+                      "• Security hardening may not be applied\n" +
+                      "• Your system may be less secure\n\n" +
+                      "You can run the setup later from the system settings."
+                color: "#ffffff"
+                font.pixelSize: 14
+            }
+            
+            Row {
+                anchors.horizontalCenter: parent.horizontalCenter
+                spacing: 15
+                
+                Button {
+                    text: "Cancel"
+                    onClicked: skipWarningDialog.close()
+                }
+                
+                Button {
+                    text: "Skip Anyway"
+                    onClicked: {
+                        skipWarningDialog.close()
+                        Qt.quit()
+                    }
+                }
+            }
+        }
+    }
+    
     // Stack view for wizard screens
     StackView {
         id: stackView
@@ -30,8 +77,7 @@ ApplicationWindow {
                 mainWindow.currentStep = 1
             }
             onSkipClicked: {
-                // TODO: Show skip warning dialog
-                Qt.quit()
+                skipWarningDialog.open()
             }
         }
         

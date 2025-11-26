@@ -96,16 +96,22 @@ public:
     /**
      * @brief Encrypt secret data (public for versioning)
      * @param data Plaintext data
+     * @param secretId Secret ID for key derivation
+     * @param metadata Secret metadata for key derivation
      * @return Encrypted data
      */
-    std::vector<uint8_t> encryptSecret(const std::vector<uint8_t>& data) const;
+    std::vector<uint8_t> encryptSecret(const std::vector<uint8_t>& data, 
+                                      const std::string& secretId,
+                                      const SecretMetadata& metadata) const;
 
     /**
      * @brief Decrypt secret data (public for versioning)
      * @param encryptedData Encrypted data
+     * @param secretId Secret ID for key derivation
      * @return Plaintext data
      */
-    std::vector<uint8_t> decryptSecret(const std::vector<uint8_t>& encryptedData) const;
+    std::vector<uint8_t> decryptSecret(const std::vector<uint8_t>& encryptedData,
+                                      const std::string& secretId) const;
 
 private:
     bool m_initialized;

@@ -5,6 +5,8 @@
 #include <sstream>
 #include <ctime>
 #include <iomanip>
+#include <filesystem>
+#include <algorithm>
 
 LogStorage::LogStorage()
     : m_initialized(false)
@@ -59,7 +61,9 @@ bool LogStorage::initializeDatabase() {
 
         // Create directory if it doesn't exist
         std::string dirPath = dbPath.substr(0, dbPath.find_last_of('/'));
-        // TODO: Create directory using filesystem library
+        if (!dirPath.empty()) {
+            std::filesystem::create_directories(dirPath);
+        }
 
         sqlite3* db = nullptr;
         int rc = sqlite3_open(dbPath.c_str(), &db);
@@ -73,8 +77,10 @@ bool LogStorage::initializeDatabase() {
         std::cout << "SQLite database opened: " << dbPath << std::endl;
         return true;
     } else if (dbType == "postgresql") {
-        // TODO: Implement PostgreSQL connection
-        std::cerr << "PostgreSQL support not yet implemented" << std::endl;
+        // PostgreSQL support is planned for enterprise deployments
+        // Requires libpq (PostgreSQL client library) integration
+        // This would provide better scalability and advanced querying capabilities
+        std::cerr << "PostgreSQL support not yet implemented. Use SQLite for now." << std::endl;
         return false;
     } else {
         std::cerr << "Unknown database type: " << dbType << std::endl;
@@ -256,7 +262,30 @@ std::vector<AuditLogEntry> LogStorage::queryLogEntries(
         if (data) entry.event_data = data;
         const char* ip = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 8));
         if (ip) entry.ip_address = ip;
-        // TODO: Parse file_paths JSON array
+        
+        // Parse file_paths JSON array
+        const char* filePathsJson = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 9));
+        if (filePathsJson && strlen(filePathsJson) > 0) {
+            // Simple JSON array parsing: ["path1", "path2", ...]
+            std::string jsonStr = filePathsJson;
+            // Remove brackets
+            if (jsonStr.front() == '[' && jsonStr.back() == ']') {
+                jsonStr = jsonStr.substr(1, jsonStr.length() - 2);
+            }
+            // Split by comma and remove quotes
+            std::istringstream iss(jsonStr);
+            std::string path;
+            while (std::getline(iss, path, ',')) {
+                // Remove quotes and whitespace
+                path.erase(std::remove(path.begin(), path.end(), '"'), path.end());
+                path.erase(0, path.find_first_not_of(" \t"));
+                path.erase(path.find_last_not_of(" \t") + 1);
+                if (!path.empty()) {
+                    entry.file_paths.push_back(path);
+                }
+            }
+        }
+        
         const char* policyId = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 10));
         if (policyId) entry.policy_id = policyId;
         const char* action = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 11));

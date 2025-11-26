@@ -28,7 +28,6 @@ private:
     bool m_active;
     QStringList m_stoppedServices;
     
-    // TODO: Integrate with systemd D-Bus interface for service management
     bool stopService(const QString &serviceName);
     bool startService(const QString &serviceName);
     QStringList getNonEssentialServiceList();

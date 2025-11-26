@@ -9,6 +9,11 @@
 #include <QDateTime>
 #include <QDebug>
 #include <QCoreApplication>
+#include <QNetworkAccessManager>
+#include <QNetworkRequest>
+#include <QNetworkReply>
+#include <QEventLoop>
+#include <QFile>
 
 ImageGenerationService::ImageGenerationService(QObject *parent)
     : QObject(parent)
@@ -119,9 +124,36 @@ QString ImageGenerationService::callWrapper(const QString &command, const QStrin
     
     // Download and save image if URL provided
     if (!imageUrl.isEmpty()) {
-        // TODO: Download image from URL and save to m_outputDirectory
         QString imagePath = m_outputDirectory + "/" + QString::number(QDateTime::currentMSecsSinceEpoch()) + ".png";
-        return imagePath;
+        
+        // Download image from URL
+        QNetworkAccessManager manager;
+        QNetworkRequest request(QUrl(imageUrl));
+        QNetworkReply* reply = manager.get(request);
+        
+        // Wait for download to complete (synchronous for simplicity)
+        QEventLoop loop;
+        QObject::connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
+        loop.exec();
+        
+        if (reply->error() == QNetworkReply::NoError) {
+            // Save image to file
+            QFile file(imagePath);
+            if (file.open(QIODevice::WriteOnly)) {
+                file.write(reply->readAll());
+                file.close();
+                qDebug() << "Image downloaded and saved to:" << imagePath;
+                reply->deleteLater();
+                return imagePath;
+            } else {
+                qWarning() << "Failed to save image to:" << imagePath;
+            }
+        } else {
+            qWarning() << "Failed to download image:" << reply->errorString();
+        }
+        
+        reply->deleteLater();
+        return QString();  // Return empty on failure
     }
     
     return QString();

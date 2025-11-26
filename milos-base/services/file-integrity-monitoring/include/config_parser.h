@@ -2,6 +2,7 @@
 #define CONFIG_PARSER_H
 
 #include <string>
+#include <vector>
 
 /**
  * @brief Configuration Parser
@@ -42,6 +43,13 @@ public:
      * @return Configuration value as integer
      */
     int getInt(const std::string& key, int defaultValue = 0) const;
+
+    /**
+     * @brief Get configuration value as string array
+     * @param key Configuration key
+     * @return Vector of string values
+     */
+    std::vector<std::string> getStringArray(const std::string& key) const;
 
     /**
      * @brief Check if configuration is loaded
