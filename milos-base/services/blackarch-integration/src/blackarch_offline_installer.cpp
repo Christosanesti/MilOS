@@ -40,7 +40,7 @@ bool BlackArchOfflineInstaller::createMirror(const QStringList& toolNames, const
     QDir mirrorDir(mirrorPath);
     if (!mirrorDir.exists()) {
         if (!mirrorDir.mkpath(".")) {
-            std::cerr << "Failed to create mirror directory: " << mirrorPath.toStdString() << std::endl;
+            LOG_ERROR(QString("Failed to create mirror directory: %1").arg(mirrorPath).toStdString());
             emit mirrorCreationCompleted(mirrorPath, false);
             return false;
         }
@@ -61,7 +61,7 @@ bool BlackArchOfflineInstaller::createMirror(const QStringList& toolNames, const
     process.waitForFinished();
 
     if (process.exitCode() != 0) {
-        std::cerr << "Failed to download packages" << std::endl;
+        LOG_ERROR("Failed to download packages");
         emit mirrorCreationCompleted(mirrorPath, false);
         return false;
     }

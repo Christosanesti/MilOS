@@ -1,11 +1,13 @@
 #include "launcher.h"
 #include "tool_manager.h"
 #include "dbus_interface.h"
+#include <milos/logging/logger.h>
+#include <milos/ui/error_handler.h>
+#include <milos/ui/crash_handler.h>
 #include <QApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QDir>
-#include <iostream>
 
 Launcher::Launcher(QObject* parent)
     : QObject(parent)
@@ -36,7 +38,11 @@ bool Launcher::initialize() {
     // Initialize tool manager
     m_toolManager = new ToolManager(this);
     if (!m_toolManager->initialize()) {
-        std::cerr << "Failed to initialize tool manager" << std::endl;
+        LOG_ERROR("Failed to initialize tool manager");
+        milos::ui::ErrorHandler::instance()->handleError("Initialization failed",
+                                                          "Failed to initialize tool manager",
+                                                          milos::ui::ErrorCategory::System,
+                                                          milos::ui::ErrorSeverity::Critical);
         return false;
     }
 
@@ -44,18 +50,26 @@ bool Launcher::initialize() {
     DBusInterface* dbusInterface = new DBusInterface(this);
     dbusInterface->setToolManager(m_toolManager);
     if (!dbusInterface->initialize()) {
-        std::cerr << "Warning: Failed to initialize D-Bus interface (continuing without D-Bus)" << std::endl;
+        LOG_WARNING("Failed to initialize D-Bus interface (continuing without D-Bus)");
     }
 
     // Register tool manager with QML
     m_engine->rootContext()->setContextProperty("toolManager", m_toolManager);
+    
+    // Register error handler and crash handler with QML
+    m_engine->rootContext()->setContextProperty("errorHandler", milos::ui::ErrorHandler::instance());
+    m_engine->rootContext()->setContextProperty("crashHandler", milos::ui::CrashHandler::instance());
 
     // Load QML
     const QUrl qmlUrl(QStringLiteral("qrc:/ui/main.qml"));
     m_engine->load(qmlUrl);
 
     if (m_engine->rootObjects().isEmpty()) {
-        std::cerr << "Failed to load QML" << std::endl;
+        LOG_ERROR("Failed to load QML");
+        milos::ui::ErrorHandler::instance()->handleError("QML Load Failed",
+                                                          "Failed to load QML interface",
+                                                          milos::ui::ErrorCategory::UI,
+                                                          milos::ui::ErrorSeverity::Critical);
         return false;
     }
 

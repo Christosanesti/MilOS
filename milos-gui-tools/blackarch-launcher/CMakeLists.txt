@@ -16,6 +16,10 @@ find_package(CLI11 REQUIRED)
 # Find BlackArch integration library
 find_package(blackarch-integration REQUIRED)
 
+# Link logging and UI utilities libraries
+add_subdirectory(../../base/libs/logging ${CMAKE_BINARY_DIR}/libs/logging)
+add_subdirectory(../../base/libs/ui-utilities ${CMAKE_BINARY_DIR}/libs/ui-utilities)
+
 # Include directories
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
@@ -66,6 +70,8 @@ target_link_libraries(milos-blackarch-launcher
     KF6::CoreAddons
     blackarch-integration
     CLI11::CLI11
+    milos::logging
+    milos-ui-utilities
 )
 
 # Enable Qt MOC and QRC
