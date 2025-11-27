@@ -1,6 +1,6 @@
 #include "wrapper_base.h"
 #include "tool_executor.h"
-#include <QDebug>
+#include <milos/logging/logger.h>
 
 WrapperBase::WrapperBase(const QString& toolName, QObject* parent)
     : QObject(parent)

@@ -1,6 +1,6 @@
 #include "file_monitor.h"
 #include "change_detector.h"
-#include <iostream>
+#include <milos/logging/logger.h>
 #include <filesystem>
 
 #ifdef HAVE_INOTIFY
@@ -38,7 +38,7 @@ bool FileMonitor::initialize(ChangeDetector* changeDetector) {
 #ifdef HAVE_INOTIFY
     m_inotifyFd = inotify_init1(IN_NONBLOCK);
     if (m_inotifyFd < 0) {
-        std::cerr << "Failed to initialize inotify" << std::endl;
+        LOG_ERROR("Failed to initialize inotify");
         return false;
     }
 #endif
@@ -93,7 +93,7 @@ void FileMonitor::stop() {
 
 void FileMonitor::addDirectory(const std::string& directoryPath) {
     if (!std::filesystem::exists(directoryPath)) {
-        std::cerr << "Directory does not exist: " << directoryPath << std::endl;
+        LOG_ERROR(QString("Directory does not exist: %1").arg(QString::fromStdString(directoryPath)));
         return;
     }
 

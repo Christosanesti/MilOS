@@ -31,6 +31,9 @@ find_package(yaml-cpp REQUIRED)
 # Find CLI11 for CLI tool
 find_package(CLI11 REQUIRED)
 
+# Add logging library
+add_subdirectory(../../libs/logging ${CMAKE_BINARY_DIR}/libs/logging)
+
 # Include directories
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/src
@@ -71,6 +74,7 @@ target_link_libraries(milos-update-service-daemon
     ${GPGME_LIBRARIES}
     SQLite::SQLite3
     yaml-cpp::yaml-cpp
+    milos-logging
 )
 
 target_include_directories(milos-update-service-daemon PRIVATE ${GPGME_INCLUDE_DIRS})

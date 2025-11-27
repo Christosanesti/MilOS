@@ -1,7 +1,7 @@
 #include "signature_verifier.h"
 #include "config_parser.h"
+#include <milos/logging/logger.h>
 #include <gpgme.h>
-#include <iostream>
 #include <fstream>
 #include <sstream>
 #include <cstring>
@@ -42,7 +42,7 @@ bool SignatureVerifier::initialize(ConfigParser* configParser) {
     // Initialize GPGME
     gpgme_error_t err = gpgme_check_version(nullptr);
     if (err != GPG_ERR_NO_ERROR) {
-        std::cerr << "GPGME initialization failed" << std::endl;
+        LOG_ERROR("GPGME initialization failed");
         return false;
     }
 

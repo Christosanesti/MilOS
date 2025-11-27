@@ -10,6 +10,9 @@ find_package(Qt6 REQUIRED COMPONENTS Core Gui Quick QuickControls2)
 # Find KDE Frameworks
 find_package(KF6 REQUIRED COMPONENTS CoreAddons)
 
+# Add logging library
+add_subdirectory(../../base/libs/logging ${CMAKE_BINARY_DIR}/libs/logging)
+
 # Include directories
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
@@ -40,6 +43,7 @@ target_link_libraries(blackarch-wrappers-framework
     Qt6::Quick
     Qt6::QuickControls2
     KF6::CoreAddons
+    milos-logging
 )
 
 # Enable Qt MOC

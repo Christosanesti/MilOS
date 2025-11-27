@@ -4,9 +4,9 @@
 #include "signature_verifier.h"
 #include "rollback_manager.h"
 #include "audit_logger.h"
+#include <milos/logging/logger.h>
 #include <QUuid>
 #include <QDateTime>
-#include <iostream>
 #include <algorithm>
 #include <mutex>
 
@@ -230,8 +230,8 @@ bool UpdateApplier::verifySignatures(const std::vector<std::string>& packageList
         SignatureResult result = m_signatureVerifier->verifyPackageByName(packageName);
         
         if (!result.verified) {
-            std::cerr << "Signature verification failed for package: " << packageName << std::endl;
-            std::cerr << "Error: " << result.error_message << std::endl;
+            LOG_ERROR(QString("Signature verification failed for package: %1").arg(QString::fromStdString(packageName)));
+            LOG_ERROR(QString("Error: %1").arg(QString::fromStdString(result.error_message)));
             
             if (m_auditLogger) {
                 m_auditLogger->logSignatureVerification(

@@ -102,7 +102,7 @@ bool BlackArchOfflineInstaller::createMirror(const QStringList& toolNames, const
 
 bool BlackArchOfflineInstaller::installFromMirror(const QString& mirrorPath, const QStringList& toolNames) {
     if (!mirrorExists(mirrorPath)) {
-        std::cerr << "Mirror does not exist: " << mirrorPath.toStdString() << std::endl;
+        LOG_ERROR(QString("Mirror does not exist: %1").arg(mirrorPath));
         return false;
     }
 
@@ -117,7 +117,7 @@ bool BlackArchOfflineInstaller::installFromMirror(const QString& mirrorPath, con
     repoProcess.waitForFinished();
 
     if (repoProcess.exitCode() != 0) {
-        std::cerr << "Failed to create repository database" << std::endl;
+        LOG_ERROR("Failed to create repository database");
         return false;
     }
 

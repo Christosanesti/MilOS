@@ -1,9 +1,8 @@
 #include "tool_executor.h"
+#include <milos/logging/logger.h>
 #include <QProcess>
 #include <QStandardPaths>
 #include <QDir>
-#include <QDebug>
-#include <iostream>
 
 ToolExecutor::ToolExecutor(QObject* parent)
     : QObject(parent)
@@ -21,7 +20,7 @@ ToolExecutor::~ToolExecutor() {
 
 bool ToolExecutor::execute(const QString& toolName, const QStringList& arguments, const QString& workingDirectory) {
     if (m_running) {
-        std::cerr << "Tool execution already in progress" << std::endl;
+        LOG_WARNING("Tool execution already in progress");
         return false;
     }
 
@@ -55,7 +54,7 @@ bool ToolExecutor::execute(const QString& toolName, const QStringList& arguments
 
     m_process->start();
     if (!m_process->waitForStarted()) {
-        std::cerr << "Failed to start tool: " << toolName.toStdString() << std::endl;
+        LOG_ERROR(QString("Failed to start tool: %1").arg(toolName));
         return false;
     }
 

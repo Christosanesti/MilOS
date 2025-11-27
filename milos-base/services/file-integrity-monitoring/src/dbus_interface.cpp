@@ -5,12 +5,12 @@
 #include "integrity_verifier.h"
 #include "remediation_manager.h"
 #include "verification_scheduler.h"
+#include <milos/logging/logger.h>
 #include <QDBusConnection>
 #include <QDBusMetaType>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
-#include <iostream>
 
 DBusInterface::DBusInterface(QObject* parent)
     : QObject(parent)
@@ -34,14 +34,14 @@ bool DBusInterface::initialize() {
 
     // Register D-Bus service
     if (!QDBusConnection::systemBus().registerService("org.milos.FileIntegrityMonitoring")) {
-        std::cerr << "Failed to register D-Bus service" << std::endl;
+        LOG_ERROR("Failed to register D-Bus service");
         return false;
     }
 
     // Register D-Bus object
     if (!QDBusConnection::systemBus().registerObject("/org/milos/FileIntegrityMonitoring", this,
                                                       QDBusConnection::ExportAllContents)) {
-        std::cerr << "Failed to register D-Bus object" << std::endl;
+        LOG_ERROR("Failed to register D-Bus object");
         return false;
     }
 
