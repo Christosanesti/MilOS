@@ -8,6 +8,7 @@
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QFile>
+#include "milos/logging/logger.h"
 #include <iostream>
 #include <string>
 
@@ -31,7 +32,7 @@ public:
     QString checkUpdates() {
         QDBusReply<QString> reply = m_interface->call("CheckUpdates");
         if (!reply.isValid()) {
-            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            // CLI tool - errors shown to user via CLI output
             return QString();
         }
         return reply.value();
@@ -40,7 +41,7 @@ public:
     QString applyUpdates(const QString& packageList) {
         QDBusReply<QString> reply = m_interface->call("ApplyUpdates", packageList);
         if (!reply.isValid()) {
-            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            // CLI tool - errors shown to user via CLI output
             return QString();
         }
         return reply.value();
@@ -49,7 +50,7 @@ public:
     bool rollbackUpdate(const QString& updateId) {
         QDBusReply<bool> reply = m_interface->call("RollbackUpdate", updateId);
         if (!reply.isValid()) {
-            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            // CLI tool - errors shown to user via CLI output
             return false;
         }
         return reply.value();
@@ -58,7 +59,7 @@ public:
     QString getUpdateStatus(const QString& updateId = QString()) {
         QDBusReply<QString> reply = m_interface->call("GetUpdateStatus", updateId);
         if (!reply.isValid()) {
-            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            // CLI tool - errors shown to user via CLI output
             return QString();
         }
         return reply.value();
@@ -67,7 +68,7 @@ public:
     QString getUpdateHistory() {
         QDBusReply<QString> reply = m_interface->call("GetUpdateHistory");
         if (!reply.isValid()) {
-            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            // CLI tool - errors shown to user via CLI output
             return QString();
         }
         return reply.value();
@@ -76,7 +77,7 @@ public:
     QString getHealthStatus() {
         QDBusReply<QString> reply = m_interface->call("GetHealthStatus");
         if (!reply.isValid()) {
-            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            // CLI tool - errors shown to user via CLI output
             return QString();
         }
         return reply.value();
@@ -92,7 +93,9 @@ void printUpdates(const QString& jsonUpdates) {
     QJsonDocument doc = QJsonDocument::fromJson(jsonUpdates.toUtf8(), &error);
 
     if (error.error != QJsonParseError::NoError) {
-        std::cerr << "Error parsing updates: " << error.errorString().toStdString() << std::endl;
+        QString errorMsg = QString("Error parsing updates: %1").arg(error.errorString());
+        std::cerr << errorMsg.toStdString() << std::endl;
+        LOG_ERROR(errorMsg);
         return;
     }
 
@@ -115,7 +118,9 @@ void printUpdateStatus(const QString& jsonStatus) {
     QJsonDocument doc = QJsonDocument::fromJson(jsonStatus.toUtf8(), &error);
 
     if (error.error != QJsonParseError::NoError) {
-        std::cerr << "Error parsing status: " << error.errorString().toStdString() << std::endl;
+        QString errorMsg = QString("Error parsing status: %1").arg(error.errorString());
+        std::cerr << errorMsg.toStdString() << std::endl;
+        LOG_ERROR(errorMsg);
         return;
     }
 
@@ -144,7 +149,9 @@ void printUpdateHistory(const QString& jsonHistory) {
     QJsonDocument doc = QJsonDocument::fromJson(jsonHistory.toUtf8(), &error);
 
     if (error.error != QJsonParseError::NoError) {
-        std::cerr << "Error parsing history: " << error.errorString().toStdString() << std::endl;
+        QString errorMsg = QString("Error parsing history: %1").arg(error.errorString());
+        std::cerr << errorMsg.toStdString() << std::endl;
+        LOG_ERROR(errorMsg);
         return;
     }
 
@@ -166,6 +173,15 @@ int main(int argc, char* argv[]) {
     QCoreApplication app(argc, argv);
     app.setApplicationName("milos-update");
     app.setOrganizationName("MilOS");
+
+    // Initialize logger for CLI tool
+    if (!Logger::instance()->initialize("milos-update-cli",
+                                        "org.milos.AuditService",
+                                        "/org/milos/AuditService",
+                                        Logger::Info,
+                                        false)) {  // Disable file logging for CLI
+        // Continue with graceful degradation
+    }
 
     CLI::App cliApp{"MilOS Update Service CLI Tool", "milos-update"};
     cliApp.require_subcommand(0, 1);
@@ -204,8 +220,9 @@ int main(int argc, char* argv[]) {
     UpdateServiceClient client;
 
     if (!client.isConnected()) {
-        std::cerr << "Error: Cannot connect to Update Service." << std::endl;
-        std::cerr << "Make sure the service is running: systemctl status milos-update-service" << std::endl;
+        QString errorMsg = "Cannot connect to Update Service. Make sure the service is running: systemctl status milos-update-service";
+        std::cerr << "Error: " << errorMsg.toStdString() << std::endl;
+        LOG_ERROR(errorMsg);
         return 1;
     }
 
@@ -219,7 +236,9 @@ int main(int argc, char* argv[]) {
     } else if (*updateCmd) {
         QFile file(QString::fromStdString(packageFile));
         if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-            std::cerr << "Error: Cannot open package file: " << packageFile << std::endl;
+            QString errorMsg = QString("Cannot open package file: %1").arg(QString::fromStdString(packageFile));
+            std::cerr << "Error: " << errorMsg.toStdString() << std::endl;
+            LOG_ERROR(errorMsg);
             return 1;
         }
 
@@ -233,9 +252,12 @@ int main(int argc, char* argv[]) {
         bool success = client.rollbackUpdate(QString::fromStdString(updateId));
         if (success) {
             std::cout << "Update rolled back successfully." << std::endl;
+            LOG_INFO("Update rolled back successfully");
             return 0;
         } else {
-            std::cerr << "Error: Failed to rollback update." << std::endl;
+            QString errorMsg = "Failed to rollback update";
+            std::cerr << "Error: " << errorMsg.toStdString() << std::endl;
+            LOG_ERROR(errorMsg);
             return 1;
         }
     } else if (*statusCmd) {

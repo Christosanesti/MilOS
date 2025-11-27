@@ -1,4 +1,5 @@
 #include "updateservice.h"
+#include "milos/logging/logger.h"
 #include <QProcess>
 #include <QTimer>
 #include <QDebug>
@@ -43,7 +44,7 @@ void UpdateService::checkForUpdates()
                 int updateCount = output.split('\n').count() - 1; // Subtract 1 for empty line
                 if (updateCount > 0) {
                     m_status = "updates_available";
-                    qDebug() << "Updates available for" << updateCount << "packages";
+                    LOG_INFO(QString("Updates available for %1 packages").arg(updateCount));
                 } else {
                     m_status = "up_to_date";
                 }

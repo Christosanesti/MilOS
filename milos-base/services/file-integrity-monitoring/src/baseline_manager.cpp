@@ -1,4 +1,5 @@
 #include "baseline_manager.h"
+#include "milos/logging/logger.h"
 #include <openssl/sha.h>
 #include <openssl/evp.h>
 #include <fstream>
@@ -43,21 +44,21 @@ std::vector<std::string> BaselineManager::createBaseline(const std::vector<std::
     for (const auto& filePath : filePaths) {
         // Check if file exists
         if (!std::filesystem::exists(filePath)) {
-            std::cerr << "File does not exist: " << filePath << std::endl;
+            LOG_ERROR(QString("File does not exist: %1").arg(QString::fromStdString(filePath)));
             continue;
         }
 
         // Calculate file hash
         std::string fileHash = calculateFileHash(filePath);
         if (fileHash.empty()) {
-            std::cerr << "Failed to calculate hash for: " << filePath << std::endl;
+            LOG_ERROR(QString("Failed to calculate hash for: %1").arg(QString::fromStdString(filePath)));
             continue;
         }
 
         // Get file metadata
         struct stat fileStat;
         if (stat(filePath.c_str(), &fileStat) != 0) {
-            std::cerr << "Failed to get file stats: " << filePath << std::endl;
+            LOG_ERROR(QString("Failed to get file stats: %1").arg(QString::fromStdString(filePath)));
             continue;
         }
 
@@ -361,7 +362,7 @@ void BaselineManager::loadBaselines() {
         // Create database and table
         sqlite3* db;
         if (sqlite3_open(dbPath.c_str(), &db) != SQLITE_OK) {
-            std::cerr << "Failed to create database: " << sqlite3_errmsg(db) << std::endl;
+            LOG_ERROR(QString("Failed to create database: %1").arg(sqlite3_errmsg(db)));
             sqlite3_close(db);
             return;
         }
@@ -384,7 +385,7 @@ void BaselineManager::loadBaselines() {
         
         char* errMsg = nullptr;
         if (sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &errMsg) != SQLITE_OK) {
-            std::cerr << "Failed to create baselines table: " << errMsg << std::endl;
+            LOG_ERROR(QString("Failed to create baselines table: %1").arg(errMsg));
             sqlite3_free(errMsg);
             sqlite3_close(db);
             return;
@@ -397,7 +398,7 @@ void BaselineManager::loadBaselines() {
     // Load baselines from database
     sqlite3* db;
     if (sqlite3_open(dbPath.c_str(), &db) != SQLITE_OK) {
-        std::cerr << "Failed to open database: " << sqlite3_errmsg(db) << std::endl;
+        LOG_ERROR(QString("Failed to open database: %1").arg(sqlite3_errmsg(db)));
         sqlite3_close(db);
         return;
     }
@@ -462,7 +463,7 @@ void BaselineManager::loadBaselines() {
     }
     
     sqlite3_close(db);
-    std::cout << "Loaded " << m_baselines.size() << " baselines from database" << std::endl;
+        // Logging handled by audit logger
 }
 
 void BaselineManager::saveBaseline(const BaselineInfo& baseline) {
@@ -470,7 +471,7 @@ void BaselineManager::saveBaseline(const BaselineInfo& baseline) {
     
     sqlite3* db;
     if (sqlite3_open(dbPath.c_str(), &db) != SQLITE_OK) {
-        std::cerr << "Failed to open database: " << sqlite3_errmsg(db) << std::endl;
+        LOG_ERROR(QString("Failed to open database: %1").arg(sqlite3_errmsg(db)));
         sqlite3_close(db);
         return;
     }
@@ -497,9 +498,9 @@ void BaselineManager::saveBaseline(const BaselineInfo& baseline) {
         sqlite3_bind_int(stmt, 11, baseline.is_valid ? 1 : 0);
         
         if (sqlite3_step(stmt) != SQLITE_DONE) {
-            std::cerr << "Failed to save baseline: " << sqlite3_errmsg(db) << std::endl;
+            LOG_ERROR(QString("Failed to save baseline: %1").arg(sqlite3_errmsg(db)));
         } else {
-            std::cout << "Baseline saved: " << baseline.baseline_id << " for " << baseline.file_path << std::endl;
+            LOG_INFO(QString("Baseline saved: %1").arg(QString::fromStdString(baseline.baseline_id)));
         }
         
         sqlite3_finalize(stmt);

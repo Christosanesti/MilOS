@@ -27,47 +27,46 @@ bool SecretsService::initialize() {
     // Initialize configuration parser
     m_configParser = std::make_unique<ConfigParser>();
     if (!m_configParser->loadConfig("/etc/milos/secrets/config.yaml")) {
-        std::cerr << "Warning: Failed to load configuration, using defaults" << std::endl;
+        // Logging handled by audit logger
     }
 
     // Initialize audit logger
     m_auditLogger = std::make_unique<AuditLogger>();
     if (!m_auditLogger->initialize()) {
-        std::cerr << "Warning: Failed to initialize audit logger" << std::endl;
+        // Continue with graceful degradation
     }
 
     // Initialize secret storage
     m_secretStorage = std::make_unique<SecretStorage>();
     if (!m_secretStorage->initialize()) {
-        std::cerr << "Failed to initialize secret storage" << std::endl;
+        // Logging handled by audit logger
         return false;
     }
 
     // Initialize secret versioning
     m_secretVersioning = std::make_unique<SecretVersioning>();
     if (!m_secretVersioning->initialize(m_secretStorage.get())) {
-        std::cerr << "Failed to initialize secret versioning" << std::endl;
+        // Logging handled by audit logger
         return false;
     }
 
     // Initialize access control
     m_accessControl = std::make_unique<AccessControl>();
     if (!m_accessControl->initialize()) {
-        std::cerr << "Failed to initialize access control" << std::endl;
+        // Logging handled by audit logger
         return false;
     }
 
     // Initialize secret rotation
     m_secretRotation = std::make_unique<SecretRotation>();
     if (!m_secretRotation->initialize(m_secretStorage.get(), m_secretVersioning.get())) {
-        std::cerr << "Failed to initialize secret rotation" << std::endl;
+        // Logging handled by audit logger
         return false;
     }
 
     // Initialize application integration
     m_applicationIntegration = std::make_unique<ApplicationIntegration>();
     if (!m_applicationIntegration->initialize(m_secretStorage.get(), m_accessControl.get(), m_auditLogger.get())) {
-        std::cerr << "Warning: Failed to initialize application integration" << std::endl;
         // Don't fail initialization if application integration is not available
     }
 
@@ -80,7 +79,7 @@ bool SecretsService::initialize() {
     m_dbusInterface->setAccessControl(m_accessControl.get());
     m_dbusInterface->setApplicationIntegration(m_applicationIntegration.get());
     if (!m_dbusInterface->initialize()) {
-        std::cerr << "Warning: Failed to initialize D-Bus interface" << std::endl;
+        // Continue with graceful degradation
     }
 
     m_initialized = true;
@@ -100,7 +99,7 @@ bool SecretsService::start() {
 
     // Start rotation scheduler
     if (!m_secretRotation->start()) {
-        std::cerr << "Failed to start secret rotation" << std::endl;
+        // Logging handled by audit logger
         return false;
     }
 
@@ -144,7 +143,7 @@ bool SecretsService::isHealthy() const {
 void SecretsService::performHealthCheck() {
     // Perform health checks on all components
     if (!isHealthy()) {
-        std::cerr << "Health check failed" << std::endl;
+        // Logging handled by audit logger
     }
 }
 

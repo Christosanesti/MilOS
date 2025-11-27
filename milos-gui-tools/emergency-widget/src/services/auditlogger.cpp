@@ -1,4 +1,5 @@
 #include "auditlogger.h"
+#include "milos/logging/logger.h"
 #include <QDBusConnection>
 #include <QDBusInterface>
 #include <QDBusReply>
@@ -68,12 +69,12 @@ bool AuditLogger::logViaAuditService(const QString &eventType, const QVariantMap
     QDBusReply<QString> reply = auditInterface.call("LogEvent", eventDataJson);
     if (reply.isValid()) {
         QString eventId = reply.value();
-        qDebug() << "Event logged to audit service:" << eventType << "Event ID:" << eventId;
+        LOG_INFO(QString("Event logged to audit service: %1, Event ID: %2").arg(eventType, eventId));
         return true;
     } else {
-        qWarning() << "Failed to log event to audit service:" << reply.error().message();
+        LOG_WARNING(QString("Failed to log event to audit service: %1").arg(reply.error().message()));
         // Fallback: log to console
-        qDebug() << "Audit Log (fallback):" << eventType << eventData;
+        LOG_INFO(QString("Audit Log (fallback): %1").arg(eventType));
         return false;
     }
 }

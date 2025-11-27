@@ -1,4 +1,5 @@
 #include "navigationreset.h"
+#include "milos/logging/logger.h"
 #include <QDBusConnection>
 #include <QDBusError>
 #include <QDebug>
@@ -35,7 +36,7 @@ bool NavigationReset::initialize()
 bool NavigationReset::start()
 {
     if (!m_initialized) {
-        qWarning() << "Navigation Reset service not initialized";
+        LOG_WARNING("Navigation Reset service not initialized");
         return false;
     }
 
@@ -44,12 +45,12 @@ bool NavigationReset::start()
     }
 
     if (!registerInterface()) {
-        qWarning() << "Failed to register D-Bus interface";
+        LOG_WARNING("Failed to register D-Bus interface");
         return false;
     }
 
     m_running = true;
-    qDebug() << "Navigation Reset D-Bus service started";
+    LOG_INFO("Navigation Reset D-Bus service started");
     return true;
 }
 
@@ -61,7 +62,7 @@ void NavigationReset::stop()
 
     unregisterInterface();
     m_running = false;
-    qDebug() << "Navigation Reset D-Bus service stopped";
+    LOG_INFO("Navigation Reset D-Bus service stopped");
 }
 
 bool NavigationReset::registerInterface()
@@ -69,14 +70,14 @@ bool NavigationReset::registerInterface()
     QDBusConnection connection = QDBusConnection::sessionBus();
     
     if (!connection.isConnected()) {
-        qWarning() << "Cannot connect to D-Bus session bus";
+        LOG_WARNING("Cannot connect to D-Bus session bus");
         return false;
     }
 
     if (!connection.registerService("org.milos.NavigationReset")) {
         QDBusError error = connection.lastError();
         if (error.isValid()) {
-            qWarning() << "Failed to register D-Bus service:" << error.message();
+            LOG_WARNING(QString("Failed to register D-Bus service: %1").arg(error.message()));
         }
         return false;
     }
@@ -86,7 +87,7 @@ bool NavigationReset::registerInterface()
                                    QDBusConnection::ExportAllSignals)) {
         QDBusError error = connection.lastError();
         if (error.isValid()) {
-            qWarning() << "Failed to register D-Bus object:" << error.message();
+            LOG_WARNING(QString("Failed to register D-Bus object: %1").arg(error.message()));
             connection.unregisterService("org.milos.NavigationReset");
             return false;
         }
@@ -247,7 +248,7 @@ void NavigationReset::logToAudit(const QString& eventType, const QVariantMap& ev
                                  connection);
 
     if (!auditInterface.isValid()) {
-        qDebug() << "Audit service not available";
+        LOG_INFO("Audit service not available");
         return;
     }
 

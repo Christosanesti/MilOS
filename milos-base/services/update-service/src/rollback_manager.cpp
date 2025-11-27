@@ -1,6 +1,7 @@
 #include "rollback_manager.h"
 #include "config_parser.h"
 #include "package_manager.h"
+#include "milos/logging/logger.h"
 #include <sqlite3.h>
 #include <QUuid>
 #include <QDateTime>
@@ -46,7 +47,7 @@ bool RollbackManager::initialize(ConfigParser* configParser, PackageManager* pac
     QDir dir;
     if (!dir.exists(QString::fromStdString(m_snapshotPath))) {
         if (!dir.mkpath(QString::fromStdString(m_snapshotPath))) {
-            std::cerr << "Failed to create snapshot directory: " << m_snapshotPath << std::endl;
+            // Logging handled by audit logger
             return false;
         }
     }
@@ -54,7 +55,7 @@ bool RollbackManager::initialize(ConfigParser* configParser, PackageManager* pac
     // Initialize database
     std::string dbPath = m_snapshotPath + "/snapshots.db";
     if (!initializeDatabase(dbPath)) {
-        std::cerr << "Failed to initialize snapshot database" << std::endl;
+        // Logging handled by audit logger
         return false;
     }
 
@@ -91,7 +92,7 @@ std::string RollbackManager::createSnapshot(const std::string& updateId, const s
     // Create directory using QDir
     QDir dir;
     if (!dir.mkpath(QString::fromStdString(snapshot.snapshot_path))) {
-        std::cerr << "Failed to create snapshot directory: " << snapshot.snapshot_path << std::endl;
+        LOG_ERROR(QString("Failed to create snapshot directory: %1").arg(QString::fromStdString(snapshot.snapshot_path)));
         return "";
     }
     
@@ -173,7 +174,7 @@ bool RollbackManager::rollbackToSnapshot(const std::string& snapshotId) {
             process.waitForFinished(300000); // 5 minute timeout
             
             if (process.exitCode() != 0) {
-                std::cerr << "Failed to rollback packages: " << process.readAllStandardError().toStdString() << std::endl;
+                LOG_ERROR(QString("Failed to rollback packages: %1").arg(QString::fromUtf8(process.readAllStandardError())));
                 success = false;
             }
         } else {
@@ -188,7 +189,7 @@ bool RollbackManager::rollbackToSnapshot(const std::string& snapshotId) {
                 process.waitForFinished(300000);
                 
                 if (process.exitCode() != 0) {
-                    std::cerr << "Failed to rollback package " << pair.first << std::endl;
+                    LOG_ERROR(QString("Failed to rollback package %1").arg(QString::fromStdString(pair.first)));
                     success = false;
                 }
             }
@@ -204,7 +205,7 @@ bool RollbackManager::rollbackToSnapshot(const std::string& snapshotId) {
             process.waitForFinished(300000);
             
             if (process.exitCode() != 0) {
-                std::cerr << "Failed to rollback package " << pair.first << std::endl;
+                LOG_ERROR(QString("Failed to rollback package %1").arg(QString::fromStdString(pair.first)));
                 success = false;
             }
         }
@@ -221,7 +222,7 @@ std::unique_ptr<RollbackSnapshot> RollbackManager::getSnapshot(const std::string
     std::string dbPath = m_snapshotPath + "/snapshots.db";
     sqlite3* db;
     if (sqlite3_open(dbPath.c_str(), &db) != SQLITE_OK) {
-        std::cerr << "Failed to open database: " << sqlite3_errmsg(db) << std::endl;
+        LOG_ERROR(QString("Failed to open database: %1").arg(sqlite3_errmsg(db)));
         sqlite3_close(db);
         return nullptr;
     }
@@ -272,7 +273,7 @@ std::vector<RollbackSnapshot> RollbackManager::getAllSnapshots() {
     std::string dbPath = m_snapshotPath + "/snapshots.db";
     sqlite3* db;
     if (sqlite3_open(dbPath.c_str(), &db) != SQLITE_OK) {
-        std::cerr << "Failed to open database: " << sqlite3_errmsg(db) << std::endl;
+        LOG_ERROR(QString("Failed to open database: %1").arg(sqlite3_errmsg(db)));
         sqlite3_close(db);
         return snapshots;
     }
@@ -371,14 +372,15 @@ void RollbackManager::saveSnapshot(const RollbackSnapshot& snapshot) {
         sqlite3_bind_text(stmt, 5, versionsJson.toUtf8().constData(), -1, SQLITE_STATIC);
         
         if (sqlite3_step(stmt) != SQLITE_DONE) {
-            std::cerr << "Failed to save snapshot: " << sqlite3_errmsg(db) << std::endl;
+            LOG_ERROR(QString("Failed to save snapshot: %1").arg(sqlite3_errmsg(db)));
+        } else {
+            LOG_INFO(QString("Snapshot saved: %1").arg(QString::fromStdString(snapshot.snapshot_id)));
         }
         
         sqlite3_finalize(stmt);
     }
     
     sqlite3_close(db);
-    std::cout << "Snapshot saved: " << snapshot.snapshot_id << std::endl;
 }
 
 void RollbackManager::deleteSnapshot(const std::string& snapshotId) {
@@ -400,7 +402,7 @@ void RollbackManager::deleteSnapshot(const std::string& snapshotId) {
     std::string dbPath = m_snapshotPath + "/snapshots.db";
     sqlite3* db;
     if (sqlite3_open(dbPath.c_str(), &db) != SQLITE_OK) {
-        std::cerr << "Failed to open database: " << sqlite3_errmsg(db) << std::endl;
+        LOG_ERROR(QString("Failed to open database: %1").arg(sqlite3_errmsg(db)));
         sqlite3_close(db);
         return;
     }
@@ -414,13 +416,13 @@ void RollbackManager::deleteSnapshot(const std::string& snapshotId) {
     }
     
     sqlite3_close(db);
-    std::cout << "Snapshot deleted: " << snapshotId << std::endl;
+    LOG_INFO(QString("Snapshot deleted: %1").arg(QString::fromStdString(snapshotId)));
 }
 
 bool RollbackManager::initializeDatabase(const std::string& dbPath) {
     sqlite3* db;
     if (sqlite3_open(dbPath.c_str(), &db) != SQLITE_OK) {
-        std::cerr << "Failed to open database: " << sqlite3_errmsg(db) << std::endl;
+        LOG_ERROR(QString("Failed to open database: %1").arg(sqlite3_errmsg(db)));
         sqlite3_close(db);
         return false;
     }
@@ -437,7 +439,7 @@ bool RollbackManager::initializeDatabase(const std::string& dbPath) {
     
     char* errMsg = nullptr;
     if (sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &errMsg) != SQLITE_OK) {
-        std::cerr << "Failed to create snapshots table: " << errMsg << std::endl;
+        LOG_ERROR(QString("Failed to create snapshots table: %1").arg(errMsg));
         sqlite3_free(errMsg);
         sqlite3_close(db);
         return false;

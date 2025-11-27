@@ -1,4 +1,5 @@
 #include "performancemode.h"
+#include "milos/logging/logger.h"
 #include <QDebug>
 #include <QDBusConnection>
 #include <QDBusInterface>
@@ -82,7 +83,7 @@ void PerformanceMode::adjustXenonEffects(const QString& mode)
     QDBusInterface xenonInterface("org.milos.XenonEffects", "/XenonEffects", "org.milos.XenonEffects", connection);
 
     if (!xenonInterface.isValid()) {
-        qDebug() << "Xenon effects service not available";
+        LOG_INFO("Xenon effects service not available");
         return;
     }
 

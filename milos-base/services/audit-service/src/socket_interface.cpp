@@ -3,6 +3,7 @@
 #include "log_storage.h"
 #include "hash_chain.h"
 #include "event_collector.h"
+#include "milos/logging/logger.h"
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <unistd.h>
@@ -60,7 +61,7 @@ bool SocketInterface::start() {
     }
 
     if (!createSocket()) {
-        std::cerr << "Failed to create socket" << std::endl;
+        LOG_ERROR("Failed to create socket");
         return false;
     }
 
@@ -69,7 +70,7 @@ bool SocketInterface::start() {
     acceptThread.detach();
 
     m_running = true;
-    std::cout << "Socket interface started at " << m_socketPath << std::endl;
+    // Logging handled by service initialization
     return true;
 }
 
@@ -87,14 +88,14 @@ void SocketInterface::stop() {
     }
 
     m_running = false;
-    std::cout << "Socket interface stopped" << std::endl;
+    // Logging handled by service shutdown
 }
 
 bool SocketInterface::createSocket() {
     // Create Unix domain socket
     m_socketFd = socket(AF_UNIX, SOCK_STREAM, 0);
     if (m_socketFd < 0) {
-        std::cerr << "Failed to create socket: " << strerror(errno) << std::endl;
+        LOG_ERROR(QString("Failed to create socket: %1").arg(strerror(errno)));
         return false;
     }
 
@@ -108,7 +109,7 @@ bool SocketInterface::createSocket() {
     strncpy(addr.sun_path, m_socketPath.c_str(), sizeof(addr.sun_path) - 1);
 
     if (bind(m_socketFd, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
-        std::cerr << "Failed to bind socket: " << strerror(errno) << std::endl;
+        LOG_ERROR(QString("Failed to bind socket: %1").arg(strerror(errno)));
         close(m_socketFd);
         m_socketFd = -1;
         return false;
@@ -119,7 +120,7 @@ bool SocketInterface::createSocket() {
 
     // Listen for connections
     if (listen(m_socketFd, 10) < 0) {
-        std::cerr << "Failed to listen on socket: " << strerror(errno) << std::endl;
+        LOG_ERROR(QString("Failed to listen on socket: %1").arg(strerror(errno)));
         close(m_socketFd);
         m_socketFd = -1;
         return false;
@@ -136,7 +137,7 @@ void SocketInterface::acceptConnections() {
         int clientFd = accept(m_socketFd, (struct sockaddr*)&clientAddr, &clientLen);
         if (clientFd < 0) {
             if (m_running) {
-                std::cerr << "Failed to accept connection: " << strerror(errno) << std::endl;
+                LOG_ERROR(QString("Failed to accept connection: %1").arg(strerror(errno)));
             }
             continue;
         }

@@ -1,4 +1,5 @@
 #include "highcontrastmode.h"
+#include "milos/logging/logger.h"
 #include <QStandardPaths>
 #include <QDir>
 #include <QDebug>
@@ -169,7 +170,7 @@ void HighContrastMode::adjustXenonEffects()
     QDBusInterface xenonInterface("org.milos.XenonEffects", "/XenonEffects", "org.milos.XenonEffects", connection);
 
     if (!xenonInterface.isValid()) {
-        qDebug() << "Xenon effects service not available";
+        LOG_INFO("Xenon effects service not available");
         return;
     }
 

@@ -1,4 +1,5 @@
 #include "xenoncoordinator.h"
+#include "milos/logging/logger.h"
 #include <QDBusConnection>
 #include <QDBusInterface>
 #include <QDBusReply>
@@ -61,7 +62,7 @@ bool XenonCoordinator::coordinateEffectOnMonitor(const QString& monitorId)
     
     if (!xenonInterface.isValid()) {
         // Xenon effects service not available - this is not an error, just means effects are optional
-        qDebug() << "Xenon effects service not available";
+        LOG_INFO("Xenon effects service not available");
         return true; // Return success as effects are optional
     }
 

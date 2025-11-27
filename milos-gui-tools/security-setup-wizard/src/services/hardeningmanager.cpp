@@ -1,4 +1,5 @@
 #include "hardeningmanager.h"
+#include "milos/logging/logger.h"
 #include <QProcess>
 #include <QFile>
 #include <QTextStream>
@@ -49,14 +50,14 @@ void HardeningManager::applyHardening(const QString &level)
     // Apply firewall rules (if firewall service available)
     if (!applyFirewallHardening(level)) {
         // Firewall hardening is optional, log warning but don't fail
-        qWarning() << "Firewall hardening not available or failed";
+        LOG_WARNING("Firewall hardening not available or failed");
     }
     emit hardeningProgress(70);
     
     // Configure audit logging
     if (!applyAuditHardening(level)) {
         // Audit hardening is optional, log warning but don't fail
-        qWarning() << "Audit hardening not available or failed";
+        LOG_WARNING("Audit hardening not available or failed");
     }
     emit hardeningProgress(90);
     
@@ -131,12 +132,12 @@ bool HardeningManager::applyKernelHardening(const QString &level)
         
         process.start("sysctl", QStringList() << "-w" << QString("%1=%2").arg(key, value));
         if (!process.waitForFinished(5000)) {
-            qWarning() << "Failed to apply sysctl setting:" << setting;
+            LOG_WARNING(QString("Failed to apply sysctl setting: %1").arg(setting));
             continue;
         }
         
         if (process.exitCode() != 0) {
-            qWarning() << "sysctl setting failed:" << setting << process.readAllStandardError();
+            LOG_WARNING(QString("sysctl setting failed: %1 - %2").arg(setting, QString::fromUtf8(process.readAllStandardError())));
             // Continue with other settings even if one fails
         }
     }
@@ -159,7 +160,7 @@ bool HardeningManager::applyKernelHardening(const QString &level)
         process.start("sysctl", QStringList() << "--system");
         process.waitForFinished(5000);
     } else {
-        qWarning() << "Failed to write sysctl configuration file (may require root):" << sysctlFile;
+        LOG_WARNING(QString("Failed to write sysctl configuration file (may require root): %1").arg(sysctlFile));
         // This is expected if not running as root - settings applied temporarily
     }
     
@@ -206,7 +207,7 @@ bool HardeningManager::applySystemdHardening(const QString &level)
         process.start("systemctl", QStringList() << "daemon-reload");
         process.waitForFinished(5000);
     } else {
-        qWarning() << "Failed to write systemd configuration (may require root):" << configFile;
+        LOG_WARNING(QString("Failed to write systemd configuration (may require root): %1").arg(configFile));
         // Expected if not running as root
     }
     
@@ -229,13 +230,13 @@ bool HardeningManager::applyFirewallHardening(const QString &level)
     bool ufwActive = (process.exitCode() == 0);
     
     if (!firewalldActive && !ufwActive) {
-        qWarning() << "No active firewall service found";
+        LOG_WARNING("No active firewall service found");
         return false;
     }
     
     // Firewall rules would be applied via firewall service
     // This is a placeholder - actual rule application would depend on firewall type
-    qDebug() << "Firewall hardening applied for level:" << level;
+    LOG_INFO(QString("Firewall hardening applied for level: %1").arg(level));
     
     return true;
 }
@@ -251,13 +252,13 @@ bool HardeningManager::applyAuditHardening(const QString &level)
     bool auditdActive = (process.exitCode() == 0);
     
     if (!auditdActive) {
-        qWarning() << "auditd service not active";
+        LOG_WARNING("auditd service not active");
         return false;
     }
     
     // Audit rules would be configured via auditctl or /etc/audit/rules.d/
     // This is a placeholder for actual audit rule configuration
-    qDebug() << "Audit hardening applied for level:" << level;
+    LOG_INFO(QString("Audit hardening applied for level: %1").arg(level));
     
     return true;
 }

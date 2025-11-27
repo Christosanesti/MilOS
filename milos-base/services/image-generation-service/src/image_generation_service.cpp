@@ -1,4 +1,5 @@
 #include "image_generation_service.h"
+#include "milos/logging/logger.h"
 #include <QDBusConnection>
 #include <QDBusInterface>
 #include <QStandardPaths>
@@ -7,7 +8,6 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QDateTime>
-#include <QDebug>
 #include <QCoreApplication>
 #include <QNetworkAccessManager>
 #include <QNetworkRequest>
@@ -20,6 +20,11 @@ ImageGenerationService::ImageGenerationService(QObject *parent)
     , m_process(nullptr)
     , m_available(false)
 {
+    // Initialize logger
+    if (!Logger::instance()->isInitialized()) {
+        Logger::instance()->initialize("image-generation-service");
+    }
+    
     // Find wrapper script
     m_wrapperPath = findWrapperScript();
     
@@ -33,16 +38,16 @@ ImageGenerationService::ImageGenerationService(QObject *parent)
     if (m_available) {
         // Register D-Bus service
         if (!QDBusConnection::systemBus().registerService("org.milos.ImageGeneration")) {
-            qWarning() << "Failed to register D-Bus service org.milos.ImageGeneration";
+            LOG_WARNING("Failed to register D-Bus service org.milos.ImageGeneration");
         }
         
         if (!QDBusConnection::systemBus().registerObject("/org/milos/ImageGeneration", this, QDBusConnection::ExportAllSlots | QDBusConnection::ExportAllSignals)) {
-            qWarning() << "Failed to register D-Bus object /org/milos/ImageGeneration";
+            LOG_WARNING("Failed to register D-Bus object /org/milos/ImageGeneration");
         }
         
-        qDebug() << "Image Generation Service initialized";
+        LOG_INFO("Image Generation Service initialized");
     } else {
-        qWarning() << "Image Generation Service not available - wrapper script not found";
+        LOG_WARNING("Image Generation Service not available - wrapper script not found");
     }
 }
 
@@ -142,14 +147,14 @@ QString ImageGenerationService::callWrapper(const QString &command, const QStrin
             if (file.open(QIODevice::WriteOnly)) {
                 file.write(reply->readAll());
                 file.close();
-                qDebug() << "Image downloaded and saved to:" << imagePath;
+                LOG_INFO(QString("Image downloaded and saved to: %1").arg(imagePath));
                 reply->deleteLater();
                 return imagePath;
             } else {
-                qWarning() << "Failed to save image to:" << imagePath;
+                LOG_ERROR(QString("Failed to save image to: %1").arg(imagePath));
             }
         } else {
-            qWarning() << "Failed to download image:" << reply->errorString();
+            LOG_ERROR(QString("Failed to download image: %1").arg(reply->errorString()));
         }
         
         reply->deleteLater();
@@ -251,6 +256,11 @@ void ImageGenerationService::onProcessError(QProcess::ProcessError error)
         default:
             errorMsg = "Unknown process error";
     }
+    
+    emit errorOccurred(errorMsg);
+}
+
+
     
     emit errorOccurred(errorMsg);
 }

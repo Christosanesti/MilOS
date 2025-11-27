@@ -4,6 +4,8 @@
 #include <QFile>
 #include <QTextStream>
 #include <QRegularExpression>
+#include <QDir>
+#include <QDirIterator>
 
 CodeAnalyzer::CodeAnalyzer(QObject* parent)
     : QObject(parent)
@@ -46,8 +48,24 @@ QList<SecurityIssue> CodeAnalyzer::analyzeFile(const QString& filePath) {
 QList<SecurityIssue> CodeAnalyzer::analyzeDirectory(const QString& directoryPath) {
     QList<SecurityIssue> allIssues;
     
-    // In production, would recursively scan directory
-    // For now, return empty list
+    QDir dir(directoryPath);
+    if (!dir.exists()) {
+        return allIssues;
+    }
+    
+    // Recursively scan directory for code files
+    QStringList filters = {
+        "*.cpp", "*.h", "*.hpp", "*.c", "*.cc", "*.cxx",
+        "*.qml", "*.js", "*.py", "*.java", "*.rs", "*.go"
+    };
+    
+    QDirIterator it(directoryPath, filters, QDir::Files | QDir::NoSymLinks, QDirIterator::Subdirectories);
+    
+    while (it.hasNext()) {
+        QString filePath = it.next();
+        QList<SecurityIssue> fileIssues = analyzeFile(filePath);
+        allIssues.append(fileIssues);
+    }
     
     return allIssues;
 }
@@ -105,6 +123,24 @@ SecurityIssue CodeAnalyzer::checkForVulnerability(const QString& code, const QSt
         issue.type = "vulnerability";
         issue.file = filePath;
         issue.line = line;
+        issue.description = "Potential SQL injection vulnerability";
+        issue.recommendation = "Use prepared statements or parameterized queries.";
+        return issue;
+    }
+    
+    return issue;
+}
+
+QString CodeAnalyzer::generateIssueId() const {
+    return QUuid::createUuid().toString(QUuid::WithoutBraces);
+}
+
+
+
+
+
+
+
         issue.description = "Potential SQL injection vulnerability";
         issue.recommendation = "Use prepared statements or parameterized queries.";
         return issue;

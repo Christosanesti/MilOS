@@ -1,6 +1,7 @@
 #include "securemode.h"
 #include "auditlogger.h"
 #include "widgetconfig.h"
+#include "milos/logging/logger.h"
 #include <QDBusConnection>
 #include <QDBusInterface>
 #include <QDBusReply>
@@ -102,10 +103,10 @@ bool SecureMode::stopService(const QString &serviceName)
     QDBusReply<QDBusObjectPath> reply = systemdInterface.call("StopUnit", serviceName, "replace");
     
     if (reply.isValid()) {
-        qDebug() << "Stopped service:" << serviceName;
+        LOG_INFO(QString("Stopped service: %1").arg(serviceName));
         return true;
     } else {
-        qWarning() << "Failed to stop service" << serviceName << ":" << reply.error().message();
+        LOG_WARNING(QString("Failed to stop service %1: %2").arg(serviceName, reply.error().message()));
         return false;
     }
 }
@@ -127,10 +128,10 @@ bool SecureMode::startService(const QString &serviceName)
     QDBusReply<QDBusObjectPath> reply = systemdInterface.call("StartUnit", serviceName, "replace");
     
     if (reply.isValid()) {
-        qDebug() << "Started service:" << serviceName;
+        LOG_INFO(QString("Started service: %1").arg(serviceName));
         return true;
     } else {
-        qWarning() << "Failed to start service" << serviceName << ":" << reply.error().message();
+        LOG_WARNING(QString("Failed to start service %1: %2").arg(serviceName, reply.error().message()));
         return false;
     }
 }

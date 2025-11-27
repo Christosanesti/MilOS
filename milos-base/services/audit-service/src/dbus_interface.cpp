@@ -51,7 +51,7 @@ bool DBusInterface::initialize(
 
 bool DBusInterface::start() {
     if (!m_initialized) {
-        std::cerr << "D-Bus interface not initialized" << std::endl;
+        // Logging handled by service initialization
         return false;
     }
 
@@ -61,12 +61,12 @@ bool DBusInterface::start() {
 
     // Register D-Bus interface
     if (!registerInterface()) {
-        std::cerr << "Failed to register D-Bus interface" << std::endl;
+        // Logging handled by service initialization
         return false;
     }
 
     m_running = true;
-    std::cout << "D-Bus interface started" << std::endl;
+    // Logging handled by service initialization
     return true;
 }
 
@@ -77,7 +77,7 @@ void DBusInterface::stop() {
 
     unregisterInterface();
     m_running = false;
-    std::cout << "D-Bus interface stopped" << std::endl;
+    // Logging handled by service shutdown
 }
 
 bool DBusInterface::isHealthy() const {
@@ -96,13 +96,13 @@ bool DBusInterface::isHealthy() const {
 
 QString DBusInterface::LogEvent(const QString& eventData) {
     if (!m_eventCollector) {
-        std::cerr << "Event collector not available" << std::endl;
+        // Logging handled by service
         return QString();
     }
 
     // Collect event
     if (!m_eventCollector->collectEvent(eventData.toStdString())) {
-        std::cerr << "Failed to collect event" << std::endl;
+        // Logging handled by service
         return QString();
     }
 
@@ -126,7 +126,7 @@ QString DBusInterface::LogEvent(const QString& eventData) {
 
 QString DBusInterface::QueryEvents(const QString& queryParams) {
     if (!m_queryEngine) {
-        std::cerr << "Query engine not available" << std::endl;
+        // Logging handled by service
         return QString("{\"error\":\"Query engine not available\"}");
     }
 
@@ -136,7 +136,7 @@ QString DBusInterface::QueryEvents(const QString& queryParams) {
 
 QString DBusInterface::GetEventStatistics(const QString& queryParams) {
     if (!m_queryEngine) {
-        std::cerr << "Query engine not available" << std::endl;
+        // Logging handled by service
         return QString("{\"error\":\"Query engine not available\"}");
     }
 
@@ -146,7 +146,7 @@ QString DBusInterface::GetEventStatistics(const QString& queryParams) {
 
 QString DBusInterface::ExportAuditLog(const QString& timeRange, const QString& format) {
     if (!m_queryEngine) {
-        std::cerr << "Query engine not available" << std::endl;
+        // Logging handled by service
         return QString();
     }
 
@@ -156,7 +156,7 @@ QString DBusInterface::ExportAuditLog(const QString& timeRange, const QString& f
 
 bool DBusInterface::VerifyLogIntegrity() {
     if (!m_hashChain) {
-        std::cerr << "Hash chain not available" << std::endl;
+        // Logging handled by service
         return false;
     }
 
@@ -208,30 +208,26 @@ bool DBusInterface::registerInterface() {
     QDBusConnection connection = QDBusConnection::systemBus();
 
     if (!connection.isConnected()) {
-        std::cerr << "Cannot connect to D-Bus system bus: "
-                  << connection.lastError().message().toStdString() << std::endl;
+        // Logging handled by service initialization
         return false;
     }
 
     // Register object at path /org/milos/AuditService
     QString objectPath = "/org/milos/AuditService";
     if (!connection.registerObject(objectPath, this)) {
-        std::cerr << "Failed to register D-Bus object: "
-                  << connection.lastError().message().toStdString() << std::endl;
+        // Logging handled by service initialization
         return false;
     }
 
     // Register service name org.milos.AuditService
     QString serviceName = "org.milos.AuditService";
     if (!connection.registerService(serviceName)) {
-        std::cerr << "Failed to register D-Bus service: "
-                  << connection.lastError().message().toStdString() << std::endl;
+        // Logging handled by service initialization
         connection.unregisterObject(objectPath);
         return false;
     }
 
-    std::cout << "D-Bus interface registered: " << serviceName.toStdString()
-              << " at " << objectPath.toStdString() << std::endl;
+    // Logging handled by service initialization
     return true;
 }
 

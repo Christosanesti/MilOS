@@ -5,6 +5,10 @@
 #include <QString>
 #include <QStringList>
 #include <QVariantMap>
+#include <QHash>
+
+// Forward declaration
+class CVEClient;
 
 /**
  * @brief Dependency
@@ -64,13 +68,25 @@ Q_SIGNALS:
 
 private:
     QList<Dependency> m_dependencies;
+    QHash<QString, QList<QString>> m_vulnerabilityCache;  // Cache of known vulnerabilities
+    CVEClient* m_cveClient;  // CVE database client
     
     QList<Dependency> parsePackageJson(const QString& filePath) const;
     QList<Dependency> parseRequirementsTxt(const QString& filePath) const;
     QList<Dependency> parseCargoToml(const QString& filePath) const;
+    bool isVersionVulnerable(const QString& currentVersion, const QString& vulnerableVersionRange) const;
+    int compareVersions(const QString& v1, const QString& v2) const;
 };
 
 Q_DECLARE_METATYPE(Dependency)
+
+#endif // SUPPLY_CHAIN_MANAGER_H
+
+
+
+
+
+
 
 #endif // SUPPLY_CHAIN_MANAGER_H
 

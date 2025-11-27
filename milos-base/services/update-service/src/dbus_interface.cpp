@@ -5,6 +5,7 @@
 #include "update_applier.h"
 #include "rollback_manager.h"
 #include "audit_logger.h"
+#include "milos/logging/logger.h"
 #include <QDBusConnection>
 #include <QDBusError>
 #include <QJsonDocument>
@@ -55,7 +56,7 @@ bool DBusInterface::initialize(
 
 bool DBusInterface::start() {
     if (!m_initialized) {
-        std::cerr << "D-Bus interface not initialized" << std::endl;
+        LOG_ERROR("D-Bus interface not initialized");
         return false;
     }
 
@@ -65,12 +66,12 @@ bool DBusInterface::start() {
 
     // Register D-Bus interface
     if (!registerInterface()) {
-        std::cerr << "Failed to register D-Bus interface" << std::endl;
+        LOG_ERROR("Failed to register D-Bus interface");
         return false;
     }
 
     m_running = true;
-    std::cout << "D-Bus interface started" << std::endl;
+    // Logging handled by service initialization
     return true;
 }
 
@@ -81,7 +82,7 @@ void DBusInterface::stop() {
 
     unregisterInterface();
     m_running = false;
-    std::cout << "D-Bus interface stopped" << std::endl;
+    // Logging handled by service shutdown
 }
 
 bool DBusInterface::isHealthy() const {
@@ -100,7 +101,7 @@ bool DBusInterface::isHealthy() const {
 
 QString DBusInterface::CheckUpdates() {
     if (!m_packageManager) {
-        std::cerr << "Package manager not available" << std::endl;
+        LOG_ERROR("Package manager not available");
         return QString("{\"error\":\"Package manager not available\"}");
     }
 
@@ -133,7 +134,7 @@ QString DBusInterface::CheckUpdates() {
 
 QString DBusInterface::ApplyUpdates(const QString& packageList) {
     if (!m_updateApplier) {
-        std::cerr << "Update applier not available" << std::endl;
+        LOG_ERROR("Update applier not available");
         return QString();
     }
 
@@ -141,7 +142,7 @@ QString DBusInterface::ApplyUpdates(const QString& packageList) {
     QJsonParseError error;
     QJsonDocument doc = QJsonDocument::fromJson(packageList.toUtf8(), &error);
     if (error.error != QJsonParseError::NoError || !doc.isArray()) {
-        std::cerr << "Invalid package list JSON" << std::endl;
+        LOG_ERROR("Invalid package list JSON");
         return QString();
     }
 
@@ -172,7 +173,7 @@ QString DBusInterface::ApplyUpdates(const QString& packageList) {
 
 bool DBusInterface::RollbackUpdate(const QString& updateId) {
     if (!m_rollbackManager) {
-        std::cerr << "Rollback manager not available" << std::endl;
+        LOG_ERROR("Rollback manager not available");
         return false;
     }
 
@@ -215,7 +216,7 @@ bool DBusInterface::RollbackUpdate(const QString& updateId) {
 
 QString DBusInterface::GetUpdateStatus(const QString& updateId) {
     if (!m_updateApplier) {
-        std::cerr << "Update applier not available" << std::endl;
+        LOG_ERROR("Update applier not available");
         return QString("{\"error\":\"Update applier not available\"}");
     }
 
@@ -392,30 +393,26 @@ bool DBusInterface::registerInterface() {
     QDBusConnection connection = QDBusConnection::systemBus();
 
     if (!connection.isConnected()) {
-        std::cerr << "Cannot connect to D-Bus system bus: "
-                  << connection.lastError().message().toStdString() << std::endl;
+        LOG_ERROR(QString("Cannot connect to D-Bus system bus: %1").arg(connection.lastError().message()));
         return false;
     }
 
     // Register object at path /org/milos/UpdateService
     QString objectPath = "/org/milos/UpdateService";
     if (!connection.registerObject(objectPath, this)) {
-        std::cerr << "Failed to register D-Bus object: "
-                  << connection.lastError().message().toStdString() << std::endl;
+        LOG_ERROR(QString("Failed to register D-Bus object: %1").arg(connection.lastError().message()));
         return false;
     }
 
     // Register service name org.milos.UpdateService
     QString serviceName = "org.milos.UpdateService";
     if (!connection.registerService(serviceName)) {
-        std::cerr << "Failed to register D-Bus service: "
-                  << connection.lastError().message().toStdString() << std::endl;
+        LOG_ERROR(QString("Failed to register D-Bus service: %1").arg(connection.lastError().message()));
         connection.unregisterObject(objectPath);
         return false;
     }
 
-    std::cout << "D-Bus interface registered: " << serviceName.toStdString()
-              << " at " << objectPath.toStdString() << std::endl;
+    // Logging handled by service initialization
     return true;
 }
 

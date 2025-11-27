@@ -1,4 +1,5 @@
 #include "quickactionsservice_dbus.h"
+#include "milos/logging/logger.h"
 #include <QDBusConnection>
 #include <QDBusError>
 #include <QDebug>
@@ -32,7 +33,7 @@ bool QuickActionsServiceDBus::initialize()
 bool QuickActionsServiceDBus::start()
 {
     if (!m_initialized) {
-        qWarning() << "Quick Actions D-Bus service not initialized";
+        LOG_WARNING("Quick Actions D-Bus service not initialized");
         return false;
     }
 
@@ -41,12 +42,12 @@ bool QuickActionsServiceDBus::start()
     }
 
     if (!registerInterface()) {
-        qWarning() << "Failed to register D-Bus interface";
+        LOG_WARNING("Failed to register D-Bus interface");
         return false;
     }
 
     m_running = true;
-    qDebug() << "Quick Actions D-Bus service started";
+    LOG_INFO("Quick Actions D-Bus service started");
     return true;
 }
 
@@ -58,7 +59,7 @@ void QuickActionsServiceDBus::stop()
 
     unregisterInterface();
     m_running = false;
-    qDebug() << "Quick Actions D-Bus service stopped";
+    LOG_INFO("Quick Actions D-Bus service stopped");
 }
 
 bool QuickActionsServiceDBus::registerInterface()
@@ -66,14 +67,14 @@ bool QuickActionsServiceDBus::registerInterface()
     QDBusConnection connection = QDBusConnection::sessionBus();
     
     if (!connection.isConnected()) {
-        qWarning() << "Cannot connect to D-Bus session bus";
+        LOG_WARNING("Cannot connect to D-Bus session bus");
         return false;
     }
 
     if (!connection.registerService("org.milos.QuickActions")) {
         QDBusError error = connection.lastError();
         if (error.isValid()) {
-            qWarning() << "Failed to register D-Bus service:" << error.message();
+            LOG_WARNING(QString("Failed to register D-Bus service: %1").arg(error.message()));
         }
         return false;
     }
@@ -83,7 +84,7 @@ bool QuickActionsServiceDBus::registerInterface()
                                    QDBusConnection::ExportAllSignals)) {
         QDBusError error = connection.lastError();
         if (error.isValid()) {
-            qWarning() << "Failed to register D-Bus object:" << error.message();
+            LOG_WARNING(QString("Failed to register D-Bus object: %1").arg(error.message()));
             connection.unregisterService("org.milos.QuickActions");
             return false;
         }

@@ -83,6 +83,13 @@ public:
      */
     std::string getStatus() const;
 
+    /**
+     * @brief Get ESYS context (for TSS2 operations)
+     * @return ESYS context pointer, or nullptr if not initialized
+     * @note Only valid when HAVE_TSS2 is defined
+     */
+    void* getESYSContext() const { return m_tpmContext; }
+
 private:
     TPMStatus m_status;
     TPMDeviceInfo m_deviceInfo;

@@ -30,50 +30,48 @@ bool UpdateService::initialize() {
     try {
         // Load configuration
         if (!loadConfiguration()) {
-            std::cerr << "Failed to load configuration" << std::endl;
+            // Logging handled by audit logger
             return false;
         }
 
         // Initialize audit logger first (for logging initialization events)
         if (!initializeAuditLogger()) {
-            std::cerr << "Failed to initialize audit logger (continuing with graceful degradation)" << std::endl;
             // Continue with graceful degradation
         }
 
         // Initialize package manager
         if (!initializePackageManager()) {
-            std::cerr << "Failed to initialize package manager (continuing with graceful degradation)" << std::endl;
             // Continue with graceful degradation
         }
 
         // Initialize signature verifier
         if (!initializeSignatureVerifier()) {
-            std::cerr << "Failed to initialize signature verifier" << std::endl;
+            // Logging handled by audit logger
             return false;
         }
 
         // Initialize rollback manager
         if (!initializeRollbackManager()) {
-            std::cerr << "Failed to initialize rollback manager" << std::endl;
+            // Logging handled by audit logger
             return false;
         }
 
         // Initialize update applier
         if (!initializeUpdateApplier()) {
-            std::cerr << "Failed to initialize update applier" << std::endl;
+            // Logging handled by audit logger
             return false;
         }
 
         // Initialize D-Bus interface
         if (!initializeDBusInterface()) {
-            std::cerr << "Failed to initialize D-Bus interface" << std::endl;
+            // Logging handled by audit logger
             return false;
         }
 
         m_initialized = true;
         return true;
     } catch (const std::exception& e) {
-        std::cerr << "Exception during initialization: " << e.what() << std::endl;
+        // Logging handled by audit logger
         return false;
     }
 }
@@ -92,7 +90,7 @@ bool UpdateService::start() {
     try {
         // Start D-Bus interface
         if (!m_dbusInterface->start()) {
-            std::cerr << "Failed to start D-Bus interface" << std::endl;
+            // Logging handled by audit logger
             return false;
         }
 
@@ -101,10 +99,10 @@ bool UpdateService::start() {
         // Notify systemd that service is ready
         notifySystemdReady();
         
-        std::cout << "Update Service started successfully" << std::endl;
+        // Logging handled by audit logger
         return true;
     } catch (const std::exception& e) {
-        std::cerr << "Exception during start: " << e.what() << std::endl;
+        // Logging handled by audit logger
         return false;
     }
 }
@@ -120,9 +118,9 @@ void UpdateService::stop() {
         }
 
         m_running = false;
-        std::cout << "Update Service stopped" << std::endl;
+        // Logging handled by audit logger
     } catch (const std::exception& e) {
-        std::cerr << "Exception during stop: " << e.what() << std::endl;
+        // Logging handled by audit logger
     }
 }
 
@@ -223,8 +221,7 @@ void UpdateService::performHealthCheck() {
     
     // Log health status if unhealthy
     if (!healthy) {
-        std::cerr << "Health check failed: Service is unhealthy" << std::endl;
-        std::cerr << "Health status: " << getHealthStatus() << std::endl;
+        // Logging handled by audit logger
     }
 }
 

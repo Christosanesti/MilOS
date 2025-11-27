@@ -1,5 +1,6 @@
 #include "policy_manager.h"
 #include "config_parser.h"
+#include "milos/logging/logger.h"
 #include <algorithm>
 #include <iostream>
 
@@ -18,7 +19,7 @@ bool PolicyManager::initialize(ConfigParser* configParser) {
 
 bool PolicyManager::loadPolicies() {
     if (!m_configParser || !m_configParser->isLoaded()) {
-        std::cerr << "Config parser not set or not loaded" << std::endl;
+        LOG_ERROR("Config parser not set or not loaded");
         return false;
     }
 
@@ -84,7 +85,7 @@ bool PolicyManager::loadPolicies() {
         m_policies.push_back(localhostPolicy);
         
     } catch (const std::exception& e) {
-        std::cerr << "Error loading policies: " << e.what() << std::endl;
+        LOG_ERROR(QString("Error loading policies: %1").arg(e.what()));
         return false;
     }
 
@@ -148,12 +149,12 @@ bool PolicyManager::validatePolicy(const NetworkPolicy& policy) const {
 bool PolicyManager::applyPolicy(const std::string& policyId) {
     const NetworkPolicy* policy = getPolicy(policyId);
     if (!policy) {
-        std::cerr << "Policy not found: " << policyId << std::endl;
+        LOG_ERROR(QString("Policy not found: %1").arg(QString::fromStdString(policyId)));
         return false;
     }
 
     if (!validatePolicy(*policy)) {
-        std::cerr << "Policy validation failed: " << policyId << std::endl;
+        LOG_ERROR(QString("Policy validation failed: %1").arg(QString::fromStdString(policyId)));
         return false;
     }
 
@@ -166,7 +167,7 @@ bool PolicyManager::applyPolicy(const std::string& policyId) {
 
 bool PolicyManager::addOrUpdatePolicy(const NetworkPolicy& policy) {
     if (!validatePolicy(policy)) {
-        std::cerr << "Policy validation failed: " << policy.policy_id << std::endl;
+        LOG_ERROR(QString("Policy validation failed: %1").arg(QString::fromStdString(policy.policy_id)));
         return false;
     }
 

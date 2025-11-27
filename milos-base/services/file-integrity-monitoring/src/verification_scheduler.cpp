@@ -2,6 +2,7 @@
 #include "integrity_verifier.h"
 #include "baseline_manager.h"
 #include "audit_logger.h"
+#include "milos/logging/logger.h"
 #include <iostream>
 #include <sstream>
 #include <iomanip>
@@ -31,7 +32,7 @@ bool VerificationScheduler::initialize(IntegrityVerifier* integrityVerifier,
     }
 
     if (!integrityVerifier || !baselineManager || !auditLogger) {
-        std::cerr << "VerificationScheduler: Missing dependencies for initialization." << std::endl;
+        LOG_ERROR("VerificationScheduler: Missing dependencies for initialization.");
         return false;
     }
 
@@ -49,7 +50,7 @@ void VerificationScheduler::start() {
 
     m_running = true;
     m_schedulerThread = std::thread(&VerificationScheduler::schedulerThreadFunction, this);
-    std::cout << "VerificationScheduler: Started scheduler thread" << std::endl;
+    // Logging handled by service initialization
 }
 
 void VerificationScheduler::stop() {
@@ -61,7 +62,7 @@ void VerificationScheduler::stop() {
     if (m_schedulerThread.joinable()) {
         m_schedulerThread.join();
     }
-    std::cout << "VerificationScheduler: Stopped scheduler thread" << std::endl;
+    // Logging handled by service shutdown
 }
 
 std::string VerificationScheduler::createSchedule(const VerificationSchedule& schedule) {
@@ -78,7 +79,7 @@ std::string VerificationScheduler::createSchedule(const VerificationSchedule& sc
 
     // Check if ID already exists
     if (m_schedules.find(newSchedule.schedule_id) != m_schedules.end()) {
-        std::cerr << "VerificationScheduler: Schedule ID already exists: " << newSchedule.schedule_id << std::endl;
+        LOG_WARNING(QString("VerificationScheduler: Schedule ID already exists: %1").arg(QString::fromStdString(newSchedule.schedule_id)));
         return "";
     }
 
@@ -369,7 +370,7 @@ void VerificationScheduler::executeSchedule(const VerificationSchedule& schedule
         return;
     }
 
-    std::cout << "VerificationScheduler: Executing schedule: " << schedule.name << std::endl;
+    // Logging handled by audit logger
 
     // Get files to verify
     std::vector<std::string> filesToVerify;

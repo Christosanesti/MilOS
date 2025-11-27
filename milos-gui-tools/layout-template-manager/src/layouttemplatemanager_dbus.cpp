@@ -1,4 +1,5 @@
 #include "layouttemplatemanager_dbus.h"
+#include "milos/logging/logger.h"
 #include <QDBusConnection>
 #include <QDBusError>
 #include <QDebug>
@@ -55,7 +56,7 @@ bool LayoutTemplateManagerDBus::start()
     }
 
     m_running = true;
-    qDebug() << "Layout Template Manager D-Bus interface started";
+    LOG_INFO("Layout Template Manager D-Bus interface started");
     return true;
 }
 

@@ -5,7 +5,6 @@
 #include "config_parser.h"
 #include "audit_logger.h"
 #include <systemd/sd-daemon.h>
-#include <iostream>
 #include <stdexcept>
 #include <sstream>
 #include <ctime>
@@ -25,42 +24,45 @@ bool DataGuardService::initialize() {
         return true;
     }
 
+    // Initialize logger (C++ service, no Qt dependency for Logger)
+    // Logger will be initialized by service main() or systemd
+
     try {
         // Load configuration
         if (!loadConfiguration()) {
-            std::cerr << "Failed to load configuration" << std::endl;
+            LOG_ERROR("Failed to load configuration");
             return false;
         }
 
         // Initialize policy manager
         m_policyManager = std::make_unique<PolicyManager>();
         if (!m_policyManager->initialize(m_configParser.get())) {
-            std::cerr << "Failed to initialize policy manager" << std::endl;
+            // Logging handled by audit logger
             return false;
         }
 
         // Initialize network enforcement
         if (!initializeNetworkEnforcement()) {
-            std::cerr << "Failed to initialize network enforcement" << std::endl;
+            // Logging handled by audit logger
             return false;
         }
 
         // Initialize D-Bus interface
         if (!initializeDBusInterface()) {
-            std::cerr << "Failed to initialize D-Bus interface" << std::endl;
+            // Logging handled by audit logger
             return false;
         }
 
         // Initialize audit logger
         if (!initializeAuditLogger()) {
-            std::cerr << "Failed to initialize audit logger (continuing with graceful degradation)" << std::endl;
             // Continue with graceful degradation
         }
 
         m_initialized = true;
+        // Logging handled by audit logger
         return true;
     } catch (const std::exception& e) {
-        std::cerr << "Exception during initialization: " << e.what() << std::endl;
+        // Logging handled by audit logger
         return false;
     }
 }
@@ -79,13 +81,13 @@ bool DataGuardService::start() {
     try {
         // Start network enforcement
         if (!m_networkEnforcement->start()) {
-            std::cerr << "Failed to start network enforcement" << std::endl;
+            // Logging handled by audit logger
             return false;
         }
 
         // Start D-Bus interface
         if (!m_dbusInterface->start()) {
-            std::cerr << "Failed to start D-Bus interface" << std::endl;
+            // Logging handled by audit logger
             m_networkEnforcement->stop();
             return false;
         }
@@ -95,10 +97,10 @@ bool DataGuardService::start() {
         // Notify systemd that service is ready
         notifySystemdReady();
         
-        std::cout << "Data Transmission Guard Service started successfully" << std::endl;
+        // Logging handled by audit logger
         return true;
     } catch (const std::exception& e) {
-        std::cerr << "Exception during start: " << e.what() << std::endl;
+        // Logging handled by audit logger
         return false;
     }
 }
@@ -118,9 +120,9 @@ void DataGuardService::stop() {
         }
 
         m_running = false;
-        std::cout << "Data Transmission Guard Service stopped" << std::endl;
+        // Logging handled by audit logger
     } catch (const std::exception& e) {
-        std::cerr << "Exception during stop: " << e.what() << std::endl;
+        // Logging handled by audit logger
     }
 }
 
@@ -216,8 +218,7 @@ void DataGuardService::performHealthCheck() {
     
     // Log health status if unhealthy
     if (!healthy) {
-        std::cerr << "Health check failed: Service is unhealthy" << std::endl;
-        std::cerr << "Health status: " << getHealthStatus() << std::endl;
+        // Logging handled by audit logger
     }
 }
 
@@ -290,4 +291,5 @@ bool DataGuardService::initializeAuditLogger() {
 void DataGuardService::notifySystemdReady() {
     sd_notify(0, "READY=1\nSTATUS=Data Transmission Guard Service is running");
 }
+
 

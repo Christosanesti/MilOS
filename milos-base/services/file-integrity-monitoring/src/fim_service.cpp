@@ -9,6 +9,7 @@
 #include "dbus_interface.h"
 #include "config_parser.h"
 #include "audit_logger.h"
+#include "milos/logging/logger.h"
 #include <iostream>
 
 FIMService::FIMService()
@@ -29,40 +30,40 @@ bool FIMService::initialize() {
     // Initialize configuration parser
     m_configParser = std::make_unique<ConfigParser>();
     if (!m_configParser->loadConfig("/etc/milos/fim/config.yaml")) {
-        std::cerr << "Warning: Failed to load configuration, using defaults" << std::endl;
+        LOG_WARNING("Failed to load configuration, using defaults");
     }
 
     // Initialize audit logger
     m_auditLogger = std::make_unique<AuditLogger>();
     if (!m_auditLogger->initialize()) {
-        std::cerr << "Warning: Failed to initialize audit logger" << std::endl;
+        LOG_WARNING("Failed to initialize audit logger");
     }
 
     // Initialize baseline manager
     m_baselineManager = std::make_unique<BaselineManager>();
     if (!m_baselineManager->initialize()) {
-        std::cerr << "Failed to initialize baseline manager" << std::endl;
+        LOG_ERROR("Failed to initialize baseline manager");
         return false;
     }
 
     // Initialize change detector
     m_changeDetector = std::make_unique<ChangeDetector>();
     if (!m_changeDetector->initialize(m_baselineManager.get())) {
-        std::cerr << "Failed to initialize change detector" << std::endl;
+        LOG_ERROR("Failed to initialize change detector");
         return false;
     }
 
     // Initialize integrity verifier
     m_integrityVerifier = std::make_unique<IntegrityVerifier>();
     if (!m_integrityVerifier->initialize(m_baselineManager.get())) {
-        std::cerr << "Failed to initialize integrity verifier" << std::endl;
+        LOG_ERROR("Failed to initialize integrity verifier");
         return false;
     }
 
     // Initialize file monitor
     m_fileMonitor = std::make_unique<FileMonitor>();
     if (!m_fileMonitor->initialize(m_changeDetector.get())) {
-        std::cerr << "Failed to initialize file monitor" << std::endl;
+        LOG_ERROR("Failed to initialize file monitor");
         return false;
     }
     
@@ -77,14 +78,14 @@ bool FIMService::initialize() {
     // Initialize remediation manager
     m_remediationManager = std::make_unique<RemediationManager>();
     if (!m_remediationManager->initialize(m_baselineManager.get(), m_changeDetector.get(), m_auditLogger.get())) {
-        std::cerr << "Warning: Failed to initialize remediation manager" << std::endl;
+        LOG_WARNING("Failed to initialize remediation manager");
         // Don't fail initialization if remediation is not available
     }
 
     // Initialize security tools integration
     m_securityToolsIntegration = std::make_unique<SecurityToolsIntegration>();
     if (!m_securityToolsIntegration->initialize(m_changeDetector.get(), m_integrityVerifier.get(), m_auditLogger.get())) {
-        std::cerr << "Warning: Failed to initialize security tools integration" << std::endl;
+        LOG_WARNING("Failed to initialize security tools integration");
         // Don't fail initialization if security tools integration is not available
     } else {
         // Register callback to forward violations to security tools
@@ -111,7 +112,7 @@ bool FIMService::initialize() {
     // Initialize verification scheduler
     m_verificationScheduler = std::make_unique<VerificationScheduler>();
     if (!m_verificationScheduler->initialize(m_integrityVerifier.get(), m_baselineManager.get(), m_auditLogger.get())) {
-        std::cerr << "Warning: Failed to initialize verification scheduler" << std::endl;
+        LOG_WARNING("Failed to initialize verification scheduler");
         // Don't fail initialization if scheduler is not available
     }
 
@@ -124,7 +125,7 @@ bool FIMService::initialize() {
     m_dbusInterface->setRemediationManager(m_remediationManager.get());
     m_dbusInterface->setVerificationScheduler(m_verificationScheduler.get());
     if (!m_dbusInterface->initialize()) {
-        std::cerr << "Warning: Failed to initialize D-Bus interface" << std::endl;
+        LOG_WARNING("Failed to initialize D-Bus interface");
     }
 
     m_initialized = true;
@@ -144,7 +145,7 @@ bool FIMService::start() {
 
     // Start file monitoring
     if (!m_fileMonitor->start()) {
-        std::cerr << "Failed to start file monitor" << std::endl;
+        LOG_ERROR("Failed to start file monitor");
         return false;
     }
 
@@ -220,7 +221,7 @@ bool FIMService::reloadConfiguration() {
 void FIMService::performHealthCheck() {
     // Perform health checks on all components
     if (!isHealthy()) {
-        std::cerr << "Health check failed" << std::endl;
+        LOG_ERROR("Health check failed");
     }
 }
 

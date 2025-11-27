@@ -1,4 +1,5 @@
 #include "screenlock.h"
+#include "milos/logging/logger.h"
 #include <QDBusConnection>
 #include <QDBusInterface>
 #include <QDBusReply>
@@ -50,7 +51,7 @@ bool ScreenLock::lockViaKWin()
         if (kwinCompositor.isValid()) {
             QDBusReply<void> reply = kwinCompositor.call("lockScreen");
             if (reply.isValid()) {
-                qDebug() << "Screen locked via KWin";
+                LOG_INFO("Screen locked via KWin");
                 return true;
             }
         }
@@ -70,7 +71,7 @@ bool ScreenLock::lockViaKWin()
         msg << "Lock Session";
         QDBusReply<void> reply = bus.call(msg);
         if (reply.isValid()) {
-            qDebug() << "Screen locked via KGlobalAccel";
+            LOG_INFO("Screen locked via KGlobalAccel");
             return true;
         }
     }
@@ -111,10 +112,10 @@ bool ScreenLock::lockViaSystemdLogind()
     if (sessionInterface.isValid()) {
         QDBusReply<void> reply = sessionInterface.call("Lock");
         if (reply.isValid()) {
-            qDebug() << "Screen locked via systemd-logind";
+            LOG_INFO("Screen locked via systemd-logind");
             return true;
         } else {
-            qWarning() << "Failed to lock session:" << reply.error().message();
+            LOG_WARNING(QString("Failed to lock session: %1").arg(reply.error().message()));
         }
     }
     

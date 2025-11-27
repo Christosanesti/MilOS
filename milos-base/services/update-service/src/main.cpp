@@ -10,7 +10,7 @@ static UpdateService* g_service = nullptr;
 
 void signalHandler(int signal) {
     if (g_service) {
-        std::cout << "Received signal " << signal << ", shutting down..." << std::endl;
+        // Logging handled by service shutdown
         g_service->stop();
     }
     if (QCoreApplication::instance()) {
@@ -33,14 +33,14 @@ int main(int argc, char* argv[]) {
     g_service = &service;
 
     if (!service.initialize()) {
-        std::cerr << "Failed to initialize Update Service" << std::endl;
+        // Logging handled by service initialization
         sd_notify(0, "STATUS=Failed to initialize\n");
         return 1;
     }
 
     // Start service
     if (!service.start()) {
-        std::cerr << "Failed to start Update Service" << std::endl;
+        // Logging handled by service initialization
         sd_notify(0, "STATUS=Failed to start\n");
         return 1;
     }
@@ -57,7 +57,7 @@ int main(int argc, char* argv[]) {
 
     // Service stopped
     if (!service.isHealthy()) {
-        std::cerr << "Service became unhealthy, exiting" << std::endl;
+        // Logging handled by service health check
         sd_notify(0, "STATUS=Service unhealthy\n");
         return 1;
     }

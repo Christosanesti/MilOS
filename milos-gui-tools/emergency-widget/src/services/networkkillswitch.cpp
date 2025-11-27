@@ -1,4 +1,5 @@
 #include "networkkillswitch.h"
+#include "milos/logging/logger.h"
 #include <QDBusConnection>
 #include <QDBusInterface>
 #include <QDBusReply>
@@ -169,10 +170,10 @@ bool NetworkKillSwitch::disableNetworkManager()
     
     QDBusReply<void> reply = bus.call(msg);
     if (reply.isValid()) {
-        qDebug() << "NetworkManager networking disabled";
+        LOG_INFO("NetworkManager networking disabled");
         return true;
     } else {
-        qWarning() << "Failed to disable NetworkManager:" << reply.error().message();
+        LOG_WARNING(QString("Failed to disable NetworkManager: %1").arg(reply.error().message()));
         return false;
     }
 }
@@ -193,10 +194,10 @@ bool NetworkKillSwitch::disableSystemdNetworkd()
     // Stop systemd-networkd service
     QDBusReply<QDBusObjectPath> reply = systemdInterface.call("StopUnit", "systemd-networkd.service", "replace");
     if (reply.isValid()) {
-        qDebug() << "systemd-networkd service stopped";
+        LOG_INFO("systemd-networkd service stopped");
         return true;
     } else {
-        qWarning() << "Failed to stop systemd-networkd:" << reply.error().message();
+        LOG_WARNING(QString("Failed to stop systemd-networkd: %1").arg(reply.error().message()));
         return false;
     }
 }
@@ -223,10 +224,10 @@ bool NetworkKillSwitch::enableNetworkManager()
     
     QDBusReply<void> reply = bus.call(msg);
     if (reply.isValid()) {
-        qDebug() << "NetworkManager networking enabled";
+        LOG_INFO("NetworkManager networking enabled");
         return true;
     } else {
-        qWarning() << "Failed to enable NetworkManager:" << reply.error().message();
+        LOG_WARNING(QString("Failed to enable NetworkManager: %1").arg(reply.error().message()));
         return false;
     }
 }
@@ -247,10 +248,10 @@ bool NetworkKillSwitch::enableSystemdNetworkd()
     // Start systemd-networkd service
     QDBusReply<QDBusObjectPath> reply = systemdInterface.call("StartUnit", "systemd-networkd.service", "replace");
     if (reply.isValid()) {
-        qDebug() << "systemd-networkd service started";
+        LOG_INFO("systemd-networkd service started");
         return true;
     } else {
-        qWarning() << "Failed to start systemd-networkd:" << reply.error().message();
+        LOG_WARNING(QString("Failed to start systemd-networkd: %1").arg(reply.error().message()));
         return false;
     }
 }

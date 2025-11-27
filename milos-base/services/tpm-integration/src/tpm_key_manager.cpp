@@ -4,6 +4,8 @@
 #include <sstream>
 #include <iomanip>
 #include <random>
+#include <iostream>
+#include <algorithm>
 
 #ifdef HAVE_TSS2
 #include <tss2/tss2_esys.h>
@@ -43,26 +45,152 @@ TPMKeyInfo TPMKeyManager::generateKey(const KeyGenerationParams& params) {
 
 #ifdef HAVE_TSS2
     // TPM key generation using TSS2 library
-    // Full implementation requires TSS2 (tpm2-tss) library and proper TPM device access
-    
-    // In full implementation:
-    // 1. Initialize ESYS context: Esys_Initialize(&esys_context, ...)
-    // 2. Create primary key: Esys_CreatePrimary(...) for primary keys
-    // 3. Create key: Esys_Create(...) for child keys
-    // 4. Load key: Esys_Load(...) if needed
-    // 5. Make persistent: Esys_EvictControl(...) if params.persistent is true
-    // 6. Extract key handle and public key data
-    
-    // For now, generate structured key ID
-    std::stringstream ss;
-    ss << "tss2_key_" << params.key_type << "_" << std::hex << std::time(nullptr);
-    keyInfo.key_id = ss.str();
-    
-    if (params.persistent) {
-        keyInfo.persistent_handle = generatePersistentHandle();
-        // In full implementation, this would be the actual TPM persistent handle
-        // returned from Esys_EvictControl
+    ESYS_CONTEXT* esysContext = static_cast<ESYS_CONTEXT*>(m_tpmDevice->getESYSContext());
+    if (!esysContext) {
+        std::cerr << "ESYS context not available" << std::endl;
+        return keyInfo;
     }
+
+    TSS2_RC rc;
+    ESYS_TR keyHandle = ESYS_TR_NONE;
+    
+    // Determine key attributes based on key type and usage
+    TPMA_OBJECT objectAttributes = TPMA_OBJECT_USERWITHAUTH | 
+                                    TPMA_OBJECT_RESTRICTED | 
+                                    TPMA_OBJECT_DECRYPT;
+    
+    if (params.key_usage == "signing") {
+        objectAttributes = TPMA_OBJECT_USERWITHAUTH | 
+                          TPMA_OBJECT_SIGN_ENCRYPT | 
+                          TPMA_OBJECT_FIXEDTPM | 
+                          TPMA_OBJECT_FIXEDPARENT;
+    } else if (params.key_usage == "storage") {
+        objectAttributes = TPMA_OBJECT_USERWITHAUTH | 
+                          TPMA_OBJECT_RESTRICTED | 
+                          TPMA_OBJECT_DECRYPT | 
+                          TPMA_OBJECT_FIXEDTPM | 
+                          TPMA_OBJECT_FIXEDPARENT;
+    }
+
+    // Prepare key parameters
+    TPM2B_PUBLIC inPublic = {0};
+    inPublic.size = sizeof(TPMT_PUBLIC);
+    inPublic.publicArea.type = TPM2_ALG_RSA;
+    inPublic.publicArea.nameAlg = TPM2_ALG_SHA256;
+    inPublic.publicArea.objectAttributes = objectAttributes;
+    
+    // Set key size based on key type
+    if (params.key_type == "RSA2048") {
+        inPublic.publicArea.parameters.rsaDetail.keyBits = 2048;
+        inPublic.publicArea.parameters.rsaDetail.exponent = 0;  // Default exponent
+    } else if (params.key_type == "ECC256") {
+        inPublic.publicArea.type = TPM2_ALG_ECC;
+        inPublic.publicArea.parameters.eccDetail.curveID = TPM2_ECC_NIST_P256;
+        inPublic.publicArea.parameters.eccDetail.kdf.scheme = TPM2_ALG_NULL;
+        inPublic.publicArea.parameters.eccDetail.scheme.scheme = TPM2_ALG_NULL;
+    } else {
+        // Default to RSA 2048
+        inPublic.publicArea.parameters.rsaDetail.keyBits = 2048;
+    }
+
+    TPM2B_DATA outsideInfo = {0};
+    TPM2B_SENSITIVE_CREATE inSensitive = {0};
+    TPM2B_PUBLIC* outPublic = nullptr;
+    TPM2B_PRIVATE* outPrivate = nullptr;
+    TPM2B_DATA* creationData = nullptr;
+    TPM2B_DIGEST* creationHash = nullptr;
+    TPMT_TK_CREATION* creationTicket = nullptr;
+    TPM2B_NAME* name = nullptr;
+
+    // Create primary key in owner hierarchy
+    rc = Esys_CreatePrimary(esysContext,
+                           ESYS_TR_RH_OWNER,
+                           ESYS_TR_PASSWORD,
+                           ESYS_TR_NONE,
+                           ESYS_TR_NONE,
+                           &inSensitive,
+                           &inPublic,
+                           &outsideInfo,
+                           &creationData,
+                           &creationHash,
+                           &creationTicket,
+                           &outPublic,
+                           &outPrivate,
+                           nullptr,
+                           &name,
+                           &keyHandle);
+
+    if (rc != TSS2_RC_SUCCESS) {
+        std::cerr << "Failed to create primary key: 0x" << std::hex << rc << std::endl;
+        return keyInfo;
+    }
+
+    // Extract public key data
+    if (outPublic) {
+        std::stringstream ss;
+        ss << std::hex;
+        
+        if (outPublic->publicArea.type == TPM2_ALG_RSA && 
+            outPublic->publicArea.unique.rsa.size > 0) {
+            // RSA public key
+            for (size_t i = 0; i < outPublic->publicArea.unique.rsa.size; i++) {
+                ss << std::setw(2) << std::setfill('0') 
+                   << static_cast<int>(outPublic->publicArea.unique.rsa.buffer[i]);
+            }
+        } else if (outPublic->publicArea.type == TPM2_ALG_ECC && 
+                   outPublic->publicArea.unique.ecc.x.size > 0) {
+            // ECC public key (x coordinate)
+            for (size_t i = 0; i < outPublic->publicArea.unique.ecc.x.size; i++) {
+                ss << std::setw(2) << std::setfill('0') 
+                   << static_cast<int>(outPublic->publicArea.unique.ecc.x.buffer[i]);
+            }
+            // Add y coordinate if present
+            if (outPublic->publicArea.unique.ecc.y.size > 0) {
+                for (size_t i = 0; i < outPublic->publicArea.unique.ecc.y.size; i++) {
+                    ss << std::setw(2) << std::setfill('0') 
+                       << static_cast<int>(outPublic->publicArea.unique.ecc.y.buffer[i]);
+                }
+            }
+        }
+        
+        keyInfo.public_key = ss.str();
+    }
+
+    // Generate key ID
+    std::stringstream keyIdStream;
+    keyIdStream << "tss2_key_" << params.key_type << "_" << std::hex << std::time(nullptr);
+    keyInfo.key_id = keyIdStream.str();
+
+    // Make key persistent if requested
+    if (params.persistent) {
+        uint32_t persistentHandle = generatePersistentHandle();
+        
+        rc = Esys_EvictControl(esysContext,
+                              ESYS_TR_RH_OWNER,
+                              keyHandle,
+                              ESYS_TR_PASSWORD,
+                              ESYS_TR_NONE,
+                              ESYS_TR_NONE,
+                              persistentHandle,
+                              nullptr);
+        
+        if (rc == TSS2_RC_SUCCESS) {
+            keyInfo.persistent_handle = persistentHandle;
+            // Flush transient handle since we now have persistent handle
+            Esys_FlushContext(esysContext, keyHandle);
+        } else {
+            std::cerr << "Failed to make key persistent: 0x" << std::hex << rc << std::endl;
+            // Keep transient handle
+        }
+    }
+
+    // Cleanup
+    if (outPublic) Esys_Free(outPublic);
+    if (outPrivate) Esys_Free(outPrivate);
+    if (creationData) Esys_Free(creationData);
+    if (creationTicket) Esys_Free(creationTicket);
+    if (creationHash) Esys_Free(creationHash);
+    if (name) Esys_Free(name);
 #else
     // Fallback: Generate key ID without TPM
     std::stringstream ss;
@@ -102,19 +230,23 @@ bool TPMKeyManager::deleteKey(const std::string& keyId) {
     if (it != m_keys.end()) {
 #ifdef HAVE_TSS2
         // TPM key deletion using TSS2 library
-        // Full implementation requires TSS2 library and proper TPM device access
-        
-        // In full implementation:
-        // 1. Initialize ESYS context: Esys_Initialize(&esys_context, ...)
-        // 2. If persistent: Esys_EvictControl(esys_context, persistent_handle, ...)
-        // 3. If transient: Esys_FlushContext(esys_context, key_handle)
-        // 4. Handle errors appropriately
-        
-        if (it->is_persistent && it->persistent_handle != 0) {
-            // Evict persistent handle from TPM
-            // Esys_EvictControl(esys_context, ESYS_TR_RH_OWNER, 
-            //                   ESYS_TR_PERSISTENT | it->persistent_handle, ...)
-            // Note: This requires proper ESYS context and TPM access
+        ESYS_CONTEXT* esysContext = static_cast<ESYS_CONTEXT*>(m_tpmDevice->getESYSContext());
+        if (esysContext) {
+            if (it->is_persistent && it->persistent_handle != 0) {
+                // Evict persistent handle from TPM
+                ESYS_TR persistentHandle = ESYS_TR_PERSISTENT | it->persistent_handle;
+                TSS2_RC rc = Esys_EvictControl(esysContext,
+                                              ESYS_TR_RH_OWNER,
+                                              persistentHandle,
+                                              ESYS_TR_PASSWORD,
+                                              ESYS_TR_NONE,
+                                              ESYS_TR_NONE,
+                                              it->persistent_handle,
+                                              nullptr);
+                if (rc != TSS2_RC_SUCCESS) {
+                    std::cerr << "Failed to evict persistent key: 0x" << std::hex << rc << std::endl;
+                }
+            }
         }
 #endif
         m_keys.erase(it);

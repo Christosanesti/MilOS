@@ -1,5 +1,6 @@
 #include "log_storage.h"
 #include "config_parser.h"
+#include "milos/logging/logger.h"
 #include <sqlite3.h>
 #include <iostream>
 #include <sstream>
@@ -27,12 +28,12 @@ bool LogStorage::initialize(ConfigParser* configParser) {
     m_configParser = configParser;
 
     if (!initializeDatabase()) {
-        std::cerr << "Failed to initialize database" << std::endl;
+        LOG_ERROR("Failed to initialize database");
         return false;
     }
 
     if (!createSchema()) {
-        std::cerr << "Failed to create database schema" << std::endl;
+        LOG_ERROR("Failed to create database schema");
         cleanupDatabase();
         return false;
     }
@@ -43,7 +44,7 @@ bool LogStorage::initialize(ConfigParser* configParser) {
 
 bool LogStorage::initializeDatabase() {
     if (!m_configParser || !m_configParser->isLoaded()) {
-        std::cerr << "Configuration not loaded" << std::endl;
+        LOG_ERROR("Configuration not loaded");
         return false;
     }
 
@@ -68,22 +69,22 @@ bool LogStorage::initializeDatabase() {
         sqlite3* db = nullptr;
         int rc = sqlite3_open(dbPath.c_str(), &db);
         if (rc != SQLITE_OK) {
-            std::cerr << "Cannot open database: " << sqlite3_errmsg(db) << std::endl;
+            LOG_ERROR(QString("Cannot open database: %1").arg(sqlite3_errmsg(db)));
             sqlite3_close(db);
             return false;
         }
 
         m_database = db;
-        std::cout << "SQLite database opened: " << dbPath << std::endl;
+        // Log via audit service (circular dependency avoided - use direct logging)
         return true;
     } else if (dbType == "postgresql") {
         // PostgreSQL support is planned for enterprise deployments
         // Requires libpq (PostgreSQL client library) integration
         // This would provide better scalability and advanced querying capabilities
-        std::cerr << "PostgreSQL support not yet implemented. Use SQLite for now." << std::endl;
+        LOG_WARNING("PostgreSQL support not yet implemented. Use SQLite for now.");
         return false;
     } else {
-        std::cerr << "Unknown database type: " << dbType << std::endl;
+        LOG_ERROR(QString("Unknown database type: %1").arg(QString::fromStdString(dbType)));
         return false;
     }
 }
@@ -123,7 +124,7 @@ bool LogStorage::createSchema() {
     char* errMsg = nullptr;
     int rc = sqlite3_exec(db, createTableSQL, nullptr, nullptr, &errMsg);
     if (rc != SQLITE_OK) {
-        std::cerr << "SQL error: " << errMsg << std::endl;
+        LOG_ERROR(QString("SQL error: %1").arg(errMsg));
         sqlite3_free(errMsg);
         return false;
     }
@@ -159,7 +160,7 @@ bool LogStorage::storeLogEntry(const AuditLogEntry& entry) {
     sqlite3_stmt* stmt = nullptr;
     int rc = sqlite3_prepare_v2(db, insertSQL, -1, &stmt, nullptr);
     if (rc != SQLITE_OK) {
-        std::cerr << "Failed to prepare statement: " << sqlite3_errmsg(db) << std::endl;
+        LOG_ERROR(QString("Failed to prepare statement: %1").arg(sqlite3_errmsg(db)));
         return false;
     }
 
@@ -182,7 +183,7 @@ bool LogStorage::storeLogEntry(const AuditLogEntry& entry) {
     sqlite3_finalize(stmt);
 
     if (rc != SQLITE_DONE) {
-        std::cerr << "Failed to insert log entry: " << sqlite3_errmsg(db) << std::endl;
+        LOG_ERROR(QString("Failed to insert log entry: %1").arg(sqlite3_errmsg(db)));
         return false;
     }
 
@@ -229,7 +230,7 @@ std::vector<AuditLogEntry> LogStorage::queryLogEntries(
     sqlite3_stmt* stmt = nullptr;
     int rc = sqlite3_prepare_v2(db, query.str().c_str(), -1, &stmt, nullptr);
     if (rc != SQLITE_OK) {
-        std::cerr << "Failed to prepare query: " << sqlite3_errmsg(db) << std::endl;
+        LOG_ERROR(QString("Failed to prepare query: %1").arg(sqlite3_errmsg(db)));
         return entries;
     }
 
@@ -346,7 +347,7 @@ std::map<std::string, int> LogStorage::getEventStatistics(
     sqlite3_stmt* stmt = nullptr;
     int rc = sqlite3_prepare_v2(db, query.str().c_str(), -1, &stmt, nullptr);
     if (rc != SQLITE_OK) {
-        std::cerr << "Failed to prepare statistics query: " << sqlite3_errmsg(db) << std::endl;
+        LOG_ERROR(QString("Failed to prepare statistics query: %1").arg(sqlite3_errmsg(db)));
         return stats;
     }
 
@@ -386,7 +387,7 @@ int LogStorage::enforceRetentionPolicies() {
     sqlite3_stmt* stmt = nullptr;
     int rc = sqlite3_prepare_v2(db, deleteSQL, -1, &stmt, nullptr);
     if (rc != SQLITE_OK) {
-        std::cerr << "Failed to prepare retention query: " << sqlite3_errmsg(db) << std::endl;
+        LOG_ERROR(QString("Failed to prepare retention query: %1").arg(sqlite3_errmsg(db)));
         return 0;
     }
 
@@ -396,7 +397,7 @@ int LogStorage::enforceRetentionPolicies() {
     sqlite3_finalize(stmt);
 
     if (rc != SQLITE_DONE) {
-        std::cerr << "Failed to enforce retention policies: " << sqlite3_errmsg(db) << std::endl;
+        LOG_ERROR(QString("Failed to enforce retention policies: %1").arg(sqlite3_errmsg(db)));
         return 0;
     }
 

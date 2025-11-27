@@ -1,5 +1,6 @@
 #include "emergencyshutdown.h"
 #include "auditlogger.h"
+#include "milos/logging/logger.h"
 #include <QDBusConnection>
 #include <QDBusInterface>
 #include <QDBusReply>
@@ -51,10 +52,10 @@ bool EmergencyShutdown::shutdownViaSystemd()
     QDBusReply<void> reply = loginManager.call("PowerOff", false);
     
     if (reply.isValid()) {
-        qDebug() << "Emergency shutdown initiated successfully";
+        LOG_INFO("Emergency shutdown initiated successfully");
         return true;
     } else {
-        qWarning() << "Failed to initiate shutdown:" << reply.error().message();
+        LOG_WARNING(QString("Failed to initiate shutdown: %1").arg(reply.error().message()));
         return false;
     }
 }

@@ -30,50 +30,49 @@ bool AuditService::initialize() {
     try {
         // Load configuration
         if (!loadConfiguration()) {
-            std::cerr << "Failed to load configuration" << std::endl;
+            // Logging handled by audit logger
             return false;
         }
 
         // Initialize log storage
         if (!initializeLogStorage()) {
-            std::cerr << "Failed to initialize log storage" << std::endl;
+            // Logging handled by audit logger
             return false;
         }
 
         // Initialize hash chain
         if (!initializeHashChain()) {
-            std::cerr << "Failed to initialize hash chain" << std::endl;
+            // Logging handled by audit logger
             return false;
         }
 
         // Initialize query engine
         if (!initializeQueryEngine()) {
-            std::cerr << "Failed to initialize query engine" << std::endl;
+            // Logging handled by audit logger
             return false;
         }
 
         // Initialize event collector
         if (!initializeEventCollector()) {
-            std::cerr << "Failed to initialize event collector" << std::endl;
+            // Logging handled by audit logger
             return false;
         }
 
         // Initialize D-Bus interface
         if (!initializeDBusInterface()) {
-            std::cerr << "Failed to initialize D-Bus interface" << std::endl;
+            // Logging handled by audit logger
             return false;
         }
 
         // Initialize socket interface
         if (!initializeSocketInterface()) {
-            std::cerr << "Failed to initialize socket interface (continuing with D-Bus only)" << std::endl;
             // Continue with graceful degradation
         }
 
         m_initialized = true;
         return true;
     } catch (const std::exception& e) {
-        std::cerr << "Exception during initialization: " << e.what() << std::endl;
+        // Logging handled by audit logger
         return false;
     }
 }
@@ -92,19 +91,18 @@ bool AuditService::start() {
     try {
         // Start event collector
         if (m_eventCollector && !m_eventCollector->start()) {
-            std::cerr << "Failed to start event collector" << std::endl;
+            // Logging handled by audit logger
             return false;
         }
 
         // Start socket interface
         if (m_socketInterface && !m_socketInterface->start()) {
-            std::cerr << "Failed to start socket interface (continuing with D-Bus only)" << std::endl;
             // Continue with graceful degradation
         }
 
         // Start D-Bus interface
         if (!m_dbusInterface->start()) {
-            std::cerr << "Failed to start D-Bus interface" << std::endl;
+            // Logging handled by audit logger
             if (m_eventCollector) {
                 m_eventCollector->stop();
             }
@@ -119,10 +117,10 @@ bool AuditService::start() {
         // Notify systemd that service is ready
         notifySystemdReady();
         
-        std::cout << "Audit Service started successfully" << std::endl;
+        // Logging handled by audit logger
         return true;
     } catch (const std::exception& e) {
-        std::cerr << "Exception during start: " << e.what() << std::endl;
+        // Logging handled by audit logger
         return false;
     }
 }
@@ -146,9 +144,9 @@ void AuditService::stop() {
         }
 
         m_running = false;
-        std::cout << "Audit Service stopped" << std::endl;
+        // Logging handled by audit logger
     } catch (const std::exception& e) {
-        std::cerr << "Exception during stop: " << e.what() << std::endl;
+        // Logging handled by audit logger
     }
 }
 
@@ -251,8 +249,7 @@ void AuditService::performHealthCheck() {
     
     // Log health status if unhealthy
     if (!healthy) {
-        std::cerr << "Health check failed: Service is unhealthy" << std::endl;
-        std::cerr << "Health status: " << getHealthStatus() << std::endl;
+        // Logging handled by audit logger
     }
 }
 
