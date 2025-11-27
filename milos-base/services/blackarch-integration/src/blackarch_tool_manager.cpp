@@ -1,11 +1,10 @@
 #include "blackarch_tool_manager.h"
+#include <milos/logging/logger.h>
 #include <QDBusInterface>
 #include <QDBusConnection>
 #include <QDBusReply>
 #include <QDateTime>
 #include <QVariantMap>
-#include <QDebug>
-#include <iostream>
 
 // Forward declaration for Update Service interface
 class UpdateServiceInterface {
@@ -13,7 +12,7 @@ public:
     static void registerPackage(const QString& packageName) {
         // Integration with Update Service (Epic 16)
         // This would call the Update Service D-Bus interface
-        qDebug() << "Registering package with Update Service:" << packageName;
+        LOG_INFO(QString("Registering package with Update Service: %1").arg(packageName).toStdString());
     }
 };
 
@@ -85,14 +84,14 @@ bool BlackArchToolManager::initialize() {
     // Initialize repository
     m_repository = new BlackArchRepository(this);
     if (!m_repository->initialize()) {
-        std::cerr << "Failed to initialize BlackArch repository" << std::endl;
+        LOG_ERROR("Failed to initialize BlackArch repository");
         return false;
     }
 
     // Configure repository if not already configured
     if (!m_repository->isRepositoryConfigured()) {
         if (!m_repository->configureRepository()) {
-            std::cerr << "Failed to configure BlackArch repository" << std::endl;
+            LOG_ERROR("Failed to configure BlackArch repository");
             return false;
         }
     }
@@ -100,14 +99,14 @@ bool BlackArchToolManager::initialize() {
     // Initialize offline installer
     m_offlineInstaller = new BlackArchOfflineInstaller(this);
     if (!m_offlineInstaller->initialize()) {
-        std::cerr << "Failed to initialize offline installer" << std::endl;
+        LOG_ERROR("Failed to initialize offline installer");
         return false;
     }
 
     // Initialize audit logger (inline implementation)
     m_auditLogger = new AuditLogger(this);
     if (!m_auditLogger->initialize()) {
-        std::cerr << "Warning: Failed to initialize audit logger (continuing without audit logging)" << std::endl;
+        LOG_WARNING("Failed to initialize audit logger (continuing without audit logging)");
         // Continue without audit logging (graceful degradation)
     }
 

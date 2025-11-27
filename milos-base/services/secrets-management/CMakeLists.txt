@@ -61,6 +61,9 @@ add_executable(milos-secrets-management
     ${SERVICE_HEADERS}
 )
 
+# Link logging library
+add_subdirectory(../../libs/logging ${CMAKE_BINARY_DIR}/libs/logging)
+
 # Link libraries
 target_link_libraries(milos-secrets-management
     Qt6::Core
@@ -70,6 +73,7 @@ target_link_libraries(milos-secrets-management
     OpenSSL::SSL
     OpenSSL::Crypto
     CLI11::CLI11
+    milos::logging
 )
 
 # Set executable properties

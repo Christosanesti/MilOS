@@ -1,10 +1,10 @@
 #include "blackarch_repository.h"
+#include <milos/logging/logger.h>
 #include <QProcess>
 #include <QStandardPaths>
 #include <QDir>
 #include <QFile>
 #include <QTextStream>
-#include <iostream>
 
 BlackArchRepository::BlackArchRepository(QObject* parent)
     : QObject(parent)
@@ -24,7 +24,7 @@ bool BlackArchRepository::initialize() {
     }
 
     if (!checkPacmanAvailable()) {
-        std::cerr << "pacman is not available" << std::endl;
+        LOG_ERROR("pacman is not available");
         return false;
     }
 
@@ -66,14 +66,14 @@ bool BlackArchRepository::configureRepository() {
     keyringArgs << "-S" << "--noconfirm" << "blackarch-keyring";
     
     if (!executePacman(keyringArgs)) {
-        std::cerr << "Failed to install BlackArch keyring" << std::endl;
+        LOG_ERROR("Failed to install BlackArch keyring");
         return false;
     }
 
     // Add BlackArch repository to pacman.conf
     QFile pacmanConf("/etc/pacman.conf");
     if (!pacmanConf.open(QIODevice::ReadWrite | QIODevice::Append | QIODevice::Text)) {
-        std::cerr << "Failed to open pacman.conf" << std::endl;
+        LOG_ERROR("Failed to open pacman.conf");
         return false;
     }
 
@@ -101,7 +101,7 @@ bool BlackArchRepository::configureRepository() {
     QStringList updateArgs;
     updateArgs << "-Sy";
     if (!executePacman(updateArgs)) {
-        std::cerr << "Failed to update package database" << std::endl;
+        LOG_ERROR("Failed to update package database");
         return false;
     }
 

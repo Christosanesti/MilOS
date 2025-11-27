@@ -1,4 +1,5 @@
 #include "milos/ui/crash_handler.h"
+#include "milos/ui/bug_reporter.h"
 #include "milos/logging/logger.h"
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -252,18 +253,26 @@ bool CrashHandler::submitCrashReport(const QString& crashReportPath, bool includ
     QJsonObject report = doc.object();
     QString crashId = report.value("crash_id").toString();
 
-    // In production, would submit to bug tracking system
-    // For now, log and save locally
     LOG_INFO(QString("Crash report ready for submission: %1").arg(crashId));
 
-    // TODO: Implement actual submission to bug tracking system
-    // - GitHub Issues API
-    // - Jira API
-    // - Custom bug tracking system
-    // - Email to support
+    // Initialize BugReporter if not already initialized
+    BugReporter* bugReporter = BugReporter::instance();
+    if (!bugReporter->isBugTrackerAvailable()) {
+        // Initialize with empty URL (will use local file storage)
+        bugReporter->initialize("");
+    }
 
-    emit crashReportSubmitted(crashId, true);
-    return true;
+    // Submit crash report using BugReporter
+    bool success = bugReporter->submitCrashReport(crashReportPath, "");
+    
+    if (success) {
+        LOG_INFO(QString("Crash report submitted successfully: %1").arg(crashId));
+    } else {
+        LOG_WARNING(QString("Crash report submission failed, saved locally: %1").arg(crashId));
+    }
+
+    emit crashReportSubmitted(crashId, success);
+    return success;
 }
 
 QString CrashHandler::getCrashReportsDirectory() const {
@@ -661,18 +670,26 @@ bool CrashHandler::submitCrashReport(const QString& crashReportPath, bool includ
     QJsonObject report = doc.object();
     QString crashId = report.value("crash_id").toString();
 
-    // In production, would submit to bug tracking system
-    // For now, log and save locally
     LOG_INFO(QString("Crash report ready for submission: %1").arg(crashId));
 
-    // TODO: Implement actual submission to bug tracking system
-    // - GitHub Issues API
-    // - Jira API
-    // - Custom bug tracking system
-    // - Email to support
+    // Initialize BugReporter if not already initialized
+    BugReporter* bugReporter = BugReporter::instance();
+    if (!bugReporter->isBugTrackerAvailable()) {
+        // Initialize with empty URL (will use local file storage)
+        bugReporter->initialize("");
+    }
 
-    emit crashReportSubmitted(crashId, true);
-    return true;
+    // Submit crash report using BugReporter
+    bool success = bugReporter->submitCrashReport(crashReportPath, "");
+    
+    if (success) {
+        LOG_INFO(QString("Crash report submitted successfully: %1").arg(crashId));
+    } else {
+        LOG_WARNING(QString("Crash report submission failed, saved locally: %1").arg(crashId));
+    }
+
+    emit crashReportSubmitted(crashId, success);
+    return success;
 }
 
 QString CrashHandler::getCrashReportsDirectory() const {

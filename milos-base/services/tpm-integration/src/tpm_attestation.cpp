@@ -1,10 +1,10 @@
 #include "tpm_attestation.h"
 #include "tpm_device.h"
+#include <milos/logging/logger.h>
 #include <ctime>
 #include <sstream>
 #include <iomanip>
 #include <random>
-#include <iostream>
 #include <openssl/rand.h>
 
 #ifdef HAVE_TSS2
@@ -58,7 +58,7 @@ AttestationQuote TPMAttestation::generateAttestation(const std::string& nonce,
     // TPM quote generation using TSS2 library
     ESYS_CONTEXT* esysContext = static_cast<ESYS_CONTEXT*>(m_tpmDevice->getESYSContext());
     if (!esysContext) {
-        std::cerr << "ESYS context not available" << std::endl;
+        LOG_ERROR("ESYS context not available");
         return quote;
     }
 
@@ -108,7 +108,9 @@ AttestationQuote TPMAttestation::generateAttestation(const std::string& nonce,
                            &signingKeyHandle);
 
     if (rc != TSS2_RC_SUCCESS) {
-        std::cerr << "Failed to create signing key: 0x" << std::hex << rc << std::endl;
+        std::stringstream ss;
+        ss << "Failed to create signing key: 0x" << std::hex << rc;
+        LOG_ERROR(ss.str());
         // Fallback to placeholder
         std::stringstream ss;
         ss << "tss2_quote_" << quote.nonce.substr(0, 8) << "_" << std::time(nullptr);
@@ -171,7 +173,9 @@ AttestationQuote TPMAttestation::generateAttestation(const std::string& nonce,
     if (name) Esys_Free(name);
 
     if (rc != TSS2_RC_SUCCESS) {
-        std::cerr << "Failed to generate quote: 0x" << std::hex << rc << std::endl;
+        std::stringstream ss;
+        ss << "Failed to generate quote: 0x" << std::hex << rc;
+        LOG_ERROR(ss.str());
         // Fallback to placeholder
         std::stringstream ss;
         ss << "tss2_quote_" << quote.nonce.substr(0, 8) << "_" << std::time(nullptr);

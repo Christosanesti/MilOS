@@ -5,12 +5,12 @@
 #include "secret_versioning.h"
 #include "access_control.h"
 #include "application_integration.h"
+#include <milos/logging/logger.h>
 #include <QDBusConnection>
 #include <QDBusMessage>
 #include <QDBusMetaType>
 #include <QCoreApplication>
 #include <QByteArray>
-#include <QDebug>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QVariant>
@@ -56,7 +56,7 @@ bool DBusInterface::initialize() {
     }
 
     m_registered = true;
-    qDebug() << "D-Bus interface registered: org.milos.SecretsManagement";
+    LOG_INFO("D-Bus interface registered: org.milos.SecretsManagement");
     return true;
 }
 

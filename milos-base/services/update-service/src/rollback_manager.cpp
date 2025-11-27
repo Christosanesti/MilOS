@@ -349,7 +349,7 @@ void RollbackManager::saveSnapshot(const RollbackSnapshot& snapshot) {
     std::string dbPath = m_snapshotPath + "/snapshots.db";
     sqlite3* db;
     if (sqlite3_open(dbPath.c_str(), &db) != SQLITE_OK) {
-        std::cerr << "Failed to open database: " << sqlite3_errmsg(db) << std::endl;
+        LOG_ERROR(QString("Failed to open database: %1").arg(sqlite3_errmsg(db)));
         sqlite3_close(db);
         return;
     }

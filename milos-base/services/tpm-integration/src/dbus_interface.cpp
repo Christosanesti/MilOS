@@ -4,12 +4,12 @@
 #include "tpm_key_manager.h"
 #include "tpm_attestation.h"
 #include "secure_boot_manager.h"
+#include <milos/logging/logger.h>
 #include <QDBusConnection>
 #include <QDBusMetaType>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
-#include <iostream>
 
 DBusInterface::DBusInterface(QObject* parent)
     : QObject(parent)
@@ -32,14 +32,14 @@ bool DBusInterface::initialize() {
 
     // Register D-Bus service
     if (!QDBusConnection::systemBus().registerService("org.milos.TPM")) {
-        std::cerr << "Failed to register D-Bus service" << std::endl;
+        LOG_ERROR("Failed to register D-Bus service");
         return false;
     }
 
     // Register D-Bus object
     if (!QDBusConnection::systemBus().registerObject("/org/milos/TPM", this,
                                                       QDBusConnection::ExportAllContents)) {
-        std::cerr << "Failed to register D-Bus object" << std::endl;
+        LOG_ERROR("Failed to register D-Bus object");
         return false;
     }
 

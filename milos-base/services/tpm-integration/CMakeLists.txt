@@ -62,12 +62,16 @@ add_executable(milos-tpm-integration
     ${SERVICE_HEADERS}
 )
 
+# Link logging library
+add_subdirectory(../../libs/logging ${CMAKE_BINARY_DIR}/libs/logging)
+
 # Link libraries
 target_link_libraries(milos-tpm-integration
     Qt6::Core
     Qt6::DBus
     OpenSSL::SSL
     OpenSSL::Crypto
+    milos::logging
 )
 
 if(TSS2_FOUND)

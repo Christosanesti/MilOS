@@ -1,6 +1,6 @@
 #include "config_parser.h"
+#include <milos/logging/logger.h>
 #include <yaml-cpp/yaml.h>
-#include <iostream>
 #include <sstream>
 #include <vector>
 
@@ -21,7 +21,7 @@ bool ConfigParser::loadConfig(const std::string& configPath) {
     m_configPath = configPath;
     
     if (!parseYaml(configPath)) {
-        std::cerr << "Failed to parse configuration file: " << configPath << std::endl;
+        LOG_ERROR(std::string("Failed to parse configuration file: ") + configPath);
         return false;
     }
 
@@ -38,7 +38,7 @@ bool ConfigParser::parseYaml(const std::string& configPath) {
         m_yamlRoot = config;
         return true;
     } catch (const YAML::Exception& e) {
-        std::cerr << "YAML parsing error: " << e.what() << std::endl;
+        LOG_ERROR(std::string("YAML parsing error: ") + e.what());
         return false;
     } catch (...) {
         // File might not exist, use defaults

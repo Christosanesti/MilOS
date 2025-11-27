@@ -1,5 +1,5 @@
 #include "tpm_device.h"
-#include <iostream>
+#include <milos/logging/logger.h>
 #include <fstream>
 #include <filesystem>
 
@@ -27,7 +27,7 @@ bool TPMDevice::initialize() {
 
     // Detect TPM device
     if (!detectDevice()) {
-        std::cerr << "TPM device not found" << std::endl;
+        LOG_WARNING("TPM device not found");
         m_status = TPMStatus::UNAVAILABLE;
         return false;
     }
@@ -35,12 +35,12 @@ bool TPMDevice::initialize() {
 #ifdef HAVE_TSS2
     // Initialize TSS2 context
     if (!initializeTSS2()) {
-        std::cerr << "Failed to initialize TSS2 context" << std::endl;
+        LOG_ERROR("Failed to initialize TSS2 context");
         m_status = TPMStatus::ERROR;
         return false;
     }
 #else
-    std::cerr << "TSS2 libraries not available. TPM operations will be limited." << std::endl;
+    LOG_WARNING("TSS2 libraries not available. TPM operations will be limited.");
 #endif
 
     m_status = TPMStatus::INITIALIZED;
@@ -81,7 +81,9 @@ bool TPMDevice::initializeTSS2() {
     ESYS_CONTEXT* esysContext = nullptr;
     rc = Esys_Initialize(&esysContext, nullptr, nullptr);
     if (rc != TSS2_RC_SUCCESS) {
-        std::cerr << "Failed to initialize ESYS context: " << rc << std::endl;
+        std::stringstream ss;
+        ss << "Failed to initialize ESYS context: " << rc;
+        LOG_ERROR(ss.str());
         return false;
     }
 

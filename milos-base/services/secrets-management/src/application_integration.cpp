@@ -2,6 +2,7 @@
 #include "secret_storage.h"
 #include "access_control.h"
 #include "audit_logger.h"
+#include <milos/logging/logger.h>
 #include <random>
 #include <fstream>
 #include <filesystem>
@@ -11,7 +12,6 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <pwd.h>
-#include <iostream>
 
 ApplicationIntegration::ApplicationIntegration()
     : m_initialized(false)
@@ -432,7 +432,7 @@ bool ApplicationIntegration::injectIntoFile(const std::string& targetPath,
         
         return true;
     } catch (const std::exception& e) {
-        std::cerr << "Failed to inject secret into file: " << e.what() << std::endl;
+        LOG_ERROR(std::string("Failed to inject secret into file: ") + e.what());
         return false;
     }
 }

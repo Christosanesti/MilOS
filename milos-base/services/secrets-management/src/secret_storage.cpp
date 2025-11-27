@@ -1,4 +1,5 @@
 #include "secret_storage.h"
+#include <milos/logging/logger.h>
 #include <sqlite3.h>
 #include <openssl/evp.h>
 #include <openssl/rand.h>
@@ -7,7 +8,6 @@
 #include <ctime>
 #include <sstream>
 #include <iomanip>
-#include <iostream>
 
 SecretStorage::SecretStorage()
     : m_initialized(false)
@@ -47,7 +47,7 @@ bool SecretStorage::initializeDatabase() {
     sqlite3* db = nullptr;
     int rc = sqlite3_open(m_databasePath.c_str(), &db);
     if (rc != SQLITE_OK) {
-        std::cerr << "Failed to open database: " << sqlite3_errmsg(db) << std::endl;
+        LOG_ERROR(std::string("Failed to open database: ") + sqlite3_errmsg(db));
         sqlite3_close(db);
         return false;
     }
@@ -82,13 +82,13 @@ bool SecretStorage::initializeDatabase() {
 
     rc = sqlite3_exec(static_cast<sqlite3*>(m_database), createSecretsTable, nullptr, nullptr, nullptr);
     if (rc != SQLITE_OK) {
-        std::cerr << "Failed to create secrets table: " << sqlite3_errmsg(static_cast<sqlite3*>(m_database)) << std::endl;
+        LOG_ERROR(std::string("Failed to create secrets table: ") + sqlite3_errmsg(static_cast<sqlite3*>(m_database)));
         return false;
     }
 
     rc = sqlite3_exec(static_cast<sqlite3*>(m_database), createMetadataTable, nullptr, nullptr, nullptr);
     if (rc != SQLITE_OK) {
-        std::cerr << "Failed to create metadata table: " << sqlite3_errmsg(static_cast<sqlite3*>(m_database)) << std::endl;
+        LOG_ERROR(std::string("Failed to create metadata table: ") + sqlite3_errmsg(static_cast<sqlite3*>(m_database)));
         return false;
     }
 
@@ -105,7 +105,7 @@ bool SecretStorage::storeSecret(const std::string& secretId,
     // Encrypt secret data
     std::vector<uint8_t> encryptedData = encryptSecret(secretData, secretId, metadata);
     if (encryptedData.empty()) {
-        std::cerr << "Failed to encrypt secret" << std::endl;
+        LOG_ERROR("Failed to encrypt secret");
         return false;
     }
 

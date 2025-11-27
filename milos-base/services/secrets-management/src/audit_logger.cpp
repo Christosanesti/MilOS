@@ -1,4 +1,5 @@
 #include "audit_logger.h"
+#include <milos/logging/logger.h>
 #include <QDBusConnection>
 #include <QDBusInterface>
 #include <QDBusReply>
@@ -6,7 +7,6 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QDateTime>
-#include <iostream>
 
 AuditLogger::AuditLogger()
     : m_initialized(false)
@@ -25,7 +25,7 @@ bool AuditLogger::initialize() {
     // Connect to D-Bus audit service
     QDBusConnection bus = QDBusConnection::systemBus();
     if (!bus.isConnected()) {
-        std::cerr << "Cannot connect to D-Bus system bus" << std::endl;
+        LOG_WARNING("Cannot connect to D-Bus system bus");
         // Still mark as initialized to allow fallback logging
         m_initialized = true;
         return false;
@@ -38,7 +38,7 @@ bool AuditLogger::initialize() {
                                   bus);
     
     if (!auditInterface.isValid()) {
-        std::cerr << "Audit service not available, will use fallback logging" << std::endl;
+        LOG_WARNING("Audit service not available, will use fallback logging");
         // Still mark as initialized to allow fallback logging
         m_initialized = true;
         return false;
@@ -85,14 +85,14 @@ void AuditLogger::logEvent(const std::string& eventType, const std::string& even
         QDBusReply<QString> reply = auditInterface.call("LogEvent", eventDataJson);
         if (reply.isValid()) {
             QString eventId = reply.value();
-            std::cout << "[AUDIT] Event logged: " << eventType << " (ID: " << eventId.toStdString() << ")" << std::endl;
+            LOG_INFO(std::string("Event logged: ") + eventType + " (ID: " + eventId.toStdString() + ")");
             return;
         } else {
-            std::cerr << "[AUDIT] Failed to log event: " << reply.error().message().toStdString() << std::endl;
+            LOG_ERROR(std::string("Failed to log event: ") + reply.error().message().toStdString());
         }
     }
 
-    // Fallback: log to stdout
-    std::cout << "[AUDIT] " << eventType << ": " << eventData << std::endl;
+    // Fallback: log to Logger
+    LOG_INFO(std::string("[AUDIT] ") + eventType + ": " + eventData);
 }
 

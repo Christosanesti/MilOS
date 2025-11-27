@@ -33,10 +33,14 @@ add_library(blackarch-integration STATIC
     ${HEADERS}
 )
 
+# Link logging library
+add_subdirectory(../../libs/logging ${CMAKE_BINARY_DIR}/libs/logging)
+
 # Link libraries
 target_link_libraries(blackarch-integration
     Qt6::Core
     Qt6::DBus
+    milos::logging
 )
 
 # Enable Qt MOC

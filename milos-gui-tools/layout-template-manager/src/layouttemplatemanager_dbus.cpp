@@ -68,7 +68,7 @@ void LayoutTemplateManagerDBus::stop()
 
     unregisterInterface();
     m_running = false;
-    qDebug() << "Layout Template Manager D-Bus interface stopped";
+    LOG_INFO("Layout Template Manager D-Bus interface stopped");
 }
 
 bool LayoutTemplateManagerDBus::registerInterface()

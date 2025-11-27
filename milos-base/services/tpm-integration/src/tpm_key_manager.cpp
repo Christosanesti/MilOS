@@ -1,10 +1,10 @@
 #include "tpm_key_manager.h"
 #include "tpm_device.h"
+#include <milos/logging/logger.h>
 #include <ctime>
 #include <sstream>
 #include <iomanip>
 #include <random>
-#include <iostream>
 #include <algorithm>
 
 #ifdef HAVE_TSS2
@@ -47,7 +47,7 @@ TPMKeyInfo TPMKeyManager::generateKey(const KeyGenerationParams& params) {
     // TPM key generation using TSS2 library
     ESYS_CONTEXT* esysContext = static_cast<ESYS_CONTEXT*>(m_tpmDevice->getESYSContext());
     if (!esysContext) {
-        std::cerr << "ESYS context not available" << std::endl;
+        LOG_ERROR("ESYS context not available");
         return keyInfo;
     }
 
@@ -121,7 +121,9 @@ TPMKeyInfo TPMKeyManager::generateKey(const KeyGenerationParams& params) {
                            &keyHandle);
 
     if (rc != TSS2_RC_SUCCESS) {
-        std::cerr << "Failed to create primary key: 0x" << std::hex << rc << std::endl;
+        std::stringstream ss;
+        ss << "Failed to create primary key: 0x" << std::hex << rc;
+        LOG_ERROR(ss.str());
         return keyInfo;
     }
 
@@ -179,7 +181,9 @@ TPMKeyInfo TPMKeyManager::generateKey(const KeyGenerationParams& params) {
             // Flush transient handle since we now have persistent handle
             Esys_FlushContext(esysContext, keyHandle);
         } else {
-            std::cerr << "Failed to make key persistent: 0x" << std::hex << rc << std::endl;
+            std::stringstream ss;
+            ss << "Failed to make key persistent: 0x" << std::hex << rc;
+            LOG_ERROR(ss.str());
             // Keep transient handle
         }
     }
@@ -244,7 +248,9 @@ bool TPMKeyManager::deleteKey(const std::string& keyId) {
                                               it->persistent_handle,
                                               nullptr);
                 if (rc != TSS2_RC_SUCCESS) {
-                    std::cerr << "Failed to evict persistent key: 0x" << std::hex << rc << std::endl;
+                    std::stringstream ss;
+                    ss << "Failed to evict persistent key: 0x" << std::hex << rc;
+                    LOG_ERROR(ss.str());
                 }
             }
         }

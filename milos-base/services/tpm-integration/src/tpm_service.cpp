@@ -5,7 +5,7 @@
 #include "tpm_health_monitor.h"
 #include "secure_boot_manager.h"
 #include "dbus_interface.h"
-#include <iostream>
+#include <milos/logging/logger.h>
 
 TPMService::TPMService()
     : m_running(false)
@@ -25,35 +25,35 @@ bool TPMService::initialize() {
     // Initialize TPM device
     m_tpmDevice = std::make_unique<TPMDevice>();
     if (!m_tpmDevice->initialize()) {
-        std::cerr << "Failed to initialize TPM device" << std::endl;
+        LOG_ERROR("Failed to initialize TPM device");
         return false;
     }
 
     // Initialize key manager
     m_keyManager = std::make_unique<TPMKeyManager>();
     if (!m_keyManager->initialize(m_tpmDevice.get())) {
-        std::cerr << "Failed to initialize TPM key manager" << std::endl;
+        LOG_ERROR("Failed to initialize TPM key manager");
         return false;
     }
 
     // Initialize attestation
     m_attestation = std::make_unique<TPMAttestation>();
     if (!m_attestation->initialize(m_tpmDevice.get())) {
-        std::cerr << "Failed to initialize TPM attestation" << std::endl;
+        LOG_ERROR("Failed to initialize TPM attestation");
         return false;
     }
 
     // Initialize health monitor
     m_healthMonitor = std::make_unique<TPMHealthMonitor>();
     if (!m_healthMonitor->initialize(m_tpmDevice.get())) {
-        std::cerr << "Failed to initialize TPM health monitor" << std::endl;
+        LOG_ERROR("Failed to initialize TPM health monitor");
         return false;
     }
 
     // Initialize secure boot manager
     m_secureBootManager = std::make_unique<SecureBootManager>();
     if (!m_secureBootManager->initialize(m_tpmDevice.get(), m_attestation.get())) {
-        std::cerr << "Warning: Failed to initialize secure boot manager" << std::endl;
+        LOG_WARNING("Failed to initialize secure boot manager");
         // Don't fail initialization if secure boot is not available
     }
 
@@ -65,7 +65,7 @@ bool TPMService::initialize() {
     m_dbusInterface->setAttestation(m_attestation.get());
     m_dbusInterface->setSecureBootManager(m_secureBootManager.get());
     if (!m_dbusInterface->initialize()) {
-        std::cerr << "Warning: Failed to initialize D-Bus interface" << std::endl;
+        LOG_WARNING("Failed to initialize D-Bus interface");
     }
 
     m_initialized = true;
@@ -85,7 +85,7 @@ bool TPMService::start() {
 
     // Start health monitoring
     if (!m_healthMonitor->start()) {
-        std::cerr << "Failed to start health monitor" << std::endl;
+        LOG_ERROR("Failed to start health monitor");
         return false;
     }
 

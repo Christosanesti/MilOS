@@ -1,9 +1,9 @@
 #include "blackarch_offline_installer.h"
+#include <milos/logging/logger.h>
 #include <QProcess>
 #include <QDir>
 #include <QFileInfo>
 #include <QStandardPaths>
-#include <iostream>
 
 BlackArchOfflineInstaller::BlackArchOfflineInstaller(QObject* parent)
     : QObject(parent)
@@ -24,7 +24,7 @@ bool BlackArchOfflineInstaller::initialize() {
     QDir mirrorDir(m_defaultMirrorPath);
     if (!mirrorDir.exists()) {
         if (!mirrorDir.mkpath(".")) {
-            std::cerr << "Failed to create mirror directory: " << m_defaultMirrorPath.toStdString() << std::endl;
+            LOG_ERROR(QString("Failed to create mirror directory: %1").arg(m_defaultMirrorPath).toStdString());
             return false;
         }
     }
