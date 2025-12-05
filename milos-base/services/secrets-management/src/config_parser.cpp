@@ -1,8 +1,8 @@
 #include "config_parser.h"
+#include <milos/logging/logger.h>
 #include <fstream>
 #include <sstream>
 #include <algorithm>
-#include <iostream>
 
 ConfigParser::ConfigParser()
     : m_loaded(false)
@@ -20,7 +20,7 @@ bool ConfigParser::loadConfig(const std::string& configPath) {
     // Try to parse YAML (simplified parser)
     if (!parseYAML(configPath)) {
         // Use defaults if config file not found
-        std::cerr << "Warning: Could not load config file, using defaults" << std::endl;
+        LOG_WARNING("Could not load config file, using defaults");
     }
 
     m_loaded = true;

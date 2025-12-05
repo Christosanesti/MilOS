@@ -2,6 +2,7 @@
 #include "change_detector.h"
 #include "integrity_verifier.h"
 #include "audit_logger.h"
+#include <milos/logging/logger.h>
 #include <random>
 #include <ctime>
 #include <sstream>
@@ -10,7 +11,6 @@
 #include <sys/un.h>
 #include <unistd.h>
 #include <syslog.h>
-#include <iostream>
 #include <fstream>
 
 // libcurl support (optional)
@@ -80,7 +80,7 @@ bool SecurityToolsIntegration::registerTool(const SecurityToolConfig& config) {
 
     // Test connection
     if (!adapter->testConnection()) {
-        std::cerr << "Warning: Failed to connect to security tool: " << config.tool_name << std::endl;
+        LOG_WARNING(QString("Failed to connect to security tool: %1").arg(QString::fromStdString(config.tool_name)));
         // Still register, but mark as potentially unavailable
     }
 
@@ -321,10 +321,11 @@ bool DBusSecurityToolAdapter::sendViolation(const ViolationNotification& violati
     // D-Bus adapter would use Qt D-Bus to send violation
     // This is a placeholder - actual implementation would use QDBusInterface
     // For now, log the violation
-    std::cout << "D-Bus Violation: Tool=" << m_config.tool_id
-              << ", File=" << violation.file_path
-              << ", Type=" << violation.change_type
-              << ", Severity=" << violation.severity << std::endl;
+    LOG_INFO(QString("D-Bus Violation: Tool=%1, File=%2, Type=%3, Severity=%4")
+             .arg(QString::fromStdString(m_config.tool_id))
+             .arg(QString::fromStdString(violation.file_path))
+             .arg(QString::fromStdString(violation.change_type))
+             .arg(QString::fromStdString(violation.severity)));
     
     return true;
 }
@@ -384,9 +385,10 @@ bool HTTPSecurityToolAdapter::sendViolation(const ViolationNotification& violati
     return (res == CURLE_OK && responseCode >= 200 && responseCode < 300);
 #else
     // Fallback: log violation (libcurl not available)
-    std::cout << "HTTP Violation (libcurl not available): Tool=" << m_config.tool_id
-              << ", File=" << violation.file_path
-              << ", Type=" << violation.change_type
+    LOG_WARNING(QString("HTTP Violation (libcurl not available): Tool=%1, File=%2, Type=%3")
+                .arg(QString::fromStdString(m_config.tool_id))
+                .arg(QString::fromStdString(violation.file_path))
+                .arg(QString::fromStdString(violation.change_type)));
               << ", Severity=" << violation.severity << std::endl;
     return true;
 #endif

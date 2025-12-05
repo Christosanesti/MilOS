@@ -3,11 +3,11 @@
 #include "log_storage.h"
 #include "hash_chain.h"
 #include "log_storage.h"
+#include <milos/logging/logger.h>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QDateTime>
 #include <QUuid>
-#include <iostream>
 #include <chrono>
 #include <thread>
 
@@ -65,7 +65,7 @@ bool EventCollector::start() {
     m_processingThread = new std::thread(&EventCollector::processEventQueue, this);
 
     m_running = true;
-    std::cout << "Event collector started" << std::endl;
+    LOG_INFO("Event collector started");
     return true;
 }
 
@@ -90,7 +90,7 @@ void EventCollector::stop() {
     }
 
     m_running = false;
-    std::cout << "Event collector stopped" << std::endl;
+    LOG_INFO("Event collector stopped");
 }
 
 bool EventCollector::collectEvent(const std::string& eventData) {
@@ -100,7 +100,7 @@ bool EventCollector::collectEvent(const std::string& eventData) {
 
     // Validate event
     if (!validateEvent(eventData)) {
-        std::cerr << "Invalid event data received" << std::endl;
+        LOG_ERROR("Invalid event data received");
         return false;
     }
 
@@ -108,7 +108,7 @@ bool EventCollector::collectEvent(const std::string& eventData) {
     std::lock_guard<std::mutex> lock(m_queueMutex);
     
     if (m_eventQueue.size() >= m_maxQueueSize) {
-        std::cerr << "Event queue full, dropping event" << std::endl;
+        LOG_WARNING("Event queue full, dropping event");
         return false;
     }
 

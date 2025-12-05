@@ -1,6 +1,6 @@
 #include "access_control.h"
+#include <milos/logging/logger.h>
 #include <algorithm>
-#include <iostream>
 
 AccessControl::AccessControl()
     : m_initialized(false)
@@ -91,8 +91,11 @@ void AccessControl::logAccess(const std::string& userId, const std::string& secr
         case Permission::Rotate: permStr = "rotate"; break;
     }
 
-    std::cout << "Access " << (granted ? "granted" : "denied") << ": user=" << userId
-              << ", secret=" << secretId << ", permission=" << permStr << std::endl;
+    LOG_INFO(QString("Access %1: user=%2, secret=%3, permission=%4")
+             .arg(granted ? "granted" : "denied")
+             .arg(QString::fromStdString(userId))
+             .arg(QString::fromStdString(secretId))
+             .arg(QString::fromStdString(permStr)));
 }
 
 bool AccessControl::patternMatches(const std::string& pattern, const std::string& text) const {

@@ -1,11 +1,11 @@
 #include "audit_logger.h"
+#include <milos/logging/logger.h>
 #include <QDBusConnection>
 #include <QDBusInterface>
 #include <QDBusReply>
 #include <QDBusError>
 #include <QJsonDocument>
 #include <QJsonArray>
-#include <iostream>
 
 AuditLogger::AuditLogger(QObject* parent)
     : QObject(parent)
@@ -25,7 +25,7 @@ bool AuditLogger::initialize(const QString& auditServiceBus, const QString& audi
     
     // Check if audit service is available
     if (!isAuditServiceAvailable()) {
-        std::cerr << "Audit service not available (graceful degradation enabled)" << std::endl;
+        LOG_WARNING("Audit service not available (graceful degradation enabled)");
         // Continue with graceful degradation
     }
     
@@ -90,8 +90,7 @@ bool AuditLogger::logToAuditService(const QString& eventType, const QVariantMap&
     if (!connection.isConnected()) {
         if (m_gracefulDegradation) {
             // Log locally or queue for later
-            std::cout << "Audit log (local): " << eventType.toStdString() 
-                      << " - " << eventData.value("timestamp").toString().toStdString() << std::endl;
+            LOG_INFO(QString("Audit log (local): %1 - %2").arg(eventType, eventData.value("timestamp").toString()));
             return true;
         }
         return false;
@@ -104,12 +103,10 @@ bool AuditLogger::logToAuditService(const QString& eventType, const QVariantMap&
     if (!interface.isValid()) {
         if (m_gracefulDegradation) {
             // Log locally or queue for later
-            std::cout << "Audit log (local): " << eventType.toStdString() 
-                      << " - " << eventData.value("timestamp").toString().toStdString() << std::endl;
+            LOG_INFO(QString("Audit log (local): %1 - %2").arg(eventType, eventData.value("timestamp").toString()));
             return true;
         }
-        std::cerr << "Audit service interface invalid: " 
-                  << interface.lastError().message().toStdString() << std::endl;
+        LOG_ERROR(QString("Audit service interface invalid: %1").arg(interface.lastError().message()));
         return false;
     }
     
@@ -137,12 +134,10 @@ bool AuditLogger::logToAuditService(const QString& eventType, const QVariantMap&
     if (!reply.isValid()) {
         if (m_gracefulDegradation) {
             // Log locally or queue for later
-            std::cout << "Audit log (local): " << eventType.toStdString() 
-                      << " - " << eventData.value("timestamp").toString().toStdString() << std::endl;
+            LOG_INFO(QString("Audit log (local): %1 - %2").arg(eventType, eventData.value("timestamp").toString()));
             return true;
         }
-        std::cerr << "Failed to log to audit service: " 
-                  << reply.error().message().toStdString() << std::endl;
+        LOG_ERROR(QString("Failed to log to audit service: %1").arg(reply.error().message()));
         return false;
     }
     

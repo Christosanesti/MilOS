@@ -1,8 +1,8 @@
 #include "audit_logger.h"
+#include <milos/logging/logger.h>
 #include <QDBusInterface>
 #include <QDBusConnection>
 #include <QDBusReply>
-#include <iostream>
 
 AuditLogger::AuditLogger()
     : m_initialized(false)
@@ -31,7 +31,7 @@ bool AuditLogger::initialize() {
     );
 
     if (!interface->isValid()) {
-        std::cerr << "Warning: Audit Service D-Bus interface not available" << std::endl;
+        LOG_WARNING("Audit Service D-Bus interface not available");
         delete interface;
         return false;
     }
@@ -58,7 +58,7 @@ void AuditLogger::logEvent(const std::string& event, const std::string& details)
                                               eventData);
     
     if (!reply.isValid()) {
-        std::cerr << "Failed to log event to Audit Service: " << reply.error().message().toStdString() << std::endl;
+        LOG_ERROR(QString("Failed to log event to Audit Service: %1").arg(reply.error().message()));
     }
 }
 

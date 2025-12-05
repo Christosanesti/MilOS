@@ -73,6 +73,11 @@ public:
     bool isPackaging() const { return m_isPackaging; }
 
     /**
+     * @brief Load existing packages from storage
+     */
+    void loadExistingPackages();
+
+    /**
      * @brief Get list of available packages
      * @return List of package IDs
      */

@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <mutex>
+#include <QString>
 
 class ConfigParser;
 class PolicyManager;

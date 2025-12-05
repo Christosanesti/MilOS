@@ -1,7 +1,6 @@
 #include "image_generation_service.h"
+#include <milos/logging/logger.h>
 #include <QCoreApplication>
-#include <QDebug>
-#include <iostream>
 
 int main(int argc, char *argv[])
 {
@@ -9,16 +8,21 @@ int main(int argc, char *argv[])
     app.setApplicationName("milos-image-generation-service");
     app.setOrganizationName("MilOS");
     
+    // Initialize logger
+    Logger::instance()->initialize("milos-image-generation-service",
+                                   "org.milos.AuditService",
+                                   "/org/milos/AuditService",
+                                   Logger::Info,
+                                   true);
+    
     ImageGenerationService service;
     
     if (!service.isAvailable()) {
-        std::cerr << "Image Generation Service is not available" << std::endl;
-        std::cerr << "Status: " << service.getStatus().toStdString() << std::endl;
+        LOG_ERROR(QString("Image Generation Service is not available. Status: %1").arg(service.getStatus()));
         return 1;
     }
     
-    std::cout << "MilOS Image Generation Service started" << std::endl;
-    std::cout << "Status: " << service.getStatus().toStdString() << std::endl;
+    LOG_INFO(QString("MilOS Image Generation Service started. Status: %1").arg(service.getStatus()));
     
     return app.exec();
 }

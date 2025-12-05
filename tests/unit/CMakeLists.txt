@@ -154,6 +154,7 @@ add_test(NAME STIGCheckerTest COMMAND test_stig_checker)
 add_executable(test_air_gap_manager
     test_air_gap_manager.cpp
     ../../milos-base/services/air-gap-deployment-manager/src/air_gap_deployment_manager.cpp
+    ../../milos-base/services/air-gap-deployment-manager/include/air_gap_deployment_manager.h
 )
 target_link_libraries(test_air_gap_manager
     Qt6::Core

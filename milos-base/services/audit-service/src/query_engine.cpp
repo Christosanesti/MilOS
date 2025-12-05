@@ -2,10 +2,10 @@
 #include "config_parser.h"
 #include "log_storage.h"
 #include "log_storage.h"
+#include <milos/logging/logger.h>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
-#include <iostream>
 #include <sstream>
 
 QueryEngine::QueryEngine()
@@ -139,7 +139,7 @@ std::string QueryEngine::exportLogs(const std::string& timeRange, const std::str
     } else if (format == "xml") {
         return exportToXML(entries);
     } else {
-        std::cerr << "Unsupported export format: " << format << std::endl;
+        LOG_ERROR(QString("Unsupported export format: %1").arg(QString::fromStdString(format)));
         return "";
     }
 }

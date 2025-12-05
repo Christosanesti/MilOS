@@ -1,6 +1,6 @@
 #include "config_parser.h"
+#include <milos/logging/logger.h>
 #include <yaml-cpp/yaml.h>
-#include <iostream>
 #include <fstream>
 #include <sstream>
 
@@ -21,7 +21,7 @@ bool ConfigParser::load(const std::string& configPath) {
     m_configPath = configPath;
     
     if (!parseYaml(configPath)) {
-        std::cerr << "Failed to parse configuration file: " << configPath << std::endl;
+        LOG_ERROR(QString("Failed to parse configuration file: %1").arg(QString::fromStdString(configPath)));
         return false;
     }
 
@@ -38,7 +38,7 @@ bool ConfigParser::parseYaml(const std::string& configPath) {
         m_yamlRoot = config;
         return true;
     } catch (const YAML::Exception& e) {
-        std::cerr << "YAML parsing error: " << e.what() << std::endl;
+        LOG_ERROR(QString("YAML parsing error: %1").arg(QString::fromStdString(e.what())));
         return false;
     }
 }
@@ -67,7 +67,7 @@ std::string ConfigParser::getString(const std::string& key) const {
             return node.as<std::string>();
         }
     } catch (const YAML::Exception& e) {
-        std::cerr << "Error getting string value for key " << key << ": " << e.what() << std::endl;
+        LOG_ERROR(QString("Error getting string value for key %1: %2").arg(QString::fromStdString(key), QString::fromStdString(e.what())));
     }
     
     return "";
@@ -97,7 +97,7 @@ bool ConfigParser::getBool(const std::string& key, bool defaultValue) const {
             return node.as<bool>();
         }
     } catch (const YAML::Exception& e) {
-        std::cerr << "Error getting bool value for key " << key << ": " << e.what() << std::endl;
+        LOG_ERROR(QString("Error getting bool value for key %1: %2").arg(QString::fromStdString(key), QString::fromStdString(e.what())));
     }
     
     return defaultValue;
@@ -127,7 +127,7 @@ int ConfigParser::getInt(const std::string& key, int defaultValue) const {
             return node.as<int>();
         }
     } catch (const YAML::Exception& e) {
-        std::cerr << "Error getting int value for key " << key << ": " << e.what() << std::endl;
+        LOG_ERROR(QString("Error getting int value for key %1: %2").arg(QString::fromStdString(key), QString::fromStdString(e.what())));
     }
     
     return defaultValue;

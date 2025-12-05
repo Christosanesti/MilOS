@@ -1,9 +1,9 @@
 #include "hash_chain.h"
 #include "config_parser.h"
 #include "log_storage.h"
+#include <milos/logging/logger.h>
 #include <openssl/sha.h>
 #include <openssl/evp.h>
-#include <iostream>
 #include <sstream>
 #include <iomanip>
 #include <cstring>
@@ -35,7 +35,7 @@ bool HashChain::initialize(ConfigParser* configParser, LogStorage* logStorage) {
     }
 
     if (!initializeChain()) {
-        std::cerr << "Failed to initialize hash chain" << std::endl;
+        LOG_ERROR("Failed to initialize hash chain");
         return false;
     }
 
@@ -57,18 +57,18 @@ bool HashChain::initializeChain() {
         initData << "MilOS Audit Service Initialization Vector ";
         initData << std::time(nullptr);
         m_initVector = computeSHA256(initData.str());
-        std::cout << "Hash chain initialized with new initialization vector" << std::endl;
+        LOG_INFO("Hash chain initialized with new initialization vector");
     } else {
         // Use last hash as starting point
         m_initVector = lastHash;
-        std::cout << "Hash chain initialized from existing logs" << std::endl;
+        LOG_INFO("Hash chain initialized from existing logs");
     }
 
     // Verify integrity if configured
     bool verifyOnStart = m_configParser->getBool("hash_chain.verify_on_start", true);
     if (verifyOnStart) {
         if (!verifyIntegrity()) {
-            std::cerr << "WARNING: Hash chain integrity verification failed!" << std::endl;
+            LOG_WARNING("Hash chain integrity verification failed!");
             // Continue anyway, but log the warning
         }
     }
@@ -115,13 +115,13 @@ bool HashChain::verifyIntegrity() {
 
         // Compare with stored hash
         if (computedHash != entry.log_hash) {
-            std::cerr << "Hash chain integrity violation detected at log_id: " << entry.log_id << std::endl;
+            LOG_ERROR(QString("Hash chain integrity violation detected at log_id: %1").arg(QString::fromStdString(entry.log_id)));
             return false;
         }
 
         // Verify previous hash matches
         if (!entry.previous_log_hash.empty() && entry.previous_log_hash != expectedPreviousHash) {
-            std::cerr << "Previous hash mismatch at log_id: " << entry.log_id << std::endl;
+            LOG_ERROR(QString("Previous hash mismatch at log_id: %1").arg(QString::fromStdString(entry.log_id)));
             return false;
         }
 

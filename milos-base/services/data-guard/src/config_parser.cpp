@@ -67,7 +67,7 @@ std::string ConfigParser::getString(const std::string& key) const {
             return node.as<std::string>();
         }
     } catch (const YAML::Exception& e) {
-        std::cerr << "Error getting string value for key " << key << ": " << e.what() << std::endl;
+        LOG_ERROR(QString("Error getting string value for key %1: %2").arg(QString::fromStdString(key), QString::fromStdString(e.what())));
     }
     
     return "";
@@ -97,7 +97,7 @@ bool ConfigParser::getBool(const std::string& key, bool defaultValue) const {
             return node.as<bool>();
         }
     } catch (const YAML::Exception& e) {
-        std::cerr << "Error getting bool value for key " << key << ": " << e.what() << std::endl;
+        LOG_ERROR(QString("Error getting bool value for key %1: %2").arg(QString::fromStdString(key), QString::fromStdString(e.what())));
     }
     
     return defaultValue;
@@ -127,7 +127,7 @@ int ConfigParser::getInt(const std::string& key, int defaultValue) const {
             return node.as<int>();
         }
     } catch (const YAML::Exception& e) {
-        std::cerr << "Error getting int value for key " << key << ": " << e.what() << std::endl;
+        LOG_ERROR(QString("Error getting int value for key %1: %2").arg(QString::fromStdString(key), QString::fromStdString(e.what())));
     }
     
     return defaultValue;

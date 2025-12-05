@@ -1,5 +1,5 @@
 #include "fim_service.h"
-#include <iostream>
+#include <milos/logging/logger.h>
 #include <signal.h>
 #include <unistd.h>
 #include <systemd/sd-daemon.h>
@@ -8,7 +8,7 @@ static FIMService* g_service = nullptr;
 
 void signalHandler(int signal) {
     if (g_service) {
-        std::cout << "Received signal " << signal << ", shutting down..." << std::endl;
+        LOG_INFO(QString("Received signal %1, shutting down...").arg(signal));
         g_service->stop();
     }
 }
@@ -22,20 +22,27 @@ int main(int argc, char* argv[]) {
     FIMService service;
     g_service = &service;
 
+    // Initialize logger
+    Logger::instance()->initialize("milos-file-integrity-monitoring",
+                                   "org.milos.AuditService",
+                                   "/org/milos/AuditService",
+                                   Logger::Info,
+                                   true);
+
     if (!service.initialize()) {
-        std::cerr << "Failed to initialize FIM service" << std::endl;
+        LOG_ERROR("Failed to initialize FIM service");
         return 1;
     }
 
     if (!service.start()) {
-        std::cerr << "Failed to start FIM service" << std::endl;
+        LOG_ERROR("Failed to start FIM service");
         return 1;
     }
 
     // Notify systemd that service is ready
     sd_notify(0, "READY=1");
 
-    std::cout << "MilOS File Integrity Monitoring Service started" << std::endl;
+    LOG_INFO("MilOS File Integrity Monitoring Service started");
 
     // Main service loop
     while (service.isRunning()) {
@@ -48,7 +55,7 @@ int main(int argc, char* argv[]) {
         sleep(30);
     }
 
-    std::cout << "MilOS File Integrity Monitoring Service stopped" << std::endl;
+    LOG_INFO("MilOS File Integrity Monitoring Service stopped");
     return 0;
 }
 

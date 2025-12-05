@@ -1,11 +1,11 @@
 #include "secret_rotation.h"
 #include "secret_storage.h"
 #include "secret_versioning.h"
+#include <milos/logging/logger.h>
 #include <openssl/rand.h>
 #include <ctime>
 #include <sstream>
 #include <iomanip>
-#include <iostream>
 
 SecretRotation::SecretRotation()
     : m_storage(nullptr)
@@ -94,7 +94,7 @@ bool SecretRotation::rotateSecret(const std::string& secretId) {
 
     // Create new version before rotation
     if (!m_versioning->createVersion(secretId, currentSecret)) {
-        std::cerr << "Failed to create version before rotation" << std::endl;
+        LOG_ERROR(QString("Failed to create version before rotation for secret: %1").arg(QString::fromStdString(secretId)));
         return false;
     }
 
@@ -213,13 +213,13 @@ void SecretRotation::checkAndRotateSecrets() {
         RotationPolicy policy = getRotationPolicy(metadata.secret_type);
 
         if (policy.auto_rotate && needsRotation(secretId)) {
-            std::cout << "Auto-rotating secret: " << secretId << std::endl;
+            LOG_INFO(QString("Auto-rotating secret: %1").arg(QString::fromStdString(secretId)));
             rotateSecret(secretId);
         } else {
             int daysUntilExpiration = getDaysUntilExpiration(secretId);
             if (daysUntilExpiration >= 0 && daysUntilExpiration <= policy.notification_days) {
                 // Emit notification signal (via D-Bus)
-                std::cout << "Secret expiring soon: " << secretId << " (" << daysUntilExpiration << " days)" << std::endl;
+                LOG_WARNING(QString("Secret expiring soon: %1 (%2 days)").arg(QString::fromStdString(secretId)).arg(daysUntilExpiration));
             }
         }
     }

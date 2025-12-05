@@ -1,11 +1,11 @@
 #include "secret_versioning.h"
 #include "secret_storage.h"
+#include <milos/logging/logger.h>
 #include <sqlite3.h>
 #include <openssl/rand.h>
 #include <ctime>
 #include <sstream>
 #include <iomanip>
-#include <iostream>
 
 SecretVersioning::SecretVersioning()
     : m_storage(nullptr)
@@ -42,7 +42,7 @@ bool SecretVersioning::initializeDatabase() {
     sqlite3* db = nullptr;
     int rc = sqlite3_open(dbPath.c_str(), &db);
     if (rc != SQLITE_OK) {
-        std::cerr << "Failed to open versioning database: " << sqlite3_errmsg(db) << std::endl;
+        LOG_ERROR(QString("Failed to open versioning database: %1").arg(sqlite3_errmsg(db)));
         sqlite3_close(db);
         return false;
     }
@@ -63,7 +63,7 @@ bool SecretVersioning::initializeDatabase() {
 
     rc = sqlite3_exec(static_cast<sqlite3*>(m_database), createVersionsTable, nullptr, nullptr, nullptr);
     if (rc != SQLITE_OK) {
-        std::cerr << "Failed to create versions table: " << sqlite3_errmsg(static_cast<sqlite3*>(m_database)) << std::endl;
+        LOG_ERROR(QString("Failed to create versions table: %1").arg(sqlite3_errmsg(static_cast<sqlite3*>(m_database))));
         return false;
     }
 

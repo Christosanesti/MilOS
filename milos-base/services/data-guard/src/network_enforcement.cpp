@@ -2,6 +2,7 @@
 #include "config_parser.h"
 #include "policy_manager.h"
 #include "audit_logger.h"
+#include <milos/logging/logger.h>
 #include <pcap/pcap.h>
 #include <pthread.h>
 #include <iostream>

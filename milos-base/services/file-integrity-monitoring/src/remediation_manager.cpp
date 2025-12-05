@@ -2,6 +2,7 @@
 #include "baseline_manager.h"
 #include "change_detector.h"
 #include "audit_logger.h"
+#include <milos/logging/logger.h>
 #include <filesystem>
 #include <fstream>
 #include <ctime>
@@ -13,7 +14,6 @@
 #include <unistd.h>
 #include <pwd.h>
 #include <grp.h>
-#include <iostream>
 
 RemediationManager::RemediationManager()
     : m_initialized(false)
@@ -530,7 +530,7 @@ std::string RemediationManager::quarantineFile(const std::string& filePath) {
                                   std::filesystem::copy_options::overwrite_existing);
         return quarantinePath;
     } catch (const std::exception& e) {
-        std::cerr << "Failed to quarantine file: " << e.what() << std::endl;
+        LOG_ERROR(QString("Failed to quarantine file: %1").arg(QString::fromStdString(e.what())));
         return "";
     }
 }

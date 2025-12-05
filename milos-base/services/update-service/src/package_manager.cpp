@@ -1,6 +1,6 @@
 #include "package_manager.h"
 #include "config_parser.h"
-#include <iostream>
+#include <milos/logging/logger.h>
 #include <sstream>
 #include <fstream>
 #include <cstdlib>
@@ -34,7 +34,7 @@ bool PackageManager::initialize(ConfigParser* configParser) {
     m_available = isAvailable();
 
     if (!m_available) {
-        std::cerr << "Package manager not available (graceful degradation enabled)" << std::endl;
+        LOG_WARNING("Package manager not available (graceful degradation enabled)");
         // Continue with graceful degradation
     }
 
