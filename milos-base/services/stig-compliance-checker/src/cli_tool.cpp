@@ -3,6 +3,8 @@
 #include <QCoreApplication>
 #include <QCommandLineParser>
 #include <QCommandLineOption>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QDebug>
 #include <iostream>
 

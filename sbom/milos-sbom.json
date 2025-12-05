@@ -1,0 +1,1 @@
+{"bomFormat": "CycloneDX", "specVersion": "1.4", "version": 1, "metadata": {"timestamp": "2025-12-05T14:55:54Z", "tools": [{"name": "MilOS SBOM Generator", "version": "1.0.0"}], "component": {"type": "application", "name": "MilOS", "version": "1.0.0"}}, "components": []}

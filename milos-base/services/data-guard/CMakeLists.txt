@@ -154,12 +154,21 @@ add_custom_target(trivy-scan
     DEPENDS milos-data-guard-daemon milos-data-guard
 )
 
+# Semgrep SAST Scanning (Post-build)
+add_custom_target(semgrep-scan
+    COMMAND bash ${CMAKE_SOURCE_DIR}/../../scripts/semgrep-scan.sh
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/../..
+    COMMENT "Running Semgrep SAST scan"
+    DEPENDS milos-data-guard-daemon milos-data-guard
+)
+
 # Combined security check target
 add_custom_target(security-check
     COMMAND ${CMAKE_COMMAND} -E echo "Running security checks..."
     COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target generate-sbom
     COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target trivy-scan
-    COMMENT "Running all security checks (SBOM generation and vulnerability scanning)"
+    COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target semgrep-scan
+    COMMENT "Running all security checks (SBOM generation, vulnerability scanning, and SAST)"
     DEPENDS milos-data-guard-daemon milos-data-guard
 )
 

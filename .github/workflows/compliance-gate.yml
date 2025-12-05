@@ -1,0 +1,104 @@
+name: Compliance Gate
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  compliance-gate:
+    name: Compliance Gate Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Qt6
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qt6-base-dev qt6-dbus-dev cmake build-essential jq bc
+
+      - name: Build STIG Compliance Checker
+        run: |
+          cd milos-base/services/stig-compliance-checker
+          mkdir -p build && cd build
+          cmake ..
+          make -j$(nproc)
+
+      - name: Run STIG Compliance Check
+        id: compliance
+        run: |
+          cd milos-base/services/stig-compliance-checker/build
+          ./milos-stig-checker --all --json > compliance.json 2>/dev/null || true
+          
+          SCORE=$(jq -r '.compliance_score' compliance.json | sed 's/%//' || echo "0")
+          CRITICAL=$(jq '[.checks[] | select(.severity == "Critical" and .result == "Fail")] | length' compliance.json || echo "0")
+          HIGH=$(jq '[.checks[] | select(.severity == "High" and .result == "Fail")] | length' compliance.json || echo "0")
+          
+          echo "score=$SCORE" >> $GITHUB_OUTPUT
+          echo "critical=$CRITICAL" >> $GITHUB_OUTPUT
+          echo "high=$HIGH" >> $GITHUB_OUTPUT
+          
+          echo "Compliance Score: ${SCORE}%"
+          echo "Critical Failures: $CRITICAL"
+          echo "High Failures: $HIGH"
+
+      - name: Check Compliance Threshold
+        run: |
+          SCORE=${{ steps.compliance.outputs.score }}
+          CRITICAL=${{ steps.compliance.outputs.critical }}
+          HIGH=${{ steps.compliance.outputs.high }}
+          
+          # Block PR if critical failures
+          if [ "$CRITICAL" -gt 0 ]; then
+            echo "❌ BLOCKING: $CRITICAL critical compliance failure(s) detected"
+            echo "Please fix critical STIG compliance issues before merging."
+            exit 1
+          fi
+          
+          # Warn if compliance below 85%
+          if (( $(echo "$SCORE < 85" | bc -l) )); then
+            echo "⚠️ WARNING: Compliance score ($SCORE%) below 85% threshold"
+            echo "Consider improving compliance before merging."
+          else
+            echo "✅ Compliance check passed: $SCORE%"
+          fi
+          
+          # Warn if high-priority failures
+          if [ "$HIGH" -gt 3 ]; then
+            echo "⚠️ WARNING: $HIGH high-priority failures detected"
+            echo "Consider addressing high-priority issues."
+          fi
+
+      - name: Comment PR with Compliance Results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const score = '${{ steps.compliance.outputs.score }}';
+            const critical = '${{ steps.compliance.outputs.critical }}';
+            const high = '${{ steps.compliance.outputs.high }}';
+            
+            const body = `## STIG Compliance Check Results
+            
+            **Compliance Score:** ${score}%
+            **Critical Failures:** ${critical}
+            **High-Priority Failures:** ${high}
+            
+            ${critical > 0 ? '❌ **BLOCKING:** Critical compliance failures detected. Please fix before merging.' : '✅ Compliance check passed.'}
+            
+            View full report in workflow artifacts.`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
+

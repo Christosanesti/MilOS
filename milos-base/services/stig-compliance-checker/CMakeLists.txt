@@ -7,11 +7,29 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Find Qt6
 find_package(Qt6 REQUIRED COMPONENTS Core DBus)
 
+# Enable MOC for Q_OBJECT classes
+set(CMAKE_AUTOMOC ON)
+
 # Include directories
 include_directories(
-    ${CMAKE_SOURCE_DIR}/milos-base/services/stig-compliance-checker/include
-    ${CMAKE_SOURCE_DIR}/milos-base/libs/logging/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../libs/logging/include
 )
+
+# Try to find or build logging library
+set(LOGGING_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../libs/logging")
+if(NOT TARGET milos-logging)
+    # Check if logging library is already built
+    find_library(LOGGING_LIB milos-logging PATHS "${LOGGING_DIR}/build" NO_DEFAULT_PATH)
+    if(LOGGING_LIB)
+        message(STATUS "Found pre-built milos-logging: ${LOGGING_LIB}")
+        add_library(milos-logging STATIC IMPORTED)
+        set_target_properties(milos-logging PROPERTIES IMPORTED_LOCATION ${LOGGING_LIB})
+    else()
+        # Build logging library
+        add_subdirectory(${LOGGING_DIR} ${CMAKE_BINARY_DIR}/libs/logging)
+    endif()
+endif()
 
 # Source files
 set(STIG_CHECKER_SOURCES
