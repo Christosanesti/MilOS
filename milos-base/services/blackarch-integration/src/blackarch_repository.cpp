@@ -1,18 +1,21 @@
 #include "blackarch_repository.h"
+#include "blackarch_data_scraper.h"
 #include <milos/logging/logger.h>
-#include <QProcess>
 #include <QStandardPaths>
 #include <QDir>
 #include <QFile>
 #include <QTextStream>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
 
 BlackArchRepository::BlackArchRepository(QObject* parent)
     : QObject(parent)
     , m_initialized(false)
-    , m_repositoryConfigured(false)
-    , m_repositoryUrl("https://blackarch.org/repo/")
-    , m_mirrorPath("/var/milos/blackarch-mirrors/")
+    , m_dataScraper(nullptr)
 {
+    m_dataStoragePath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/blackarch-data";
+    QDir().mkpath(m_dataStoragePath);
 }
 
 BlackArchRepository::~BlackArchRepository() {
@@ -23,184 +26,138 @@ bool BlackArchRepository::initialize() {
         return true;
     }
 
-    if (!checkPacmanAvailable()) {
-        LOG_ERROR("pacman is not available");
+    // Initialize data scraper
+    m_dataScraper = new BlackArchDataScraper(this);
+    if (!m_dataScraper->initialize()) {
+        LOG_ERROR("Failed to initialize BlackArch data scraper");
         return false;
     }
 
-    // Check if repository is already configured
-    m_repositoryConfigured = isRepositoryConfigured();
+    // Connect signals
+    connect(m_dataScraper, &BlackArchDataScraper::scrapingStarted,
+            this, &BlackArchRepository::dataScrapingStarted);
+    connect(m_dataScraper, &BlackArchDataScraper::scrapingCompleted,
+            this, &BlackArchRepository::dataScrapingCompleted);
+    connect(m_dataScraper, &BlackArchDataScraper::scrapingProgress,
+            this, &BlackArchRepository::dataScrapingProgress);
+
+    // Try to load existing scraped data
+    QString jsonPath = m_dataStoragePath + "/tools.json";
+    if (QFile::exists(jsonPath)) {
+        if (m_dataScraper->loadFromJson(jsonPath)) {
+            LOG_INFO(QString("Loaded %1 tools from cached data").arg(m_dataScraper->getScrapedTools().size()));
+        }
+    }
 
     m_initialized = true;
     return true;
 }
 
-bool BlackArchRepository::checkPacmanAvailable() const {
-    QProcess process;
-    process.start("which", QStringList() << "pacman");
-    process.waitForFinished();
-    return process.exitCode() == 0;
-}
-
 bool BlackArchRepository::isRepositoryConfigured() const {
-    // Check if BlackArch repository is in pacman.conf
-    QFile pacmanConf("/etc/pacman.conf");
-    if (!pacmanConf.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        return false;
-    }
-
-    QTextStream in(&pacmanConf);
-    QString content = in.readAll();
-    pacmanConf.close();
-
-    return content.contains("[blackarch]");
+    // Check if we have scraped data available
+    QString jsonPath = m_dataStoragePath + "/tools.json";
+    return QFile::exists(jsonPath) && !m_dataScraper->getScrapedTools().isEmpty();
 }
 
 bool BlackArchRepository::configureRepository() {
-    if (m_repositoryConfigured) {
-        return true;
-    }
-
-    // Install BlackArch repository keyring
-    QStringList keyringArgs;
-    keyringArgs << "-S" << "--noconfirm" << "blackarch-keyring";
-    
-    if (!executePacman(keyringArgs)) {
-        LOG_ERROR("Failed to install BlackArch keyring");
+    // This now triggers data scraping instead of pacman configuration
+    if (!m_initialized || !m_dataScraper) {
         return false;
     }
 
-    // Add BlackArch repository to pacman.conf
-    QFile pacmanConf("/etc/pacman.conf");
-    if (!pacmanConf.open(QIODevice::ReadWrite | QIODevice::Append | QIODevice::Text)) {
-        LOG_ERROR("Failed to open pacman.conf");
-        return false;
+    // Start scraping if data not available
+    if (!isRepositoryConfigured()) {
+        LOG_INFO("Starting BlackArch data scraping...");
+        return m_dataScraper->scrapeAllTools();
     }
 
-    QTextStream out(&pacmanConf);
-    out << "\n[blackarch]\n";
-    out << "Include = /etc/pacman.d/blackarch-mirrorlist\n";
-    pacmanConf.close();
-
-    // Create mirrorlist if it doesn't exist
-    QDir mirrorDir("/etc/pacman.d");
-    if (!mirrorDir.exists()) {
-        mirrorDir.mkpath(".");
-    }
-
-    QFile mirrorlist("/etc/pacman.d/blackarch-mirrorlist");
-    if (!mirrorlist.exists()) {
-        if (mirrorlist.open(QIODevice::WriteOnly | QIODevice::Text)) {
-            QTextStream mirrorOut(&mirrorlist);
-            mirrorOut << "Server = " << m_repositoryUrl << "$repo/os/$arch\n";
-            mirrorlist.close();
-        }
-    }
-
-    // Update package database
-    QStringList updateArgs;
-    updateArgs << "-Sy";
-    if (!executePacman(updateArgs)) {
-        LOG_ERROR("Failed to update package database");
-        return false;
-    }
-
-    m_repositoryConfigured = true;
     return true;
 }
 
 QStringList BlackArchRepository::getAvailableTools() const {
-    QStringList tools;
-    
-    // Query BlackArch packages
-    QString output;
-    QStringList args;
-    args << "-Ss" << "blackarch";
-    
-    if (executePacman(args, &output)) {
-        // Parse output to extract tool names
-        QStringList lines = output.split('\n');
-        for (const QString& line : lines) {
-            if (line.startsWith("blackarch/")) {
-                QString toolName = line.split('/').value(1).split(' ').value(0);
-                if (!toolName.isEmpty() && !tools.contains(toolName)) {
-                    tools.append(toolName);
-                }
-            }
-        }
+    if (!m_initialized || !m_dataScraper) {
+        return QStringList();
     }
 
+    QStringList tools;
+    QList<BlackArchToolInfo> scrapedTools = m_dataScraper->getScrapedTools();
+    for (const BlackArchToolInfo& tool : scrapedTools) {
+        tools.append(tool.name);
+    }
     return tools;
 }
 
-bool BlackArchRepository::isToolInstalled(const QString& toolName) const {
-    QStringList args;
-    args << "-Q" << toolName;
-    
-    QString output;
-    if (executePacman(args, &output)) {
-        return !output.isEmpty();
+QString BlackArchRepository::getToolInfo(const QString& toolName) const {
+    if (!m_initialized || !m_dataScraper) {
+        return QString();
     }
-    
-    return false;
-}
 
-bool BlackArchRepository::installTool(const QString& toolName) {
-    emit toolInstallationStarted(toolName);
-
-    QStringList args;
-    args << "-S" << "--noconfirm" << toolName;
-
-    bool success = executePacman(args);
-    
-    emit toolInstallationCompleted(toolName, success);
-    return success;
-}
-
-bool BlackArchRepository::installTools(const QStringList& toolNames) {
-    bool allSuccess = true;
-    
-    for (const QString& toolName : toolNames) {
-        if (!installTool(toolName)) {
-            allSuccess = false;
-        }
+    BlackArchToolInfo tool = m_dataScraper->getTool(toolName);
+    if (tool.name.isEmpty()) {
+        return QString();
     }
+
+    // Convert to JSON
+    QJsonObject toolObj;
+    toolObj["name"] = tool.name;
+    toolObj["packageName"] = tool.packageName;
+    toolObj["description"] = tool.description;
+    toolObj["category"] = tool.category;
+    toolObj["version"] = tool.version;
+    toolObj["homepage"] = tool.homepage;
+    toolObj["license"] = tool.license;
+    toolObj["pkgbuildUrl"] = tool.pkgbuildUrl;
     
-    return allSuccess;
-}
-
-bool BlackArchRepository::uninstallTool(const QString& toolName) {
-    QStringList args;
-    args << "-R" << "--noconfirm" << toolName;
-    return executePacman(args);
-}
-
-bool BlackArchRepository::updateTool(const QString& toolName) {
-    QStringList args;
-    args << "-S" << "--noconfirm" << toolName;
-    return executePacman(args);
-}
-
-bool BlackArchRepository::updateAllTools() {
-    QStringList args;
-    args << "-Syu" << "--noconfirm";
-    return executePacman(args);
-}
-
-bool BlackArchRepository::executePacman(const QStringList& arguments, QString* output) {
-    QProcess process;
-    process.setProgram("pacman");
-    process.setArguments(arguments);
-    
-    if (output) {
-        process.start();
-        process.waitForFinished();
-        *output = QString::fromUtf8(process.readAllStandardOutput());
-        return process.exitCode() == 0;
-    } else {
-        process.start();
-        process.waitForFinished();
-        return process.exitCode() == 0;
+    QJsonArray depsArray;
+    for (const QString& dep : tool.dependencies) {
+        depsArray.append(dep);
     }
+    toolObj["dependencies"] = depsArray;
+    toolObj["metadata"] = tool.metadata;
+
+    QJsonDocument doc(toolObj);
+    return QString::fromUtf8(doc.toJson());
 }
 
+QStringList BlackArchRepository::getToolsByCategory(const QString& category) const {
+    if (!m_initialized || !m_dataScraper) {
+        return QStringList();
+    }
+
+    QStringList tools;
+    QList<BlackArchToolInfo> categoryTools = m_dataScraper->getToolsByCategory(category);
+    for (const BlackArchToolInfo& tool : categoryTools) {
+        tools.append(tool.name);
+    }
+    return tools;
+}
+
+QStringList BlackArchRepository::getCategories() const {
+    if (!m_initialized || !m_dataScraper) {
+        return QStringList();
+    }
+
+    return m_dataScraper->getCategories();
+}
+
+QStringList BlackArchRepository::searchTools(const QString& query) const {
+    if (!m_initialized || !m_dataScraper) {
+        return QStringList();
+    }
+
+    QStringList tools;
+    QList<BlackArchToolInfo> results = m_dataScraper->searchTools(query);
+    for (const BlackArchToolInfo& tool : results) {
+        tools.append(tool.name);
+    }
+    return tools;
+}
+
+bool BlackArchRepository::refreshData() {
+    if (!m_initialized || !m_dataScraper) {
+        return false;
+    }
+
+    LOG_INFO("Refreshing BlackArch tool data...");
+    return m_dataScraper->scrapeAllTools();
+}

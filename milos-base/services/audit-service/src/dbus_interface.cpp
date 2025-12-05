@@ -4,13 +4,13 @@
 #include "hash_chain.h"
 #include "query_engine.h"
 #include "event_collector.h"
+#include <milos/logging/logger.h>
 #include <QDBusConnection>
 #include <QDBusError>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QDateTime>
 #include <QUuid>
-#include <iostream>
 
 DBusInterface::DBusInterface(QObject* parent)
     : QObject(parent)

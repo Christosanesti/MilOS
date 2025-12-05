@@ -1,9 +1,8 @@
 #include "tool_manager.h"
 #include "tool_discovery.h"
+#include <milos/logging/logger.h>
 #include <QProcess>
 #include <QSettings>
-#include <QDebug>
-#include <iostream>
 
 ToolManager::ToolManager(QObject* parent)
     : QObject(parent)
@@ -25,7 +24,7 @@ bool ToolManager::initialize() {
             this, &ToolManager::onToolsDiscovered);
 
     if (!m_discovery->initialize()) {
-        std::cerr << "Failed to initialize tool discovery" << std::endl;
+        LOG_ERROR("Failed to initialize tool discovery");
         return false;
     }
 
@@ -42,13 +41,13 @@ bool ToolManager::launchTool(const QString& toolName) {
 
     ToolInfo tool = m_discovery->getToolInfo(toolName);
     if (tool.name.isEmpty()) {
-        std::cerr << "Tool not found: " << toolName.toStdString() << std::endl;
+        LOG_WARNING(QString("Tool not found: %1").arg(toolName));
         emit toolLaunched(toolName, false);
         return false;
     }
 
     if (!tool.isInstalled) {
-        std::cerr << "Tool not installed: " << toolName.toStdString() << std::endl;
+        LOG_WARNING(QString("Tool not installed: %1").arg(toolName));
         emit toolLaunched(toolName, false);
         return false;
     }
@@ -60,10 +59,10 @@ bool ToolManager::launchTool(const QString& toolName) {
     bool started = process->startDetached();
     
     if (started) {
-        std::cout << "Launched tool: " << toolName.toStdString() << std::endl;
+        LOG_INFO(QString("Launched tool: %1").arg(toolName));
         emit toolLaunched(toolName, true);
     } else {
-        std::cerr << "Failed to launch tool: " << toolName.toStdString() << std::endl;
+        LOG_ERROR(QString("Failed to launch tool: %1").arg(toolName));
         emit toolLaunched(toolName, false);
     }
 

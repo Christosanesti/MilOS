@@ -4,13 +4,13 @@
 #include <QObject>
 #include <QString>
 #include <QStringList>
-#include <QProcess>
-#include <memory>
+#include "blackarch_data_scraper.h"
 
 /**
  * @brief BlackArch Repository Manager
  * 
- * Manages BlackArch repository integration and tool installation.
+ * Manages BlackArch repository data access (scraped data, not installation).
+ * This class provides access to scraped tool information from BlackArch repositories.
  */
 class BlackArchRepository : public QObject {
     Q_OBJECT
@@ -38,83 +38,64 @@ public:
     bool configureRepository();
 
     /**
-     * @brief Get list of available tools
+     * @brief Get list of available tools (from scraped data)
      * @return List of available tool names
      */
     QStringList getAvailableTools() const;
 
     /**
-     * @brief Check if tool is installed
+     * @brief Get tool information
      * @param toolName Tool name
-     * @return true if installed, false otherwise
+     * @return Tool information as JSON string
      */
-    bool isToolInstalled(const QString& toolName) const;
+    QString getToolInfo(const QString& toolName) const;
 
     /**
-     * @brief Install tool
-     * @param toolName Tool name
-     * @return true if installation successful, false otherwise
+     * @brief Get tools by category
+     * @param category Category name
+     * @return List of tool names in category
      */
-    bool installTool(const QString& toolName);
+    QStringList getToolsByCategory(const QString& category) const;
 
     /**
-     * @brief Install multiple tools
-     * @param toolNames List of tool names
-     * @return true if all installations successful, false otherwise
+     * @brief Get all categories
+     * @return List of category names
      */
-    bool installTools(const QStringList& toolNames);
+    QStringList getCategories() const;
 
     /**
-     * @brief Uninstall tool
-     * @param toolName Tool name
-     * @return true if uninstallation successful, false otherwise
+     * @brief Search tools
+     * @param query Search query
+     * @return List of matching tool names
      */
-    bool uninstallTool(const QString& toolName);
+    QStringList searchTools(const QString& query) const;
 
     /**
-     * @brief Update tool
-     * @param toolName Tool name
-     * @return true if update successful, false otherwise
+     * @brief Refresh scraped data
+     * @return true if refresh successful, false otherwise
      */
-    bool updateTool(const QString& toolName);
-
-    /**
-     * @brief Update all tools
-     * @return true if update successful, false otherwise
-     */
-    bool updateAllTools();
+    bool refreshData();
 
 Q_SIGNALS:
     /**
-     * @brief Emitted when tool installation starts
+     * @brief Emitted when data scraping starts
      */
-    void toolInstallationStarted(const QString& toolName);
+    void dataScrapingStarted();
 
     /**
-     * @brief Emitted when tool installation completes
+     * @brief Emitted when data scraping completes
      */
-    void toolInstallationCompleted(const QString& toolName, bool success);
+    void dataScrapingCompleted(bool success);
 
     /**
-     * @brief Emitted when tool installation progress changes
+     * @brief Emitted when data scraping progress changes
      */
-    void toolInstallationProgress(const QString& toolName, int progress);
+    void dataScrapingProgress(int progress, const QString& currentTool);
 
 private:
     bool m_initialized;
-    bool m_repositoryConfigured;
-    QString m_repositoryUrl;
-    QString m_mirrorPath;
-
-    /**
-     * @brief Execute pacman command
-     */
-    bool executePacman(const QStringList& arguments, QString* output = nullptr);
-
-    /**
-     * @brief Check pacman availability
-     */
-    bool checkPacmanAvailable() const;
+    QString m_dataStoragePath;
+    BlackArchDataScraper* m_dataScraper;
 };
 
 #endif // BLACKARCH_REPOSITORY_H

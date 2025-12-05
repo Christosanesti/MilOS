@@ -1,11 +1,13 @@
 #include "tool_discovery.h"
+#include <milos/logging/logger.h>
+#include <blackarch-integration/blackarch_repository.h>
 #include <QProcess>
 #include <QStandardPaths>
 #include <QDir>
 #include <QFileInfo>
 #include <QSettings>
-#include <QDebug>
-#include <iostream>
+#include <QJsonDocument>
+#include <QJsonObject>
 
 Q_DECLARE_METATYPE(ToolInfo)
 Q_DECLARE_METATYPE(QList<ToolInfo>)
@@ -13,6 +15,7 @@ Q_DECLARE_METATYPE(QList<ToolInfo>)
 ToolDiscovery::ToolDiscovery(QObject* parent)
     : QObject(parent)
     , m_initialized(false)
+    , m_repository(nullptr)
 {
 }
 
@@ -22,6 +25,19 @@ ToolDiscovery::~ToolDiscovery() {
 bool ToolDiscovery::initialize() {
     if (m_initialized) {
         return true;
+    }
+
+    // Initialize BlackArch repository (data scraper)
+    m_repository = new BlackArchRepository(this);
+    if (!m_repository->initialize()) {
+        LOG_WARNING("Failed to initialize BlackArch repository, using fallback tool list");
+        // Continue with fallback
+    } else {
+        // Ensure data is available
+        if (!m_repository->isRepositoryConfigured()) {
+            LOG_INFO("BlackArch data not found, triggering data scraping...");
+            m_repository->configureRepository();
+        }
     }
 
     // Discover tools
@@ -46,62 +62,108 @@ bool ToolDiscovery::initialize() {
 QList<ToolInfo> ToolDiscovery::discoverTools() {
     QList<ToolInfo> tools;
 
-    // List of selected BlackArch tools (from Story 20.1)
-    QStringList selectedTools = {
-        "nmap", "wireshark-cli", "john", "hashcat", "sqlmap",
-        "aircrack-ng", "nikto", "hydra", "tcpdump", "ettercap",
-        "metasploit", "burpsuite", "openvas"
-    };
+    // Try to get tools from scraped data
+    if (m_repository && m_repository->isRepositoryConfigured()) {
+        QStringList availableTools = m_repository->getAvailableTools();
+        
+        for (const QString& toolName : availableTools) {
+            // Get tool info from repository
+            QString toolInfoJson = m_repository->getToolInfo(toolName);
+            if (toolInfoJson.isEmpty()) {
+                continue;
+            }
 
-    // Tool categories mapping
-    QMap<QString, QString> toolCategories = {
-        {"nmap", "Network Scanning"},
-        {"wireshark-cli", "Network Analysis"},
-        {"john", "Password Cracking"},
-        {"hashcat", "Password Cracking"},
-        {"sqlmap", "Web Application Security"},
-        {"aircrack-ng", "Wireless Security"},
-        {"nikto", "Web Vulnerability Scanning"},
-        {"hydra", "Password Cracking"},
-        {"tcpdump", "Network Analysis"},
-        {"ettercap", "Network Security"},
-        {"metasploit", "Exploitation Framework"},
-        {"burpsuite", "Web Application Security"},
-        {"openvas", "Vulnerability Scanning"}
-    };
+            // Parse JSON
+            QJsonDocument doc = QJsonDocument::fromJson(toolInfoJson.toUtf8());
+            if (doc.isNull() || !doc.isObject()) {
+                continue;
+            }
 
-    // Tool descriptions
-    QMap<QString, QString> toolDescriptions = {
-        {"nmap", "Network exploration and security auditing tool"},
-        {"wireshark-cli", "Network protocol analyzer (command-line)"},
-        {"john", "Password cracker for various hash types"},
-        {"hashcat", "Advanced password recovery tool with GPU acceleration"},
-        {"sqlmap", "Automatic SQL injection and database takeover tool"},
-        {"aircrack-ng", "Wireless network security auditing tool"},
-        {"nikto", "Web server scanner"},
-        {"hydra", "Password brute force tool"},
-        {"tcpdump", "Network packet analyzer"},
-        {"ettercap", "Network security tool for man-in-the-middle attacks"},
-        {"metasploit", "Penetration testing framework"},
-        {"burpsuite", "Web application security testing platform"},
-        {"openvas", "Vulnerability scanner and manager"}
-    };
+            QJsonObject toolObj = doc.object();
+            ToolInfo tool;
+            tool.name = toolObj.value("name").toString();
+            tool.displayName = toolObj.value("packageName").toString();
+            tool.description = toolObj.value("description").toString();
+            tool.category = toolObj.value("category").toString();
+            tool.executable = getToolExecutable(toolName);
+            tool.isInstalled = isToolInstalled(toolName);
+            tool.isFavorite = false;  // Load from settings
+            tool.tags = QStringList() << toolName << tool.category.toLower();
 
-    for (const QString& toolName : selectedTools) {
-        ToolInfo tool;
-        tool.name = toolName;
-        tool.displayName = toolName;
-        tool.description = toolDescriptions.value(toolName, "BlackArch security tool");
-        tool.category = toolCategories.value(toolName, "Other");
-        tool.executable = getToolExecutable(toolName);
-        tool.isInstalled = isToolInstalled(toolName);
-        tool.isFavorite = false;  // Load from settings
-        tool.tags = QStringList() << toolName << tool.category.toLower();
+            tools.append(tool);
+        }
 
-        tools.append(tool);
+        LOG_INFO(QString("Discovered %1 tools from scraped data").arg(tools.size()));
+    } else {
+        // Fallback to curated list if scraper not available
+        LOG_WARNING("BlackArch repository not available, using fallback tool list");
+        
+        QStringList selectedTools = {
+            "nmap", "wireshark-cli", "john", "hashcat", "sqlmap",
+            "aircrack-ng", "nikto", "hydra", "tcpdump", "ettercap",
+            "metasploit", "burpsuite", "openvas"
+        };
+
+        QMap<QString, QString> toolCategories = {
+            {"nmap", "Network Scanning"},
+            {"wireshark-cli", "Network Analysis"},
+            {"john", "Password Cracking"},
+            {"hashcat", "Password Cracking"},
+            {"sqlmap", "Web Application Security"},
+            {"aircrack-ng", "Wireless Security"},
+            {"nikto", "Web Vulnerability Scanning"},
+            {"hydra", "Password Cracking"},
+            {"tcpdump", "Network Analysis"},
+            {"ettercap", "Network Security"},
+            {"metasploit", "Exploitation Framework"},
+            {"burpsuite", "Web Application Security"},
+            {"openvas", "Vulnerability Scanning"}
+        };
+
+        QMap<QString, QString> toolDescriptions = {
+            {"nmap", "Network exploration and security auditing tool"},
+            {"wireshark-cli", "Network protocol analyzer (command-line)"},
+            {"john", "Password cracker for various hash types"},
+            {"hashcat", "Advanced password recovery tool with GPU acceleration"},
+            {"sqlmap", "Automatic SQL injection and database takeover tool"},
+            {"aircrack-ng", "Wireless network security auditing tool"},
+            {"nikto", "Web server scanner"},
+            {"hydra", "Password brute force tool"},
+            {"tcpdump", "Network packet analyzer"},
+            {"ettercap", "Network security tool for man-in-the-middle attacks"},
+            {"metasploit", "Penetration testing framework"},
+            {"burpsuite", "Web application security testing platform"},
+            {"openvas", "Vulnerability scanner and manager"}
+        };
+
+        for (const QString& toolName : selectedTools) {
+            ToolInfo tool;
+            tool.name = toolName;
+            tool.displayName = toolName;
+            tool.description = toolDescriptions.value(toolName, "BlackArch security tool");
+            tool.category = toolCategories.value(toolName, "Other");
+            tool.executable = getToolExecutable(toolName);
+            tool.isInstalled = isToolInstalled(toolName);
+            tool.isFavorite = false;
+            tool.tags = QStringList() << toolName << tool.category.toLower();
+
+            tools.append(tool);
+        }
     }
 
     // Load favorites from settings
+    QSettings settings;
+    settings.beginGroup("BlackArchLauncher");
+    QStringList favorites = settings.value("favorites", QStringList()).toStringList();
+    settings.endGroup();
+
+    for (ToolInfo& tool : tools) {
+        if (favorites.contains(tool.name)) {
+            tool.isFavorite = true;
+        }
+    }
+
+    return tools;
     QSettings settings;
     settings.beginGroup("BlackArchLauncher");
     QStringList favorites = settings.value("favorites", QStringList()).toStringList();

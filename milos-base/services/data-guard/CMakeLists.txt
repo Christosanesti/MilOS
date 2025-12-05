@@ -28,6 +28,9 @@ find_package(yaml-cpp REQUIRED)
 # Find CLI11 for CLI tool
 find_package(CLI11 REQUIRED)
 
+# Add logging library
+add_subdirectory(../../libs/logging ${CMAKE_BINARY_DIR}/libs/logging)
+
 # Include directories
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/src
@@ -64,6 +67,7 @@ target_link_libraries(milos-data-guard-daemon
     ${LIBPCAP_LIBRARIES}
     yaml-cpp::yaml-cpp
     pthread
+    milos-logging
 )
 
 if(USE_QT_DBUS)
@@ -134,4 +138,28 @@ install(DIRECTORY DESTINATION ${CMAKE_INSTALL_PREFIX}/etc/milos/data-guard
 # Testing
 enable_testing()
 add_subdirectory(tests)
+
+# SBOM Generation (Post-build)
+add_custom_target(generate-sbom
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/sbom
+    COMMAND bash ${CMAKE_SOURCE_DIR}/../../scripts/generate-sbom.sh ${CMAKE_BINARY_DIR}/sbom
+    COMMENT "Generating Software Bill of Materials (SBOM)"
+    DEPENDS milos-data-guard-daemon milos-data-guard
+)
+
+# Trivy Vulnerability Scanning (Post-build)
+add_custom_target(trivy-scan
+    COMMAND bash ${CMAKE_SOURCE_DIR}/../../scripts/trivy-scan.sh all ${CMAKE_BINARY_DIR}/trivy-reports
+    COMMENT "Running Trivy vulnerability scan"
+    DEPENDS milos-data-guard-daemon milos-data-guard
+)
+
+# Combined security check target
+add_custom_target(security-check
+    COMMAND ${CMAKE_COMMAND} -E echo "Running security checks..."
+    COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target generate-sbom
+    COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target trivy-scan
+    COMMENT "Running all security checks (SBOM generation and vulnerability scanning)"
+    DEPENDS milos-data-guard-daemon milos-data-guard
+)
 

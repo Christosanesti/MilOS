@@ -45,12 +45,12 @@ bool NetworkEnforcement::initialize(ConfigParser* configParser, PolicyManager* p
 
     // Initialize network hooks
     if (!initializeNetworkHooks()) {
-        std::cerr << "Failed to initialize network hooks (graceful degradation enabled)" << std::endl;
+        LOG_WARNING("Failed to initialize network hooks (graceful degradation enabled)");
         // Continue with reduced functionality if graceful degradation is enabled
         bool gracefulDegradation = m_configParser ? 
             m_configParser->getBool("network_enforcement.graceful_degradation", true) : true;
         if (!gracefulDegradation) {
-            std::cerr << "Graceful degradation disabled, initialization failed" << std::endl;
+            LOG_ERROR("Graceful degradation disabled, initialization failed");
             return false;
         }
     }
@@ -75,14 +75,14 @@ bool NetworkEnforcement::start() {
         m_captureRunning = true;
         pthread_t thread;
         if (pthread_create(&thread, nullptr, packetCaptureThread, this) != 0) {
-            std::cerr << "Failed to create packet capture thread" << std::endl;
+            LOG_ERROR("Failed to create packet capture thread");
             return false;
         }
         m_captureThread = reinterpret_cast<void*>(thread);
     }
 
     m_running = true;
-    std::cout << "Network enforcement started" << std::endl;
+    LOG_INFO("Network enforcement started");
     return true;
 }
 
@@ -100,7 +100,7 @@ void NetworkEnforcement::stop() {
 
     cleanupNetworkHooks();
     m_running = false;
-    std::cout << "Network enforcement stopped" << std::endl;
+    LOG_INFO("Network enforcement stopped");
 }
 
 bool NetworkEnforcement::isHealthy() const {
@@ -132,7 +132,7 @@ bool NetworkEnforcement::initializeNetworkHooks() {
     // Try to find a network interface
     char* dev = pcap_lookupdev(errbuf);
     if (dev == nullptr) {
-        std::cerr << "Could not find network device: " << errbuf << std::endl;
+        LOG_ERROR(QString("Could not find network device: %1").arg(errbuf));
         // Graceful degradation: continue without packet capture
         return false;
     }
@@ -140,20 +140,20 @@ bool NetworkEnforcement::initializeNetworkHooks() {
     // Open device for packet capture
     m_pcapHandle = pcap_open_live(dev, 65535, 1, 1000, errbuf);
     if (m_pcapHandle == nullptr) {
-        std::cerr << "Could not open device " << dev << ": " << errbuf << std::endl;
+        LOG_ERROR(QString("Could not open device %1: %2").arg(dev).arg(errbuf));
         // Graceful degradation: continue without packet capture
         return false;
     }
 
     // Set non-blocking mode
     if (pcap_setnonblock(reinterpret_cast<pcap_t*>(m_pcapHandle), 1, errbuf) < 0) {
-        std::cerr << "Could not set non-blocking mode: " << errbuf << std::endl;
+        LOG_ERROR(QString("Could not set non-blocking mode: %1").arg(errbuf));
         pcap_close(reinterpret_cast<pcap_t*>(m_pcapHandle));
         m_pcapHandle = nullptr;
         return false;
     }
 
-    std::cout << "Network hooks initialized on device: " << dev << std::endl;
+    LOG_INFO(QString("Network hooks initialized on device: %1").arg(dev));
     return true;
 }
 
@@ -474,7 +474,7 @@ void* NetworkEnforcement::packetCaptureThread(void* arg) {
             continue;
         } else if (result == -1) {
             // Error
-            std::cerr << "Error reading packet: " << pcap_geterr(handle) << std::endl;
+            LOG_ERROR(QString("Error reading packet: %1").arg(pcap_geterr(handle)));
             break;
         } else if (result == -2) {
             // End of file (should not happen with live capture)
@@ -519,9 +519,8 @@ void NetworkEnforcement::processPacket(const void* header, const unsigned char* 
         if (m_auditLogger) {
             m_auditLogger->logTransmissionAttempt(source, destination, protocol, encrypted, "BLOCK");
         }
-        std::cout << "Packet blocked: " << source.toStdString() << " -> " 
-                  << destination.toStdString() << " (" << protocol.toStdString() 
-                  << ", size=" << hdr->caplen << ")" << std::endl;
+        LOG_INFO(QString("Packet blocked: %1 -> %2 (%3, size=%4)")
+                 .arg(source).arg(destination).arg(protocol).arg(hdr->caplen));
     } else {
         // Packet allowed - log to audit service (optional, can be configured)
         if (m_auditLogger) {

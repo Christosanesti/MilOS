@@ -8,7 +8,7 @@
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QFile>
-#include <iostream>
+#include <milos/logging/logger.h>
 #include <string>
 
 class DataGuardClient {
@@ -31,7 +31,7 @@ public:
     QString getTransmissionStatus() {
         QDBusReply<QString> reply = m_interface->call("GetTransmissionStatus");
         if (!reply.isValid()) {
-            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            LOG_ERROR(QString("D-Bus error: %1").arg(reply.error().message()));
             return QString();
         }
         return reply.value();
@@ -40,7 +40,7 @@ public:
     QStringList getBlockedTransmissions() {
         QDBusReply<QStringList> reply = m_interface->call("GetBlockedTransmissions");
         if (!reply.isValid()) {
-            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            LOG_ERROR(QString("D-Bus error: %1").arg(reply.error().message()));
             return QStringList();
         }
         return reply.value();
@@ -49,7 +49,7 @@ public:
     bool configurePolicy(const QString& policy) {
         QDBusReply<bool> reply = m_interface->call("ConfigurePolicy", policy);
         if (!reply.isValid()) {
-            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            LOG_ERROR(QString("D-Bus error: %1").arg(reply.error().message()));
             return false;
         }
         return reply.value();
@@ -58,7 +58,7 @@ public:
     QString getPolicyStatus(const QString& policyId) {
         QDBusReply<QString> reply = m_interface->call("GetPolicyStatus", policyId);
         if (!reply.isValid()) {
-            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            LOG_ERROR(QString("D-Bus error: %1").arg(reply.error().message()));
             return QString();
         }
         return reply.value();
@@ -67,7 +67,7 @@ public:
     QString getHealthStatus() {
         QDBusReply<QString> reply = m_interface->call("GetHealthStatus");
         if (!reply.isValid()) {
-            std::cerr << "Error: " << reply.error().message().toStdString() << std::endl;
+            LOG_ERROR(QString("D-Bus error: %1").arg(reply.error().message()));
             return QString();
         }
         return reply.value();
@@ -83,11 +83,12 @@ void printStatus(const QString& jsonStatus) {
     QJsonDocument doc = QJsonDocument::fromJson(jsonStatus.toUtf8(), &error);
     
     if (error.error != QJsonParseError::NoError) {
-        std::cerr << "Error parsing status: " << error.errorString().toStdString() << std::endl;
+        LOG_ERROR(QString("Error parsing status: %1").arg(error.errorString()));
         return;
     }
 
     QJsonObject obj = doc.object();
+    // CLI tool output to stdout is acceptable for user-facing commands
     std::cout << "Service Status: " << obj["status"].toString().toStdString() << std::endl;
     
     if (obj.contains("blocked")) {
@@ -121,7 +122,7 @@ void printPolicyStatus(const QString& jsonStatus) {
     QJsonDocument doc = QJsonDocument::fromJson(jsonStatus.toUtf8(), &error);
     
     if (error.error != QJsonParseError::NoError) {
-        std::cerr << "Error parsing policy status: " << error.errorString().toStdString() << std::endl;
+        LOG_ERROR(QString("Error parsing policy status: %1").arg(error.errorString()));
         return;
     }
 
@@ -187,10 +188,19 @@ int main(int argc, char* argv[]) {
         return cliApp.exit(e);
     }
 
+    // Initialize logger for CLI tool
+    Logger::instance()->initialize("milos-data-guard-cli",
+                                   "org.milos.AuditService",
+                                   "/org/milos/AuditService",
+                                   Logger::Warning,
+                                   false);
+
     // Create D-Bus client
     DataGuardClient client;
     
     if (!client.isConnected()) {
+        LOG_ERROR("Cannot connect to Data Transmission Guard service");
+        // CLI tool can output to stderr for user-facing errors
         std::cerr << "Error: Cannot connect to Data Transmission Guard service." << std::endl;
         std::cerr << "Make sure the service is running: systemctl status milos-data-guard" << std::endl;
         return 1;
@@ -232,6 +242,7 @@ int main(int argc, char* argv[]) {
         } else if (*policyConfigCmd) {
             QFile file(QString::fromStdString(policyFile));
             if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+                LOG_ERROR(QString("Cannot open policy file: %1").arg(QString::fromStdString(policyFile)));
                 std::cerr << "Error: Cannot open policy file: " << policyFile << std::endl;
                 return 1;
             }
@@ -242,6 +253,7 @@ int main(int argc, char* argv[]) {
             if (client.configurePolicy(policyJson)) {
                 std::cout << "Policy configured successfully." << std::endl;
             } else {
+                LOG_ERROR("Failed to configure policy");
                 std::cerr << "Error: Failed to configure policy." << std::endl;
                 return 1;
             }

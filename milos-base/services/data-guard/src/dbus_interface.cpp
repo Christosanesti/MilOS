@@ -2,6 +2,7 @@
 #include "config_parser.h"
 #include "policy_manager.h"
 #include "network_enforcement.h"
+#include <milos/logging/logger.h>
 #include <QDBusConnection>
 #include <QDBusError>
 #include <QJsonDocument>
@@ -9,7 +10,6 @@
 #include <QJsonArray>
 #include <QJsonValue>
 #include <QDateTime>
-#include <iostream>
 
 DBusInterface::DBusInterface(QObject* parent)
     : QObject(parent)
@@ -44,7 +44,7 @@ bool DBusInterface::initialize(
 
 bool DBusInterface::start() {
     if (!m_initialized) {
-        std::cerr << "D-Bus interface not initialized" << std::endl;
+        LOG_ERROR("D-Bus interface not initialized");
         return false;
     }
 
@@ -54,12 +54,12 @@ bool DBusInterface::start() {
 
     // Register D-Bus interface
     if (!registerInterface()) {
-        std::cerr << "Failed to register D-Bus interface" << std::endl;
+        LOG_ERROR("Failed to register D-Bus interface");
         return false;
     }
 
     m_running = true;
-    std::cout << "D-Bus interface started" << std::endl;
+    LOG_INFO("D-Bus interface started");
     return true;
 }
 
@@ -70,7 +70,7 @@ void DBusInterface::stop() {
 
     unregisterInterface();
     m_running = false;
-    std::cout << "D-Bus interface stopped" << std::endl;
+    LOG_INFO("D-Bus interface stopped");
 }
 
 bool DBusInterface::isHealthy() const {
@@ -122,7 +122,7 @@ QStringList DBusInterface::GetBlockedTransmissions() {
 
 bool DBusInterface::ConfigurePolicy(const QString& policy) {
     if (!m_policyManager) {
-        std::cerr << "Policy manager not available" << std::endl;
+        LOG_ERROR("Policy manager not available");
         return false;
     }
 
@@ -131,12 +131,12 @@ bool DBusInterface::ConfigurePolicy(const QString& policy) {
     QJsonDocument doc = QJsonDocument::fromJson(policy.toUtf8(), &error);
     
     if (error.error != QJsonParseError::NoError) {
-        std::cerr << "Failed to parse policy JSON: " << error.errorString().toStdString() << std::endl;
+        LOG_ERROR(QString("Failed to parse policy JSON: %1").arg(error.errorString()));
         return false;
     }
 
     if (!doc.isObject()) {
-        std::cerr << "Policy JSON is not an object" << std::endl;
+        LOG_ERROR("Policy JSON is not an object");
         return false;
     }
 
@@ -148,7 +148,7 @@ bool DBusInterface::ConfigurePolicy(const QString& policy) {
     // Required fields
     if (!policyObj.contains("policy_id") || !policyObj.contains("policy_name") || 
         !policyObj.contains("policy_type")) {
-        std::cerr << "Missing required policy fields (policy_id, policy_name, policy_type)" << std::endl;
+        LOG_ERROR("Missing required policy fields (policy_id, policy_name, policy_type)");
         return false;
     }
     
@@ -187,13 +187,13 @@ bool DBusInterface::ConfigurePolicy(const QString& policy) {
     
     // Add or update policy in policy manager
     if (!m_policyManager->addOrUpdatePolicy(policy)) {
-        std::cerr << "Failed to add/update policy" << std::endl;
+        LOG_ERROR("Failed to add/update policy");
         return false;
     }
     
     // Apply policy
     if (!m_policyManager->applyPolicy(policy.policy_id)) {
-        std::cerr << "Failed to apply policy" << std::endl;
+        LOG_ERROR("Failed to apply policy");
         return false;
     }
     
@@ -259,30 +259,26 @@ bool DBusInterface::registerInterface() {
     QDBusConnection connection = QDBusConnection::systemBus();
     
     if (!connection.isConnected()) {
-        std::cerr << "Cannot connect to D-Bus system bus: " 
-                  << connection.lastError().message().toStdString() << std::endl;
+        LOG_ERROR(QString("Cannot connect to D-Bus system bus: %1").arg(connection.lastError().message()));
         return false;
     }
 
     // Register object at path /org/milos/DataGuard
     QString objectPath = "/org/milos/DataGuard";
     if (!connection.registerObject(objectPath, this)) {
-        std::cerr << "Failed to register D-Bus object: " 
-                  << connection.lastError().message().toStdString() << std::endl;
+        LOG_ERROR(QString("Failed to register D-Bus object: %1").arg(connection.lastError().message()));
         return false;
     }
 
     // Register service name org.milos.DataGuard
     QString serviceName = "org.milos.DataGuard";
     if (!connection.registerService(serviceName)) {
-        std::cerr << "Failed to register D-Bus service: " 
-                  << connection.lastError().message().toStdString() << std::endl;
+        LOG_ERROR(QString("Failed to register D-Bus service: %1").arg(connection.lastError().message()));
         connection.unregisterObject(objectPath);
         return false;
     }
 
-    std::cout << "D-Bus interface registered: " << serviceName.toStdString() 
-              << " at " << objectPath.toStdString() << std::endl;
+    LOG_INFO(QString("D-Bus interface registered: %1 at %2").arg(serviceName).arg(objectPath));
     return true;
 }
 

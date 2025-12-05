@@ -13,8 +13,8 @@ find_package(KF6 REQUIRED COMPONENTS CoreAddons)
 # Find CLI11 for CLI tool
 find_package(CLI11 REQUIRED)
 
-# Find BlackArch integration library
-find_package(blackarch-integration REQUIRED)
+# Add BlackArch integration library
+add_subdirectory(../../base/services/blackarch-integration ${CMAKE_BINARY_DIR}/services/blackarch-integration)
 
 # Link logging and UI utilities libraries
 add_subdirectory(../../base/libs/logging ${CMAKE_BINARY_DIR}/libs/logging)

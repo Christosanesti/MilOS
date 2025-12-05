@@ -44,6 +44,13 @@ public:
                                 const QString& action);
 
     /**
+     * @brief Generate STIG-compliant log entry with integrity hash
+     * @param eventData Event data to log
+     * @return STIG-compliant JSON string with integrity hash
+     */
+    QString generateSTIGLogEntry(const QVariantMap& eventData);
+
+    /**
      * @brief Log policy violation
      * @param policyId Policy ID that was violated
      * @param violationType Type of violation
@@ -73,6 +80,13 @@ private:
      * @return true if logging successful, false otherwise
      */
     bool logToAuditService(const QString& eventType, const QVariantMap& eventData);
+
+    /**
+     * @brief Generate SHA-256 hash for log entry integrity
+     * @param logData Log entry data (JSON string)
+     * @return SHA-256 hash as hex string
+     */
+    QString generateIntegrityHash(const QString& logData);
 };
 
 #endif // AUDIT_LOGGER_H

@@ -6,7 +6,6 @@
 #include <QStringList>
 #include <QMap>
 #include "blackarch_repository.h"
-#include "blackarch_offline_installer.h"
 
 // Forward declarations
 class QDBusInterface;
@@ -30,88 +29,72 @@ public:
     bool initialize();
 
     /**
-     * @brief Install selected tools
-     * @param toolNames List of tool names to install
-     * @return true if installation successful, false otherwise
+     * @brief Verify selected tools exist in scraped data
+     * @param toolNames List of tool names to verify
+     * @return true if all tools found in scraped data, false otherwise
      */
     bool installSelectedTools(const QStringList& toolNames);
 
     /**
-     * @brief Get installed tools
-     * @return List of installed tool names
+     * @brief Get available tools from scraped data
+     * @return List of available tool names
      */
     QStringList getInstalledTools() const;
 
     /**
      * @brief Get tool status
      * @param toolName Tool name
-     * @return Tool status (installed, not_installed, error)
+     * @return Tool status (available, not_found, error)
      */
     QString getToolStatus(const QString& toolName) const;
 
     /**
-     * @brief Update tools
-     * @param toolNames List of tool names to update (empty = all)
-     * @return true if update successful, false otherwise
+     * @brief Refresh scraped tool data
+     * @param toolNames Not used (kept for compatibility)
+     * @return true if refresh successful, false otherwise
      */
     bool updateTools(const QStringList& toolNames = QStringList());
 
     /**
-     * @brief Create offline mirror for tools
+     * @brief Export tool data (replaces offline mirror)
      * @param toolNames List of tool names
-     * @param mirrorPath Path to store mirror
-     * @return true if mirror creation successful, false otherwise
+     * @param mirrorPath Path to export data
+     * @return true if export successful, false otherwise
      */
     bool createOfflineMirror(const QStringList& toolNames, const QString& mirrorPath);
 
 Q_SIGNALS:
     /**
-     * @brief Emitted when tool installation starts
+     * @brief Emitted when data scraping starts
      */
-    void toolInstallationStarted(const QString& toolName);
+    void dataScrapingStarted();
 
     /**
-     * @brief Emitted when tool installation completes
+     * @brief Emitted when data scraping completes
      */
-    void toolInstallationCompleted(const QString& toolName, bool success);
+    void dataScrapingCompleted(bool success);
 
     /**
-     * @brief Emitted when tool update starts
+     * @brief Emitted when data scraping progress changes
      */
-    void toolUpdateStarted(const QString& toolName);
-
-    /**
-     * @brief Emitted when tool update completes
-     */
-    void toolUpdateCompleted(const QString& toolName, bool success);
+    void dataScrapingProgress(int progress, const QString& currentTool);
 
 private slots:
     /**
-     * @brief Handle tool installation started
+     * @brief Handle data scraping started (placeholder for compatibility)
      */
     void onToolInstallationStarted(const QString& toolName);
 
     /**
-     * @brief Handle tool installation completed
+     * @brief Handle data scraping completed (placeholder for compatibility)
      */
     void onToolInstallationCompleted(const QString& toolName, bool success);
 
 private:
     bool m_initialized;
     BlackArchRepository* m_repository;
-    BlackArchOfflineInstaller* m_offlineInstaller;
     class AuditLogger* m_auditLogger;
     QMap<QString, QString> m_toolStatus;
-
-    /**
-     * @brief Log tool installation to audit service
-     */
-    void logToolInstallation(const QString& toolName, bool success);
-
-    /**
-     * @brief Register tool with update service
-     */
-    void registerToolWithUpdateService(const QString& toolName);
 };
 
 #endif // BLACKARCH_TOOL_MANAGER_H

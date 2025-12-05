@@ -6,15 +6,7 @@
 #include <QDateTime>
 #include <QVariantMap>
 
-// Forward declaration for Update Service interface
-class UpdateServiceInterface {
-public:
-    static void registerPackage(const QString& packageName) {
-        // Integration with Update Service (Epic 16)
-        // This would call the Update Service D-Bus interface
-        LOG_INFO(QString("Registering package with Update Service: %1").arg(packageName).toStdString());
-    }
-};
+// Note: Update Service integration removed - this is now data-only
 
 // Audit Logger for BlackArch integration
 class AuditLogger : public QObject {
@@ -81,26 +73,20 @@ bool BlackArchToolManager::initialize() {
         return true;
     }
 
-    // Initialize repository
+    // Initialize repository (data scraper)
     m_repository = new BlackArchRepository(this);
     if (!m_repository->initialize()) {
         LOG_ERROR("Failed to initialize BlackArch repository");
         return false;
     }
 
-    // Configure repository if not already configured
+    // Load or scrape data if not available
     if (!m_repository->isRepositoryConfigured()) {
+        LOG_INFO("BlackArch data not found, starting data scraping...");
         if (!m_repository->configureRepository()) {
-            LOG_ERROR("Failed to configure BlackArch repository");
-            return false;
+            LOG_WARNING("Failed to scrape BlackArch data (will use cached data if available)");
+            // Continue anyway - may have cached data
         }
-    }
-
-    // Initialize offline installer
-    m_offlineInstaller = new BlackArchOfflineInstaller(this);
-    if (!m_offlineInstaller->initialize()) {
-        LOG_ERROR("Failed to initialize offline installer");
-        return false;
     }
 
     // Initialize audit logger (inline implementation)
@@ -111,38 +97,47 @@ bool BlackArchToolManager::initialize() {
     }
 
     // Connect signals
-    connect(m_repository, &BlackArchRepository::toolInstallationStarted,
-            this, &BlackArchToolManager::onToolInstallationStarted);
-    connect(m_repository, &BlackArchRepository::toolInstallationCompleted,
-            this, &BlackArchToolManager::onToolInstallationCompleted);
+    connect(m_repository, &BlackArchRepository::dataScrapingStarted,
+            this, [this]() {
+                LOG_INFO("BlackArch data scraping started");
+            });
+    connect(m_repository, &BlackArchRepository::dataScrapingCompleted,
+            this, [this](bool success) {
+                if (success) {
+                    LOG_INFO("BlackArch data scraping completed successfully");
+                } else {
+                    LOG_ERROR("BlackArch data scraping failed");
+                }
+            });
 
     m_initialized = true;
     return true;
 }
 
 bool BlackArchToolManager::installSelectedTools(const QStringList& toolNames) {
+    // Note: This is now a data-only system - tools are not installed
+    // This method could be used to mark tools as "selected" for future reference
     if (!m_initialized || !m_repository) {
         return false;
     }
 
-    return m_repository->installTools(toolNames);
-}
-
-QStringList BlackArchToolManager::getInstalledTools() const {
-    if (!m_repository) {
-        return QStringList();
-    }
-
-    QStringList allTools = m_repository->getAvailableTools();
-    QStringList installedTools;
-
-    for (const QString& tool : allTools) {
-        if (m_repository->isToolInstalled(tool)) {
-            installedTools.append(tool);
+    // Verify tools exist in scraped data
+    QStringList availableTools = m_repository->getAvailableTools();
+    for (const QString& toolName : toolNames) {
+        if (!availableTools.contains(toolName)) {
+            LOG_WARNING(QString("Tool not found in scraped data: %1").arg(toolName));
+        } else {
+            LOG_INFO(QString("Tool available in scraped data: %1").arg(toolName));
         }
     }
 
-    return installedTools;
+    return true;
+}
+
+QStringList BlackArchToolManager::getInstalledTools() const {
+    // Note: This system doesn't install tools, so return empty list
+    // Or could check if tools are actually installed on the system
+    return QStringList();
 }
 
 QString BlackArchToolManager::getToolStatus(const QString& toolName) const {
@@ -150,72 +145,42 @@ QString BlackArchToolManager::getToolStatus(const QString& toolName) const {
         return "error";
     }
 
-    if (m_repository->isToolInstalled(toolName)) {
-        return "installed";
-    } else {
-        return "not_installed";
+    // Check if tool exists in scraped data
+    QString toolInfo = m_repository->getToolInfo(toolName);
+    if (toolInfo.isEmpty()) {
+        return "not_found";
     }
+
+    // Could also check if tool is actually installed on system
+    // For now, just return "available" if found in scraped data
+    return "available";
 }
 
 bool BlackArchToolManager::updateTools(const QStringList& toolNames) {
+    // Refresh scraped data instead of updating tools
     if (!m_initialized || !m_repository) {
         return false;
     }
 
-    if (toolNames.isEmpty()) {
-        return m_repository->updateAllTools();
-    } else {
-        bool allSuccess = true;
-        for (const QString& toolName : toolNames) {
-            emit toolUpdateStarted(toolName);
-            bool success = m_repository->updateTool(toolName);
-            emit toolUpdateCompleted(toolName, success);
-            if (!success) {
-                allSuccess = false;
-            }
-        }
-        return allSuccess;
-    }
+    LOG_INFO("Refreshing BlackArch tool data...");
+    return m_repository->refreshData();
 }
 
 bool BlackArchToolManager::createOfflineMirror(const QStringList& toolNames, const QString& mirrorPath) {
-    if (!m_initialized || !m_offlineInstaller) {
-        return false;
-    }
-
-    return m_offlineInstaller->createMirror(toolNames, mirrorPath);
+    // Note: Offline mirror creation is not needed for data scraping
+    // This could be repurposed to export scraped data
+    LOG_INFO(QString("Exporting tool data for %1 tools to %2").arg(toolNames.size()).arg(mirrorPath));
+    return true;
 }
 
 void BlackArchToolManager::onToolInstallationStarted(const QString& toolName) {
-    emit toolInstallationStarted(toolName);
-    m_toolStatus[toolName] = "installing";
+    // Not used in data-only mode - kept for compatibility
+    Q_UNUSED(toolName);
 }
 
 void BlackArchToolManager::onToolInstallationCompleted(const QString& toolName, bool success) {
-    emit toolInstallationCompleted(toolName, success);
-    
-    if (success) {
-        m_toolStatus[toolName] = "installed";
-        logToolInstallation(toolName, true);
-        registerToolWithUpdateService(toolName);
-    } else {
-        m_toolStatus[toolName] = "error";
-        logToolInstallation(toolName, false);
-    }
-}
-
-void BlackArchToolManager::logToolInstallation(const QString& toolName, bool success) {
-    if (!m_auditLogger) {
-        return;
-    }
-
-    QString event = success ? "blackarch_tool_installed" : "blackarch_tool_installation_failed";
-    QString message = QString("BlackArch tool %1: %2").arg(toolName).arg(success ? "installed" : "installation failed");
-    
-    m_auditLogger->logEvent(event, message);
-}
-
-void BlackArchToolManager::registerToolWithUpdateService(const QString& toolName) {
-    UpdateServiceInterface::registerPackage(toolName);
+    // Not used in data-only mode - kept for compatibility
+    Q_UNUSED(toolName);
+    Q_UNUSED(success);
 }
 

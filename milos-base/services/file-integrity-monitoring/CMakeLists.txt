@@ -19,6 +19,9 @@ find_package(yaml-cpp REQUIRED)
 # Find CLI11 for CLI tool
 find_package(CLI11 REQUIRED)
 
+# Add logging library
+add_subdirectory(../../libs/logging ${CMAKE_BINARY_DIR}/libs/logging)
+
 # Find OpenSSL for cryptographic hashing
 find_package(OpenSSL REQUIRED)
 
@@ -87,6 +90,7 @@ target_link_libraries(milos-file-integrity-monitoring
     yaml-cpp::yaml-cpp
     OpenSSL::SSL
     OpenSSL::Crypto
+    milos-logging
 )
 
 # Link libcurl if available

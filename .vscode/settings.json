@@ -1,16 +1,4 @@
 {
-  "git.autoRepositoryDetection": false,
-  "git.scanRepositories": [
-    "${workspaceFolder}"
-  ],
-  "git.enabled": true,
-  "git.detectSubmodules": false,
-  "files.exclude": {
-    "**/node_modules": true,
-    "**/build": true,
-    "**/.DS_Store": true,
-    "**/.git/modules": true
-  },
   "C_Cpp_Runner.cCompilerPath": "gcc",
   "C_Cpp_Runner.cppCompilerPath": "g++",
   "C_Cpp_Runner.debuggerPath": "gdb",
@@ -69,7 +57,3 @@
   "C_Cpp_Runner.useLinkTimeOptimization": false,
   "C_Cpp_Runner.msvcSecureNoWarnings": false
 }
-
-
-
-

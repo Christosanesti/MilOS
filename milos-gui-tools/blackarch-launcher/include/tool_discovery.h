@@ -6,6 +6,8 @@
 #include <QStringList>
 #include <QMap>
 #include <QProcess>
+#include <QJsonDocument>
+#include <QJsonObject>
 
 /**
  * @brief Tool Information
@@ -30,10 +32,13 @@ struct ToolInfo {
 Q_DECLARE_METATYPE(ToolInfo)
 Q_DECLARE_METATYPE(QList<ToolInfo>)
 
+// Forward declaration
+class BlackArchRepository;
+
 /**
  * @brief Tool Discovery
  * 
- * Discovers installed BlackArch tools and provides tool information.
+ * Discovers BlackArch tools from scraped data and provides tool information.
  */
 class ToolDiscovery : public QObject {
     Q_OBJECT
@@ -92,6 +97,7 @@ private:
     QList<ToolInfo> m_tools;
     QMap<QString, ToolInfo> m_toolMap;
     QMap<QString, QList<ToolInfo>> m_categoryMap;
+    BlackArchRepository* m_repository;
 
     /**
      * @brief Discover tool from package

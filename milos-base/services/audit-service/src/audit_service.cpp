@@ -6,8 +6,8 @@
 #include "dbus_interface.h"
 #include "socket_interface.h"
 #include "config_parser.h"
+#include <milos/logging/logger.h>
 #include <systemd/sd-daemon.h>
-#include <iostream>
 #include <stdexcept>
 #include <sstream>
 #include <ctime>
